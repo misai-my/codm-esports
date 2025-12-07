@@ -259,7 +259,7 @@
         </div>
       </div>
 
-      <!-- summary on its own row so it doesn't break the layout -->
+      <!-- summary -->
       <div id="summary" class="summary-line">
         Loading results…
       </div>
@@ -296,7 +296,7 @@
     </section>
 
     <footer id="footer-note">
-      Kills = Eliminations • <strong>Victory</strong> = match win flag
+      Kills = Eliminations • <strong>Victory</strong> = match win flag • <strong>Placement pts</strong> = points from placement
     </footer>
   </div>
 
@@ -371,12 +371,14 @@
         optAll.textContent = allLabel;
         sel.appendChild(optAll);
 
-        Array.from(values).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = v;
-          sel.appendChild(opt);
-        });
+        Array.from(values)
+          .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))
+          .forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            sel.appendChild(opt);
+          });
 
         if(current && Array.from(values).includes(current)){
           sel.value = current;
@@ -479,7 +481,7 @@
           victories: 0,
           eliminations: 0,
           total: 0,
-          bestPlacement: null,
+          placementPts: 0,
           tournaments: new Set()
         };
 
@@ -487,14 +489,8 @@
         existing.victories += (r.victory ? 1 : 0);
         existing.eliminations += (Number(r.elimination) || 0);
         existing.total += (Number(r.total) || 0);
-        if(r.placement !== null && r.placement !== undefined){
-          const p = Number(r.placement);
-          if(!Number.isNaN(p)){
-            if(existing.bestPlacement === null || p < existing.bestPlacement){
-              existing.bestPlacement = p;
-            }
-          }
-        }
+        existing.placementPts += (Number(r.placement_pts) || 0);
+
         if(r.tournament){
           existing.tournaments.add(r.tournament);
         }
@@ -509,15 +505,14 @@
       }));
 
       // SORT:
-      // Total desc, Victory desc, Elimination desc, current match placement asc
+      // Total desc, Victory desc, Elimination desc, Placement pts desc
       teams.sort((a,b) => {
         if(b.total !== a.total) return b.total - a.total;
         if(b.victories !== a.victories) return b.victories - a.victories;
         if(b.eliminations !== a.eliminations) return b.eliminations - a.eliminations;
-
-        const ap = (a.bestPlacement === null ? Number.POSITIVE_INFINITY : a.bestPlacement);
-        const bp = (b.bestPlacement === null ? Number.POSITIVE_INFINITY : b.bestPlacement);
-        return ap - bp; // ascending placement
+        const ap = a.placementPts || 0;
+        const bp = b.placementPts || 0;
+        return bp - ap; // higher placement points first
       });
 
       const rowsHtml = [];
@@ -528,7 +523,7 @@
         '<th>Team</th>'+
         '<th class="num">Matches</th>'+
         '<th class="num">Victories</th>'+
-        '<th class="num">Best&nbsp;placement</th>'+
+        '<th class="num">Placement&nbsp;pts</th>'+
         '<th class="num">Elims</th>'+
         '<th class="num">Total</th>'+
         '</tr></thead><tbody>');
@@ -537,11 +532,11 @@
         rowsHtml.push('<tr>'+
           `<td class="num rank">${idx+1}</td>`+
           `<td class="team"><strong>${escapeHtml(t.team)}</strong>`+
-          (t.victories > 0 ? `<span class="tag-pill">${t.victories} Victory${t.victories>1?'ies':' '}</span>` : '')+
+          (t.victories > 0 ? `<span class="tag-pill">${t.victories} Victory${t.victories>1?'ies':''}</span>` : '')+
           '</td>'+
           `<td class="num">${t.matchesPlayed}</td>`+
           `<td class="num">${t.victories}</td>`+
-          `<td class="num">${t.bestPlacement !== null ? t.bestPlacement : '—'}</td>`+
+          `<td class="num">${t.placementPts}</td>`+
           `<td class="num">${t.eliminations}</td>`+
           `<td class="num">${t.total}</td>`+
         '</tr>');
@@ -567,7 +562,6 @@
     stageFilter.addEventListener('change', applyFiltersAndRender);
     dayFilter.addEventListener('change', applyFiltersAndRender);
     teamSearch.addEventListener('input', () => {
-      // small debounce-ish: just re-apply on each keystroke, dataset is small
       applyFiltersAndRender();
     });
 
