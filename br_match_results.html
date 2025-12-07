@@ -64,6 +64,37 @@
       color:var(--muted);
       margin-top:2px;
     }
+    header .right-tools{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    header button{
+      border:none;
+      border-radius:999px;
+      padding:6px 12px;
+      font-size:.8rem;
+      background:var(--panel3);
+      color:var(--ink);
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      transition:background .15s, transform .05s, box-shadow .15s;
+    }
+    header button .icon{
+      font-size:.9rem;
+    }
+    header button:hover{
+      background:#1b2335;
+      transform:translateY(-1px);
+      box-shadow:0 4px 10px rgba(0,0,0,.35);
+    }
+    header button:active{
+      transform:translateY(0);
+      box-shadow:none;
+    }
 
     /* FILTERS */
     section#controls{
@@ -238,6 +269,12 @@
         <h1>COD:M Esports Match Results — Team Overview</h1>
         <span class="sub">Scores generated for COD:M Esports Tournament.</span>
       </div>
+      <div class="right-tools">
+        <button id="refresh-btn" type="button">
+          <span class="icon">🔄</span>
+          <span>Refresh</span>
+        </button>
+      </div>
     </header>
 
     <!-- FILTERS -->
@@ -317,8 +354,10 @@
     const teamSearch       = document.getElementById('team-search');
     const summaryEl        = document.getElementById('summary');
     const tableWrapper     = document.getElementById('table-wrapper');
+    const refreshBtn       = document.getElementById('refresh-btn');
 
-    let allRows = [];   // raw rows from Supabase
+    let allRows = [];          // raw rows from Supabase
+    let filtersInitialized = false; // to only auto-select latest tournament once
 
     // ===== Fetch data =====
     async function fetchMatchResults(){
@@ -363,7 +402,17 @@
         if(r.day   !== null && r.day !== undefined) days.add(String(r.day));
       });
 
-      function refillSelect(sel, values, allLabel){
+      // Determine latest tournament (from last row with a tournament value)
+      let latestTournament = null;
+      for(let i = allRows.length - 1; i >= 0; i--){
+        const t = allRows[i].tournament;
+        if(t){
+          latestTournament = t;
+          break;
+        }
+      }
+
+      function refillSelect(sel, values, allLabel, preferred){
         const current = sel.value;
         sel.innerHTML = '';
         const optAll = document.createElement('option');
@@ -371,26 +420,33 @@
         optAll.textContent = allLabel;
         sel.appendChild(optAll);
 
-        Array.from(values)
-          .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))
-          .forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            sel.appendChild(opt);
-          });
+        const arrValues = Array.from(values)
+          .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 
-        if(current && Array.from(values).includes(current)){
+        arrValues.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
+        });
+
+        if(!filtersInitialized && preferred && arrValues.includes(preferred)){
+          // First load: default to latest tournament if available
+          sel.value = preferred;
+        }else if(current && arrValues.includes(current)){
+          // Keep existing user selection
           sel.value = current;
         }else{
           sel.value = 'all';
         }
       }
 
-      refillSelect(tournamentFilter, tournaments, 'All tournaments');
-      refillSelect(matchFilter,      matches,     'All matches');
-      refillSelect(stageFilter,      stages,      'All stages');
-      refillSelect(dayFilter,        days,        'All days');
+      refillSelect(tournamentFilter, tournaments, 'All tournaments', latestTournament);
+      refillSelect(matchFilter,      matches,     'All matches',   null);
+      refillSelect(stageFilter,      stages,      'All stages',    null);
+      refillSelect(dayFilter,        days,        'All days',      null);
+
+      filtersInitialized = true;
     }
 
     // ===== Apply filters and render =====
@@ -442,7 +498,6 @@
         totalPoints += (Number(r.total)||0);
       });
 
-      const rowsCount  = rows.length;
       const teamCount  = teamMap.size;
       const matchCount = matchSet.size;
 
@@ -584,6 +639,7 @@
     teamSearch.addEventListener('input', () => {
       applyFiltersAndRender();
     });
+    refreshBtn.addEventListener('click', fetchMatchResults);
 
     // ===== Init =====
     document.addEventListener('DOMContentLoaded', fetchMatchResults);
