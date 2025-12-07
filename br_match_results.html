@@ -200,7 +200,7 @@
       width:100%;
       border-collapse:collapse;
       font-size:.78rem;
-      min-width:720px;
+      min-width:820px;
     }
     .results-table thead{
       position:sticky;
@@ -260,7 +260,7 @@
         <span class="sub">Live scoreboard and per-match breakdown from <code>match_results</code></span>
       </div>
       <div style="font-size:.78rem;color:var(--muted);text-align:right;">
-        Filter by stage, day, or team name to see standings update in real time.
+        Filter by tournament, stage, day, or team name to see standings.
       </div>
     </header>
 
@@ -269,6 +269,13 @@
       <section>
         <h2>Filters</h2>
         <div class="filters">
+          <div class="field">
+            <label for="filter-tournament">Tournament</label>
+            <select id="filter-tournament">
+              <option value="all">All tournaments</option>
+            </select>
+          </div>
+
           <div class="field">
             <label for="filter-stage">Stage</label>
             <select id="filter-stage">
@@ -329,6 +336,7 @@
               <tr>
                 <th>Day</th>
                 <th>Stage</th>
+                <th>Tournament</th>
                 <th>Match</th>
                 <th>Slot</th>
                 <th>Team</th>
@@ -355,20 +363,26 @@
 
   <script>
     // ----- Supabase client -----
-    // Use the SAME URL + anon key you used for the match_results table / Apps Script.
-    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    // Using same project as your bracket settings page.
+    const SUPABASE_URL = 'https://fjdyppkanjnvyscqrfum.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZHlwcGthbmpudnlzY3FyZnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNDU1NzIsImV4cCI6MjA3NTkyMTU3Mn0.ssEN7uA9BVm9AkhsjkWxhPzV1-VQVxc4-u7LS2wt4Aw';
+
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // match_results columns (DB):
+    // id, day, stage, match_no, slot, team_name, placement, elimination,
+    // victory, placement_pts, elimination_pts, total, tournament
 
     // ----- State -----
     let allResults = [];
 
     // DOM refs
-    const stageSelect   = document.getElementById('filter-stage');
-    const daySelect     = document.getElementById('filter-day');
-    const teamInput     = document.getElementById('filter-team');
-    const summaryText   = document.getElementById('summary-text');
-    const summaryChips  = document.getElementById('summary-chips');
+    const tournamentSelect = document.getElementById('filter-tournament');
+    const stageSelect      = document.getElementById('filter-stage');
+    const daySelect        = document.getElementById('filter-day');
+    const teamInput        = document.getElementById('filter-team');
+    const summaryText      = document.getElementById('summary-text');
+    const summaryChips     = document.getElementById('summary-chips');
     const leaderboardBody  = document.getElementById('leaderboard-body');
     const resultsBody      = document.getElementById('results-body');
     const leaderboardStatus = document.getElementById('leaderboard-status');
@@ -376,6 +390,14 @@
 
     // ----- Helpers -----
     function buildFiltersFromData(){
+      const tournaments = Array.from(
+        new Set(
+          allResults
+            .map(r => r.tournament)
+            .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
+        )
+      ).sort((a,b) => String(a).localeCompare(String(b)));
+
       const stages = Array.from(
         new Set(
           allResults
@@ -391,6 +413,15 @@
             .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
         )
       ).sort((a,b) => Number(a) - Number(b));
+
+      // Tournament options
+      tournamentSelect.innerHTML = '<option value="all">All tournaments</option>';
+      tournaments.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = String(t);
+        opt.textContent = String(t);
+        tournamentSelect.appendChild(opt);
+      });
 
       // Stage options
       stageSelect.innerHTML = '<option value="all">All stages</option>';
@@ -412,11 +443,16 @@
     }
 
     function getFilteredResults(){
-      const stageVal = stageSelect.value;
-      const dayVal   = daySelect.value;
-      const teamQ    = teamInput.value.trim().toLowerCase();
+      const tournamentVal = tournamentSelect.value;
+      const stageVal      = stageSelect.value;
+      const dayVal        = daySelect.value;
+      const teamQ         = teamInput.value.trim().toLowerCase();
 
       return allResults.filter(row => {
+        if(tournamentVal !== 'all'){
+          const t = row.tournament ? String(row.tournament) : '';
+          if(t !== tournamentVal) return false;
+        }
         if(stageVal !== 'all' && String(row.stage) !== stageVal) return false;
         if(dayVal !== 'all' && String(row.day) !== dayVal) return false;
         if(teamQ){
@@ -431,8 +467,12 @@
       const totalMatches = filtered.length;
       const uniqueTeams = new Set(filtered.map(r => r.team_name || '').filter(Boolean)).size;
 
-      const stageVal = stageSelect.value;
-      const dayVal   = daySelect.value;
+      const tournamentVal = tournamentSelect.value;
+      const stageVal      = stageSelect.value;
+      const dayVal        = daySelect.value;
+
+      let tournamentLabel = 'All tournaments';
+      if(tournamentVal !== 'all') tournamentLabel = String(tournamentVal);
 
       let stageLabel = 'All stages';
       if(stageVal !== 'all') stageLabel = 'Stage ' + stageVal;
@@ -441,7 +481,7 @@
       if(dayVal !== 'all') dayLabel = 'Day ' + dayVal;
 
       summaryText.textContent =
-        `${totalMatches} match entries • ${uniqueTeams} team(s) • ${stageLabel} • ${dayLabel}`;
+        `${totalMatches} match entries • ${uniqueTeams} team(s) • ${tournamentLabel} • ${stageLabel} • ${dayLabel}`;
 
       // Chips
       summaryChips.innerHTML = '';
@@ -449,6 +489,7 @@
       const chipData = [
         { label:'Matches', value: totalMatches },
         { label:'Teams', value: uniqueTeams },
+        { label:'Tournament', value: tournamentLabel },
         { label:'Stage', value: stageLabel },
         { label:'Day', value: dayLabel }
       ];
@@ -568,8 +609,12 @@
         tdStage.textContent = row.stage ?? '';
         tr.appendChild(tdStage);
 
+        const tdTournament = document.createElement('td');
+        tdTournament.textContent = row.tournament ?? '';
+        tr.appendChild(tdTournament);
+
         const tdMatch = document.createElement('td');
-        const matchLabel = row.match_no ?? row.match ?? '';
+        const matchLabel = row.match_no ?? '';
         tdMatch.textContent = matchLabel;
         tr.appendChild(tdMatch);
 
@@ -621,6 +666,8 @@
         summaryText.textContent = 'No data loaded.';
         leaderboardBody.innerHTML = '';
         resultsBody.innerHTML = '';
+        leaderboardStatus.textContent = '';
+        resultsStatus.textContent = '';
         return;
       }
 
@@ -638,8 +685,10 @@
         const { data, error } = await client
           .from('match_results')
           .select('*')
+          .order('tournament', { ascending:true })
           .order('day', { ascending:true })
-          .order('id', { ascending:true });
+          .order('match_no', { ascending:true })
+          .order('slot', { ascending:true });
 
         if(error){
           console.error('Error loading match_results:', error);
@@ -667,10 +716,10 @@
     }
 
     // ----- Listeners -----
+    tournamentSelect.addEventListener('change', applyFiltersAndRender);
     stageSelect.addEventListener('change', applyFiltersAndRender);
     daySelect.addEventListener('change', applyFiltersAndRender);
     teamInput.addEventListener('input', () => {
-      // small debounce not strictly needed, but keeps it light
       if(window.__teamFilterTimer) clearTimeout(window.__teamFilterTimer);
       window.__teamFilterTimer = setTimeout(applyFiltersAndRender, 150);
     });
