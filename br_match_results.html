@@ -2,19 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Match Results — Viewer</title>
+  <title>Match Results — Overview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
   <style>
     :root{
       --bg:#05060a;
-      --panel:#111524;
-      --panel2:#181d2f;
+      --panel:#0d1017;
+      --panel2:#151b26;
+      --panel3:#111624;
       --ink:#f6f7fb;
       --muted:#a3acc3;
       --brand:#ffe93b;
       --accent:#7fd2ff;
-      --line:#262b3d;
+      --line:#252b3b;
+      --danger:#ff6b6b;
       --radius-lg:16px;
       --radius-sm:10px;
     }
@@ -22,7 +24,7 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{
       height:100%;
-      background:radial-gradient(circle at top,#171c30 0,#05060a 52%);
+      background:radial-gradient(circle at top,#171c30 0,#05060a 55%);
       color:var(--ink);
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,sans-serif;
     }
@@ -34,10 +36,10 @@
 
     .app{
       width:100%;
-      max-width:1440px;
+      max-width:1280px;
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:12px;
     }
 
     header{
@@ -48,104 +50,103 @@
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:10px;
+      gap:12px;
       flex-wrap:wrap;
     }
     header h1{
-      font-size:1.1rem;
-      letter-spacing:.04em;
+      font-size:1.15rem;
+      letter-spacing:.06em;
       text-transform:uppercase;
     }
     header span.sub{
+      display:block;
       font-size:.8rem;
       color:var(--muted);
+      margin-top:2px;
     }
 
-    .header-right{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:3px 8px;
-      border-radius:999px;
-      background:#0a0c16;
-      border:1px solid rgba(255,233,59,.28);
-      font-size:.72rem;
-      color:var(--muted);
-      gap:6px;
-    }
-    .pill span.dot{
-      width:7px;height:7px;border-radius:50%;background:#38d996;
-    }
-
-    /* Filters */
-    .filters{
+    /* FILTERS */
+    section#controls{
       border-radius:var(--radius-lg);
       background:var(--panel);
       border:1px solid var(--line);
-      padding:8px 10px;
+      padding:12px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .controls-row{
       display:flex;
       flex-wrap:wrap;
-      gap:8px;
       align-items:flex-end;
+      gap:14px;
     }
+
+    .controls-row.bottom{
+      margin-top:2px;
+    }
+
     .filter-group{
       display:flex;
       flex-direction:column;
-      gap:3px;
-      min-width:120px;
-      flex:1 1 120px;
-      font-size:.78rem;
+      gap:4px;
+      font-size:.8rem;
+      min-width:140px;
     }
     .filter-group label{
       color:var(--muted);
     }
     .filter-group select,
     .filter-group input{
-      background:var(--panel2);
+      background:var(--panel3);
       border-radius:999px;
       border:1px solid var(--line);
       color:var(--ink);
       padding:6px 10px;
-      font-size:.8rem;
+      font-size:.82rem;
       outline:none;
+      min-width:0;
     }
     .filter-group select:focus,
     .filter-group input:focus{
       border-color:var(--accent);
-      box-shadow:0 0 0 1px rgba(127,210,255,.28);
-    }
-    .summary-text{
-      font-size:.76rem;
-      color:var(--muted);
-      margin-top:2px;
+      box-shadow:0 0 0 1px rgba(127,210,255,.32);
     }
 
-    /* Results card */
-    section{
+    .filter-group.wide{
+      flex:1 1 220px;
+    }
+
+    .summary-line{
+      font-size:.78rem;
+      color:var(--muted);
+      padding-top:4px;
+      border-top:1px dashed rgba(255,255,255,.08);
+      margin-top:4px;
+    }
+    .summary-line strong{
+      color:var(--brand);
+      font-weight:600;
+    }
+
+    /* TABLE WRAPPER */
+    section#results{
       border-radius:var(--radius-lg);
       background:var(--panel);
       border:1px solid var(--line);
       padding:10px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      min-height:0;
     }
-    section h2{
+    #results h2{
       font-size:.9rem;
       text-transform:uppercase;
       letter-spacing:.08em;
       color:var(--muted);
-      margin-bottom:2px;
+      margin-bottom:6px;
     }
 
-    .results-scroll{
-      max-height:540px;
+    .table-scroll{
+      max-height:520px;
       overflow:auto;
       border-radius:var(--radius-sm);
       background:var(--panel2);
@@ -160,481 +161,418 @@
     thead{
       position:sticky;
       top:0;
-      background:linear-gradient(180deg,#1d2236,#141827);
       z-index:1;
+      background:linear-gradient(180deg,#171d2b,#111624);
     }
     th,td{
-      padding:6px 7px;
-      border-bottom:1px solid var(--line);
-      text-align:left;
-    }
-    th{
-      color:var(--muted);
-      font-weight:500;
-      font-size:.74rem;
+      padding:6px 8px;
+      border-bottom:1px solid rgba(255,255,255,.04);
       white-space:nowrap;
     }
-    tbody tr:nth-child(even){
-      background:rgba(0,0,0,.06);
+    th{
+      text-align:left;
+      color:var(--muted);
+      font-weight:500;
+      font-size:.76rem;
     }
-    .col-r{
+    th.num,td.num{
       text-align:right;
       font-variant-numeric:tabular-nums;
     }
-    .team-name{
-      white-space:nowrap;
+    tbody tr:nth-child(even){
+      background:rgba(0,0,0,.18);
+    }
+    tbody tr:hover{
+      background:rgba(127,210,255,.11);
+    }
+    td.rank{
+      color:var(--muted);
+      font-weight:500;
+    }
+    td.team{
+      max-width:220px;
       overflow:hidden;
       text-overflow:ellipsis;
-      max-width:220px;
     }
-
+    td.team strong{
+      font-weight:600;
+    }
     .tag-pill{
       display:inline-flex;
       align-items:center;
       padding:2px 6px;
       border-radius:999px;
-      font-size:.66rem;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-    }
-    .tag-win{
-      background:rgba(99, 230, 165, .14);
-      color:#7ef9c0;
-      border:1px solid rgba(99, 230, 165, .4);
-    }
-    .tag-loss{
-      background:rgba(251, 113, 133, .14);
-      color:#ffb4c2;
-      border:1px solid rgba(251, 113, 133, .4);
+      font-size:.7rem;
+      background:rgba(255,233,59,.16);
+      color:var(--brand);
+      margin-left:4px;
     }
 
-    .empty-state{
+    .empty{
       padding:10px;
-      font-size:.78rem;
+      font-size:.8rem;
       color:var(--muted);
-    }
-    .status-text{
-      font-size:.74rem;
-      color:var(--muted);
-      margin-top:2px;
     }
 
-    @media(max-width:720px){
-      .filters{
-        flex-direction:column;
+    footer{
+      font-size:.7rem;
+      color:var(--muted);
+      text-align:right;
+      padding:2px 4px;
+    }
+
+    @media(max-width:800px){
+      header{
+        align-items:flex-start;
+      }
+      .filter-group{
+        min-width:130px;
       }
     }
   </style>
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app">
     <header>
       <div>
-        <h1>Match Results — Viewer</h1>
-        <span class="sub">Pulling from Supabase <code>match_results</code></span>
-      </div>
-      <div class="header-right">
-        <div class="pill">
-          <span class="dot"></span>
-          <span id="connection-status">Connected</span>
-        </div>
+        <h1>Match Results — Team Overview</h1>
+        <span class="sub">Pulling live data from <code>match_results</code> in Supabase</span>
       </div>
     </header>
 
     <!-- FILTERS -->
-    <section class="filters">
-      <div class="filter-group">
-        <label for="filter-tournament">Tournament</label>
-        <select id="filter-tournament">
-          <option value="ALL">All tournaments</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-stage">Stage</label>
-        <select id="filter-stage">
-          <option value="ALL">All stages</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-day">Day</label>
-        <select id="filter-day">
-          <option value="ALL">All days</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-match">Match</label>
-        <select id="filter-match">
-          <option value="ALL">All matches</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-team">Team search</label>
-        <input id="filter-team" type="text" placeholder="Type team name…"/>
-      </div>
-      <div class="filter-group" style="flex:0 0 100%;max-width:none;">
-        <span id="summary-text" class="summary-text">Loading data…</span>
-      </div>
-    </section>
+    <section id="controls">
+      <!-- top row: tournament + match -->
+      <div class="controls-row top">
+        <div class="filter-group">
+          <label for="tournament-filter">Tournament</label>
+          <select id="tournament-filter">
+            <option value="all">All tournaments</option>
+          </select>
+        </div>
 
-    <!-- RESULTS -->
-    <section>
-      <h2>Results (sorted by Total, Victory, Elims, Placement)</h2>
-      <div class="results-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:54px;">Day</th>
-              <th style="width:70px;">Stage</th>
-              <th style="width:56px;">Match</th>
-              <th style="width:52px;">Slot</th>
-              <th>Tournament</th>
-              <th>Team</th>
-              <th class="col-r">Placement</th>
-              <th class="col-r">Elims</th>
-              <th style="width:86px;">Victory</th>
-              <th class="col-r">PLC Pts</th>
-              <th class="col-r">Elim Pts</th>
-              <th class="col-r">Total</th>
-            </tr>
-          </thead>
-          <tbody id="results-body"></tbody>
-        </table>
-        <div id="results-empty" class="empty-state" style="display:none;">
-          No results match the current filters.
+        <div class="filter-group">
+          <label for="match-filter">Match</label>
+          <select id="match-filter">
+            <option value="all">All matches</option>
+          </select>
         </div>
       </div>
-      <div id="results-status" class="status-text"></div>
+
+      <!-- summary on its own row so it doesn't break the layout -->
+      <div id="summary" class="summary-line">
+        Loading results…
+      </div>
+
+      <!-- bottom row: stage + day + team search -->
+      <div class="controls-row bottom">
+        <div class="filter-group">
+          <label for="stage-filter">Stage</label>
+          <select id="stage-filter">
+            <option value="all">All stages</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="day-filter">Day</label>
+          <select id="day-filter">
+            <option value="all">All days</option>
+          </select>
+        </div>
+
+        <div class="filter-group wide">
+          <label for="team-search">Team search</label>
+          <input id="team-search" type="text" placeholder="Type team name…"/>
+        </div>
+      </div>
     </section>
+
+    <!-- RESULTS TABLE -->
+    <section id="results">
+      <h2>Team standings (by filters)</h2>
+      <div class="table-scroll" id="table-wrapper">
+        <div class="empty" id="empty-state">Loading data from Supabase…</div>
+      </div>
+    </section>
+
+    <footer id="footer-note">
+      Kills = Eliminations • <strong>Victory</strong> = match win flag
+    </footer>
   </div>
 
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // ===== Supabase Setup =====
+    // ===== Supabase setup =====
     const SUPABASE_URL = 'https://fjdyppkanjnvyscqrfum.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZHlwcGthbmpudnlzY3FyZnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNDU1NzIsImV4cCI6MjA3NTkyMTU3Mn0.ssEN7uA9BVm9AkhsjkWxhPzV1-VQVxc4-u7LS2wt4Aw';
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // DOM refs
-    const filterTournament = document.getElementById('filter-tournament');
-    const filterStage      = document.getElementById('filter-stage');
-    const filterDay        = document.getElementById('filter-day');
-    const filterMatch      = document.getElementById('filter-match');
-    const filterTeam       = document.getElementById('filter-team');
+    // ===== DOM refs =====
+    const tournamentFilter = document.getElementById('tournament-filter');
+    const matchFilter      = document.getElementById('match-filter');
+    const stageFilter      = document.getElementById('stage-filter');
+    const dayFilter        = document.getElementById('day-filter');
+    const teamSearch       = document.getElementById('team-search');
+    const summaryEl        = document.getElementById('summary');
+    const tableWrapper     = document.getElementById('table-wrapper');
 
-    const summaryText      = document.getElementById('summary-text');
-    const resultsBody      = document.getElementById('results-body');
-    const resultsEmpty     = document.getElementById('results-empty');
-    const resultsStatus    = document.getElementById('results-status');
+    let allRows = [];   // raw rows from Supabase
 
-    let allResults = [];
+    // ===== Fetch data =====
+    async function fetchMatchResults(){
+      try{
+        summaryEl.textContent = 'Loading results from Supabase…';
 
-    // Helpers
-    const toNum = (v, fallback = 0) => {
-      const n = Number(v);
-      return Number.isNaN(n) ? fallback : n;
-    };
+        const { data, error } = await client
+          .from('match_results')
+          .select('*')
+          .order('id', { ascending: true });
 
-    const winVal = (v) =>
-      (v === true || v === 1 || v === '1' || v === 'true') ? 1 : 0;
+        if(error){
+          console.error('Supabase error:', error);
+          summaryEl.textContent = 'Error loading data from Supabase.';
+          tableWrapper.innerHTML =
+            `<div class="empty">Error loading data: ${error.message}</div>`;
+          return;
+        }
 
-    // Custom sort: Total DESC, Victory DESC, Elims DESC, Placement ASC
-    function sortResultsForDisplay(rows){
-      return rows.slice().sort((a, b) => {
-        // 1) Total points
-        const totalA = toNum(
-          a.total ?? (toNum(a.placement_pts) + toNum(a.elimination_pts))
-        );
-        const totalB = toNum(
-          b.total ?? (toNum(b.placement_pts) + toNum(b.elimination_pts))
-        );
-        if (totalB !== totalA) return totalB - totalA;
-
-        // 2) Victory (1 > 0)
-        const winA = winVal(a.victory);
-        const winB = winVal(b.victory);
-        if (winB !== winA) return winB - winA;
-
-        // 3) Eliminations
-        const elimA = toNum(a.elimination);
-        const elimB = toNum(b.elimination);
-        if (elimB !== elimA) return elimB - elimA;
-
-        // 4) Placement (1 is better, so ASC)
-        const plcA = toNum(a.placement, 999);
-        const plcB = toNum(b.placement, 999);
-        if (plcA !== plcB) return plcA - plcB;
-
-        // Tie-breakers: Day → Match → Slot → Team name
-        const dayA = toNum(a.day, 0);
-        const dayB = toNum(b.day, 0);
-        if (dayA !== dayB) return dayA - dayB;
-
-        const mA = toNum(a.match_no, 0);
-        const mB = toNum(b.match_no, 0);
-        if (mA !== mB) return mA - mB;
-
-        const sA = toNum(a.slot, 0);
-        const sB = toNum(b.slot, 0);
-        if (sA !== sB) return sA - sB;
-
-        const tA = (a.team_name || '').toLowerCase();
-        const tB = (b.team_name || '').toLowerCase();
-        return tA.localeCompare(tB);
-      });
-    }
-
-    // Load from Supabase
-    async function loadMatchResults(){
-      summaryText.textContent = 'Loading results from Supabase…';
-      resultsStatus.textContent = '';
-
-      const { data, error } = await client
-        .from('match_results')
-        .select('*')
-        .order('day', { ascending: true })
-        .order('match_no', { ascending: true })
-        .order('slot', { ascending: true });
-
-      if(error){
-        console.error('Error loading match_results:', error);
-        summaryText.textContent = 'Error loading data: ' + error.message;
-        resultsStatus.textContent = 'Failed to load results.';
-        return;
+        allRows = data || [];
+        buildFilterOptions();
+        applyFiltersAndRender();
+      }catch(err){
+        console.error('Unexpected error:', err);
+        summaryEl.textContent = 'Unexpected error loading data.';
+        tableWrapper.innerHTML =
+          `<div class="empty">Unexpected error: ${err.message || err}</div>`;
       }
-
-      allResults = data || [];
-      buildFilterOptions();
-      applyFiltersAndRender();
     }
 
-    // Build filter options from data
+    // ===== Build filter dropdowns =====
     function buildFilterOptions(){
       const tournaments = new Set();
-      const stages = new Set();
-      const days = new Set();
-      const matches = new Set();
+      const matches     = new Set();
+      const stages      = new Set();
+      const days        = new Set();
 
-      allResults.forEach(r => {
+      allRows.forEach(r => {
         if(r.tournament) tournaments.add(r.tournament);
+        if(r.match_no !== null && r.match_no !== undefined) matches.add(String(r.match_no));
         if(r.stage) stages.add(r.stage);
-        if(r.day !== null && r.day !== undefined) days.add(r.day);
-        if(r.match_no !== null && r.match_no !== undefined) matches.add(r.match_no);
+        if(r.day   !== null && r.day !== undefined) days.add(String(r.day));
       });
 
-      function rebuildSelect(selectEl, allLabel, values, formatter){
-        const current = selectEl.value;
-        selectEl.innerHTML = '';
+      function refillSelect(sel, values, allLabel){
+        const current = sel.value;
+        sel.innerHTML = '';
         const optAll = document.createElement('option');
-        optAll.value = 'ALL';
+        optAll.value = 'all';
         optAll.textContent = allLabel;
-        selectEl.appendChild(optAll);
+        sel.appendChild(optAll);
 
-        Array.from(values).sort((a,b) => {
-          if(typeof a === 'number' && typeof b === 'number') return a - b;
-          return String(a).localeCompare(String(b));
-        }).forEach(v => {
+        Array.from(values).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(v => {
           const opt = document.createElement('option');
-          opt.value = String(v);
-          opt.textContent = formatter ? formatter(v) : String(v);
-          selectEl.appendChild(opt);
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
         });
 
-        if(current && Array.from(selectEl.options).some(o => o.value === current)){
-          selectEl.value = current;
+        if(current && Array.from(values).includes(current)){
+          sel.value = current;
         }else{
-          selectEl.value = 'ALL';
+          sel.value = 'all';
         }
       }
 
-      rebuildSelect(filterTournament, 'All tournaments', tournaments, v => v);
-      rebuildSelect(filterStage, 'All stages', stages, v => v);
-      rebuildSelect(filterDay, 'All days', days, v => 'Day ' + v);
-      rebuildSelect(filterMatch, 'All matches', matches, v => 'Match ' + v);
+      refillSelect(tournamentFilter, tournaments, 'All tournaments');
+      refillSelect(matchFilter,      matches,     'All matches');
+      refillSelect(stageFilter,      stages,      'All stages');
+      refillSelect(dayFilter,        days,        'All days');
     }
 
-    // Filter logic
-    function getFilteredResults(){
-      const tVal = filterTournament.value;
-      const sVal = filterStage.value;
-      const dVal = filterDay.value;
-      const mVal = filterMatch.value;
-      const teamQuery = filterTeam.value.trim().toLowerCase();
+    // ===== Apply filters and render =====
+    function applyFiltersAndRender(){
+      const tFilter = tournamentFilter.value;
+      const mFilter = matchFilter.value;
+      const sFilter = stageFilter.value;
+      const dFilter = dayFilter.value;
+      const q       = (teamSearch.value || '').trim().toLowerCase();
 
-      return allResults.filter(r => {
-        if(tVal !== 'ALL' && String(r.tournament || '') !== tVal) return false;
-        if(sVal !== 'ALL' && String(r.stage || '') !== sVal) return false;
-
-        if(dVal !== 'ALL'){
-          const d = toNum(r.day, null);
-          if(String(d) !== dVal) return false;
-        }
-
-        if(mVal !== 'ALL'){
-          const m = toNum(r.match_no, null);
-          if(String(m) !== mVal) return false;
-        }
-
-        if(teamQuery){
-          const name = (r.team_name || '').toLowerCase();
-          if(!name.includes(teamQuery)) return false;
-        }
-
+      const filtered = allRows.filter(r => {
+        if(tFilter !== 'all' && r.tournament !== tFilter) return false;
+        if(mFilter !== 'all' && String(r.match_no) !== mFilter) return false;
+        if(sFilter !== 'all' && r.stage !== sFilter) return false;
+        if(dFilter !== 'all' && String(r.day) !== dFilter) return false;
+        if(q && !(r.team_name || '').toLowerCase().includes(q)) return false;
         return true;
       });
+
+      renderSummary(filtered);
+      renderTable(filtered);
     }
 
+    // ===== Summary line =====
     function renderSummary(rows){
       if(!rows.length){
-        summaryText.textContent = 'No rows match the current filters.';
+        summaryEl.innerHTML = 'No rows match the current filters.';
         return;
       }
 
-      const teamSet = new Set();
+      const teamMap = new Map();
       const matchSet = new Set();
-      let totalWins = 0;
+      let totalVictories = 0;
       let totalElims = 0;
       let totalPoints = 0;
 
       rows.forEach(r => {
-        if(r.team_name) teamSet.add(r.team_name);
-        matchSet.add(`${r.day}|${r.match_no}`);
-        totalWins += winVal(r.victory);
-        totalElims += toNum(r.elimination);
-        totalPoints += toNum(
-          r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts))
-        );
+        const key = r.team_name || 'Unknown';
+        const current = teamMap.get(key) || { team:key, matches:new Set(), victories:0, eliminations:0, total:0 };
+        current.matches.add(r.match_no);
+        current.victories += (r.victory ? 1 : 0);
+        current.eliminations += (Number(r.elimination)||0);
+        current.total += (Number(r.total)||0);
+        teamMap.set(key, current);
+
+        matchSet.add(r.match_no);
+        totalVictories += (r.victory ? 1 : 0);
+        totalElims += (Number(r.elimination)||0);
+        totalPoints += (Number(r.total)||0);
       });
 
-      const tLabel = filterTournament.value === 'ALL'
+      const rowsCount  = rows.length;
+      const teamCount  = teamMap.size;
+      const matchCount = matchSet.size;
+
+      const tLabel = tournamentFilter.value === 'all'
         ? 'All tournaments'
-        : filterTournament.value;
-      const sLabel = filterStage.value === 'ALL'
+        : tournamentFilter.value;
+      const sLabel = stageFilter.value === 'all'
         ? 'All stages'
-        : filterStage.value;
+        : stageFilter.value;
 
-      summaryText.textContent =
-        `${rows.length} rows • ${teamSet.size} teams • ${matchSet.size} matches • `
-        + `${totalWins} victories • ${totalElims} eliminations • ${totalPoints} total points `
-        + `• Tournament: ${tLabel} • Stage: ${sLabel}`;
+      summaryEl.innerHTML =
+        `<strong>${rowsCount}</strong> rows • `+
+        `<strong>${teamCount}</strong> teams • `+
+        `<strong>${matchCount}</strong> matches • `+
+        `<strong>${totalVictories}</strong> victories • `+
+        `<strong>${totalElims}</strong> eliminations • `+
+        `<strong>${totalPoints}</strong> total points • `+
+        `Tournament: <strong>${tLabel}</strong> • Stage: <strong>${sLabel}</strong>`;
     }
 
-    function renderResultsTable(rows){
-      resultsBody.innerHTML = '';
-
+    // ===== Build aggregated table =====
+    function renderTable(rows){
       if(!rows.length){
-        resultsEmpty.style.display = 'block';
-        resultsStatus.textContent = 'No rows match the current filters.';
+        tableWrapper.innerHTML =
+          '<div class="empty">No data for the selected filters. Try a different tournament, match, stage, day, or team search.</div>';
         return;
       }
-      resultsEmpty.style.display = 'none';
 
-      const sorted = sortResultsForDisplay(rows);
+      const teamMap = new Map();
 
-      sorted.forEach(r => {
-        const tr = document.createElement('tr');
+      rows.forEach(r => {
+        const key = r.team_name || 'Unknown';
+        const existing = teamMap.get(key) || {
+          team: key,
+          matches: new Set(),
+          victories: 0,
+          eliminations: 0,
+          total: 0,
+          bestPlacement: null,
+          tournaments: new Set()
+        };
 
-        const tdDay = document.createElement('td');
-        tdDay.textContent = r.day ?? '';
-        tr.appendChild(tdDay);
-
-        const tdStage = document.createElement('td');
-        tdStage.textContent = r.stage || '';
-        tr.appendChild(tdStage);
-
-        const tdMatch = document.createElement('td');
-        tdMatch.textContent = r.match_no ?? '';
-        tr.appendChild(tdMatch);
-
-        const tdSlot = document.createElement('td');
-        tdSlot.textContent = r.slot ?? '';
-        tr.appendChild(tdSlot);
-
-        const tdTourn = document.createElement('td');
-        tdTourn.textContent = r.tournament || '';
-        tr.appendChild(tdTourn);
-
-        const tdTeam = document.createElement('td');
-        tdTeam.className = 'team-name';
-        tdTeam.textContent = r.team_name || '';
-        tr.appendChild(tdTeam);
-
-        const tdPlc = document.createElement('td');
-        tdPlc.className = 'col-r';
-        tdPlc.textContent = r.placement ?? '';
-        tr.appendChild(tdPlc);
-
-        const tdElims = document.createElement('td');
-        tdElims.className = 'col-r';
-        tdElims.textContent = r.elimination ?? 0;
-        tr.appendChild(tdElims);
-
-        const tdVictory = document.createElement('td');
-        const tag = document.createElement('span');
-        tag.classList.add('tag-pill');
-        if(winVal(r.victory)){
-          tag.classList.add('tag-win');
-          tag.textContent = 'Victory';
-        }else{
-          tag.classList.add('tag-loss');
-          tag.textContent = 'No Victory';
+        existing.matches.add(r.match_no);
+        existing.victories += (r.victory ? 1 : 0);
+        existing.eliminations += (Number(r.elimination) || 0);
+        existing.total += (Number(r.total) || 0);
+        if(r.placement !== null && r.placement !== undefined){
+          const p = Number(r.placement);
+          if(!Number.isNaN(p)){
+            if(existing.bestPlacement === null || p < existing.bestPlacement){
+              existing.bestPlacement = p;
+            }
+          }
         }
-        tdVictory.appendChild(tag);
-        tr.appendChild(tdVictory);
+        if(r.tournament){
+          existing.tournaments.add(r.tournament);
+        }
 
-        const plcPts = r.placement_pts ?? (r.total - r.elimination_pts);
-        const tdPlcPts = document.createElement('td');
-        tdPlcPts.className = 'col-r';
-        tdPlcPts.textContent = toNum(plcPts,0);
-        tr.appendChild(tdPlcPts);
-
-        const elimPts = r.elimination_pts ?? 0;
-        const tdElimPts = document.createElement('td');
-        tdElimPts.className = 'col-r';
-        tdElimPts.textContent = toNum(elimPts,0);
-        tr.appendChild(tdElimPts);
-
-        const total = r.total ?? (toNum(plcPts,0) + toNum(elimPts,0));
-        const tdTotal = document.createElement('td');
-        tdTotal.className = 'col-r';
-        tdTotal.textContent = total;
-        tr.appendChild(tdTotal);
-
-        resultsBody.appendChild(tr);
+        teamMap.set(key, existing);
       });
 
-      resultsStatus.textContent =
-        `Showing ${rows.length} rows (sorted by Total, Victory, Elims, Placement).`;
+      let teams = Array.from(teamMap.values()).map(t => ({
+        ...t,
+        matchesPlayed: t.matches.size,
+        tournamentLabel: Array.from(t.tournaments).join(', ')
+      }));
+
+      // SORT:
+      // Total desc, Victory desc, Elimination desc, current match placement asc
+      teams.sort((a,b) => {
+        if(b.total !== a.total) return b.total - a.total;
+        if(b.victories !== a.victories) return b.victories - a.victories;
+        if(b.eliminations !== a.eliminations) return b.eliminations - a.eliminations;
+
+        const ap = (a.bestPlacement === null ? Number.POSITIVE_INFINITY : a.bestPlacement);
+        const bp = (b.bestPlacement === null ? Number.POSITIVE_INFINITY : b.bestPlacement);
+        return ap - bp; // ascending placement
+      });
+
+      const rowsHtml = [];
+
+      rowsHtml.push('<table>');
+      rowsHtml.push('<thead><tr>'+
+        '<th class="num">#</th>'+
+        '<th>Team</th>'+
+        '<th class="num">Matches</th>'+
+        '<th class="num">Victories</th>'+
+        '<th class="num">Best&nbsp;placement</th>'+
+        '<th class="num">Elims</th>'+
+        '<th class="num">Total</th>'+
+        '</tr></thead><tbody>');
+
+      teams.forEach((t, idx) => {
+        rowsHtml.push('<tr>'+
+          `<td class="num rank">${idx+1}</td>`+
+          `<td class="team"><strong>${escapeHtml(t.team)}</strong>`+
+          (t.victories > 0 ? `<span class="tag-pill">${t.victories} Victory${t.victories>1?'ies':' '}</span>` : '')+
+          '</td>'+
+          `<td class="num">${t.matchesPlayed}</td>`+
+          `<td class="num">${t.victories}</td>`+
+          `<td class="num">${t.bestPlacement !== null ? t.bestPlacement : '—'}</td>`+
+          `<td class="num">${t.eliminations}</td>`+
+          `<td class="num">${t.total}</td>`+
+        '</tr>');
+      });
+
+      rowsHtml.push('</tbody></table>');
+      tableWrapper.innerHTML = rowsHtml.join('');
     }
 
-    function applyFiltersAndRender(){
-      if(!allResults.length){
-        summaryText.textContent = 'No data loaded.';
-        resultsBody.innerHTML = '';
-        resultsEmpty.style.display = 'block';
-        resultsStatus.textContent = '';
-        return;
-      }
-      const filtered = getFilteredResults();
-      renderSummary(filtered);
-      renderResultsTable(filtered);
+    // ===== Helpers =====
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
     }
 
-    // Events
-    filterTournament.addEventListener('change', applyFiltersAndRender);
-    filterStage.addEventListener('change', applyFiltersAndRender);
-    filterDay.addEventListener('change', applyFiltersAndRender);
-    filterMatch.addEventListener('change', applyFiltersAndRender);
-    filterTeam.addEventListener('input', () => {
+    // ===== Event wiring =====
+    tournamentFilter.addEventListener('change', applyFiltersAndRender);
+    matchFilter.addEventListener('change', applyFiltersAndRender);
+    stageFilter.addEventListener('change', applyFiltersAndRender);
+    dayFilter.addEventListener('change', applyFiltersAndRender);
+    teamSearch.addEventListener('input', () => {
+      // small debounce-ish: just re-apply on each keystroke, dataset is small
       applyFiltersAndRender();
     });
 
-    // Init
-    document.addEventListener('DOMContentLoaded', () => {
-      loadMatchResults();
-    });
+    // ===== Init =====
+    document.addEventListener('DOMContentLoaded', fetchMatchResults);
   </script>
 </body>
 </html>
