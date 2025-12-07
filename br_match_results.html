@@ -296,7 +296,7 @@
     </section>
 
     <footer id="footer-note">
-      Kills = Eliminations • <strong>Victory</strong> = match win flag • <strong>Placement pts</strong> = points from placement
+      Kills = Eliminations • <strong>Victory</strong> = match win flag • <strong>Placement pts</strong> = points from placement • <strong>Last plc</strong> = placement in latest match_no (within filters)
     </footer>
   </div>
 
@@ -482,6 +482,8 @@
           eliminations: 0,
           total: 0,
           placementPts: 0,
+          lastMatchNo: null,
+          lastPlacement: null,
           tournaments: new Set()
         };
 
@@ -490,6 +492,19 @@
         existing.eliminations += (Number(r.elimination) || 0);
         existing.total += (Number(r.total) || 0);
         existing.placementPts += (Number(r.placement_pts) || 0);
+
+        // Track last match placement based on highest match_no in filtered rows
+        const mNoRaw = r.match_no;
+        if(mNoRaw !== null && mNoRaw !== undefined){
+          const mNo = Number(mNoRaw);
+          if(!Number.isNaN(mNo)){
+            if(existing.lastMatchNo === null || mNo > existing.lastMatchNo){
+              existing.lastMatchNo = mNo;
+              const plc = Number(r.placement);
+              existing.lastPlacement = Number.isNaN(plc) ? null : plc;
+            }
+          }
+        }
 
         if(r.tournament){
           existing.tournaments.add(r.tournament);
@@ -505,14 +520,18 @@
       }));
 
       // SORT:
-      // Total desc, Victory desc, Elimination desc, Placement pts desc
+      // Total desc, Victory desc, Elimination desc, Placement pts desc, Last placement asc
       teams.sort((a,b) => {
         if(b.total !== a.total) return b.total - a.total;
         if(b.victories !== a.victories) return b.victories - a.victories;
         if(b.eliminations !== a.eliminations) return b.eliminations - a.eliminations;
-        const ap = a.placementPts || 0;
-        const bp = b.placementPts || 0;
-        return bp - ap; // higher placement points first
+        const apPts = a.placementPts || 0;
+        const bpPts = b.placementPts || 0;
+        if(bpPts !== apPts) return bpPts - apPts;
+
+        const apLast = (a.lastPlacement === null ? Number.POSITIVE_INFINITY : a.lastPlacement);
+        const bpLast = (b.lastPlacement === null ? Number.POSITIVE_INFINITY : b.lastPlacement);
+        return apLast - bpLast; // ascending last placement (1st is best)
       });
 
       const rowsHtml = [];
@@ -524,6 +543,7 @@
         '<th class="num">Matches</th>'+
         '<th class="num">Victories</th>'+
         '<th class="num">Placement&nbsp;pts</th>'+
+        '<th class="num">Last&nbsp;plc</th>'+
         '<th class="num">Elims</th>'+
         '<th class="num">Total</th>'+
         '</tr></thead><tbody>');
@@ -537,6 +557,7 @@
           `<td class="num">${t.matchesPlayed}</td>`+
           `<td class="num">${t.victories}</td>`+
           `<td class="num">${t.placementPts}</td>`+
+          `<td class="num">${t.lastPlacement !== null ? t.lastPlacement : '—'}</td>`+
           `<td class="num">${t.eliminations}</td>`+
           `<td class="num">${t.total}</td>`+
         '</tr>');
