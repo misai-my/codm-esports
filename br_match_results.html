@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>COD:M Esports BR Tournament Match Results</title>
+  <title>Match Results — Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
   <style>
@@ -13,11 +13,11 @@
       --ink:#f6f7fb;
       --muted:#a3acc3;
       --brand:#ffe93b;
-      --brand-soft:rgba(255,233,59,.14);
       --accent:#7fd2ff;
+      --danger:#ff6b6b;
       --line:#262b3d;
       --radius-lg:16px;
-      --radius-sm:8px;
+      --radius-sm:10px;
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
@@ -27,7 +27,6 @@
       color:var(--ink);
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,sans-serif;
     }
-
     body{
       display:flex;
       justify-content:center;
@@ -36,7 +35,7 @@
 
     .app{
       width:100%;
-      max-width:1280px;
+      max-width:1440px;
       display:flex;
       flex-direction:column;
       gap:12px;
@@ -63,602 +62,496 @@
       color:var(--muted);
     }
 
-    main{
+    .header-right{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#0a0c16;
+      border:1px solid rgba(255,233,59,.28);
+      font-size:.72rem;
+      color:var(--muted);
+      gap:6px;
+    }
+    .pill span.dot{
+      width:7px;height:7px;border-radius:50%;background:#38d996;
+    }
+
+    /* Filters */
+    .filters{
+      border-radius:var(--radius-lg);
+      background:var(--panel);
+      border:1px solid var(--line);
+      padding:10px 12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:flex-end;
+    }
+    .filter-group{
       display:flex;
       flex-direction:column;
+      gap:3px;
+      min-width:120px;
+      flex:1 1 120px;
+      font-size:.78rem;
+    }
+    .filter-group label{
+      color:var(--muted);
+    }
+    .filter-group select,
+    .filter-group input{
+      background:var(--panel2);
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--ink);
+      padding:6px 10px;
+      font-size:.8rem;
+      outline:none;
+    }
+    .filter-group select:focus,
+    .filter-group input:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(127,210,255,.28);
+    }
+
+    .summary-text{
+      font-size:.76rem;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    /* Layout main */
+    main{
+      display:grid;
+      grid-template-columns:minmax(320px,380px) 1fr;
       gap:12px;
+      align-items:flex-start;
     }
 
     section{
       border-radius:var(--radius-lg);
       background:var(--panel);
       border:1px solid var(--line);
-      padding:12px;
+      padding:10px;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
     }
-
     section h2{
       font-size:.9rem;
       text-transform:uppercase;
       letter-spacing:.08em;
       color:var(--muted);
-      margin-bottom:8px;
-    }
-
-    /* Filters */
-    .filters{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:flex-end;
-    }
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-      font-size:.82rem;
-    }
-    .field label{
-      color:var(--muted);
-      font-size:.74rem;
-    }
-    .field select,
-    .field input[type="text"]{
-      background:var(--panel2);
-      border-radius:var(--radius-sm);
-      border:1px solid var(--line);
-      color:var(--ink);
-      padding:6px 8px;
-      font-size:.82rem;
-      outline:none;
-      min-width:120px;
-    }
-    .field select:focus,
-    .field input[type="text"]:focus{
-      border-color:var(--accent);
-      box-shadow:0 0 0 1px rgba(127,210,255,.3);
-    }
-
-    .summary{
-      margin-top:6px;
-      font-size:.78rem;
-      color:var(--muted);
+      margin-bottom:2px;
     }
 
     /* Leaderboard */
-    .leaderboard-table{
+    .leaderboard-scroll{
+      max-height:420px;
+      overflow:auto;
+      border-radius:var(--radius-sm);
+      background:var(--panel2);
+      border:1px solid var(--line);
+    }
+    table{
       width:100%;
       border-collapse:collapse;
-      font-size:.8rem;
-      border-radius:var(--radius-sm);
-      overflow:hidden;
-      margin-top:4px;
-    }
-    .leaderboard-table thead{
-      background:var(--panel2);
-    }
-    .leaderboard-table th,
-    .leaderboard-table td{
-      padding:6px 6px;
-      border-bottom:1px solid var(--line);
-      text-align:right;
-    }
-    .leaderboard-table th{
-      color:var(--muted);
-      font-weight:500;
       font-size:.78rem;
     }
-    .leaderboard-table th.team,
-    .leaderboard-table td.team{
+    thead{
+      position:sticky;
+      top:0;
+      background:linear-gradient(180deg,#1d2236,#141827);
+      z-index:1;
+    }
+    th,td{
+      padding:6px 7px;
+      border-bottom:1px solid var(--line);
       text-align:left;
+    }
+    th{
+      color:var(--muted);
+      font-weight:500;
+      font-size:.74rem;
+    }
+    tbody tr:nth-child(even){
+      background:rgba(0,0,0,.06);
+    }
+    .col-r{
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+    }
+    .team-name{
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      max-width:220px;
     }
-    .leaderboard-table th.rank,
-    .leaderboard-table td.rank{
-      width:40px;
-    }
-    .leaderboard-table td.total{
+    .rank-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      border:1px solid rgba(255,233,59,.4);
+      background:rgba(255,233,59,.1);
       color:var(--brand);
+      font-size:.7rem;
       font-weight:600;
-      font-variant-numeric:tabular-nums;
-    }
-    .leaderboard-table tbody tr:nth-child(even){
-      background:rgba(0,0,0,.08);
     }
 
-    .chip-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:6px;
-      font-size:.72rem;
+    .status-text{
+      font-size:.74rem;
+      color:var(--muted);
+      margin-top:4px;
     }
-    .chip{
+
+    /* Results table */
+    .results-scroll{
+      max-height:520px;
+      overflow:auto;
+      border-radius:var(--radius-sm);
+      background:var(--panel2);
+      border:1px solid var(--line);
+    }
+    .tag-pill{
       display:inline-flex;
       align-items:center;
       padding:2px 6px;
       border-radius:999px;
-      background:var(--panel2);
-      color:var(--muted);
-      border:1px solid rgba(255,255,255,.06);
+      font-size:.66rem;
+      letter-spacing:.04em;
+      text-transform:uppercase;
     }
-    .chip strong{
-      margin-left:3px;
-      color:var(--ink);
+    .tag-win{
+      background:rgba(99, 230, 165, .14);
+      color:#7ef9c0;
+      border:1px solid rgba(99, 230, 165, .4);
+    }
+    .tag-loss{
+      background:rgba(251, 113, 133, .14);
+      color:#ffb4c2;
+      border:1px solid rgba(251, 113, 133, .4);
     }
 
-    /* Results table */
-    .results-wrapper{
-      max-height:420px;
-      overflow:auto;
-      border-radius:var(--radius-sm);
-      border:1px solid var(--line);
-      background:var(--panel2);
-    }
-    .results-table{
-      width:100%;
-      border-collapse:collapse;
+    .empty-state{
+      padding:10px;
       font-size:.78rem;
-      min-width:820px;
-    }
-    .results-table thead{
-      position:sticky;
-      top:0;
-      background:#14192a;
-      z-index:1;
-    }
-    .results-table th,
-    .results-table td{
-      padding:5px 6px;
-      border-bottom:1px solid var(--line);
-    }
-    .results-table th{
       color:var(--muted);
-      font-weight:500;
-      text-align:left;
-      font-size:.75rem;
-      white-space:nowrap;
-    }
-    .results-table td{
-      font-variant-numeric:tabular-nums;
-    }
-    .results-table td.team{
-      font-weight:500;
-      color:var(--ink);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .results-table td.victory{
-      font-weight:600;
-      color:var(--brand);
-    }
-    .results-table tbody tr:nth-child(even){
-      background:rgba(0,0,0,.08);
     }
 
-    .status-text{
-      font-size:.76rem;
-      color:var(--muted);
-      margin-top:4px;
+    @media(max-width:1040px){
+      main{
+        display:flex;
+        flex-direction:column;
+      }
     }
-
-    @media (max-width:768px){
-      body{padding:10px;}
-      header{padding:10px 12px;}
-      section{padding:10px;}
-      .results-wrapper{max-height:340px;}
+    @media(max-width:720px){
+      .filters{
+        flex-direction:column;
+      }
     }
   </style>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app">
     <header>
       <div>
-        <h1>Tournament Match Results</h1>
-        <span class="sub">Live scoreboard and per-match breakdown from <code>match_results</code></span>
+        <h1>Match Results — Viewer</h1>
+        <span class="sub">Pulled live from Supabase <code>match_results</code> table</span>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);text-align:right;">
-        Filter by tournament, stage, day, or team name to see standings.
+      <div class="header-right">
+        <div class="pill">
+          <span class="dot"></span>
+          <span id="connection-status">Connected to database</span>
+        </div>
       </div>
     </header>
 
+    <!-- FILTERS -->
+    <section class="filters">
+      <div class="filter-group">
+        <label for="filter-tournament">Tournament</label>
+        <select id="filter-tournament">
+          <option value="ALL">All tournaments</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-stage">Stage</label>
+        <select id="filter-stage">
+          <option value="ALL">All stages</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-day">Day</label>
+        <select id="filter-day">
+          <option value="ALL">All days</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-match">Match</label>
+        <select id="filter-match">
+          <option value="ALL">All matches</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-team">Team search</label>
+        <input id="filter-team" type="text" placeholder="Type team name…"/>
+      </div>
+      <div class="filter-group" style="flex:0 0 100%;max-width:none;">
+        <span id="summary-text" class="summary-text">Loading data…</span>
+      </div>
+    </section>
+
     <main>
-      <!-- FILTERS -->
+      <!-- LEFT: Leaderboard -->
       <section>
-        <h2>Filters</h2>
-        <div class="filters">
-          <div class="field">
-            <label for="filter-tournament">Tournament</label>
-            <select id="filter-tournament">
-              <option value="all">All tournaments</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="filter-stage">Stage</label>
-            <select id="filter-stage">
-              <option value="all">All stages</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="filter-day">Day</label>
-            <select id="filter-day">
-              <option value="all">All days</option>
-            </select>
-          </div>
-
-          <div class="field" style="flex:1;min-width:180px;">
-            <label for="filter-team">Search Team</label>
-            <input type="text" id="filter-team" placeholder="Type part of a team name…"/>
-          </div>
-        </div>
-
-        <p id="summary-text" class="summary">Loading match data…</p>
-      </section>
-
-      <!-- LEADERBOARD -->
-      <section>
-        <h2>Leaderboard</h2>
-
-        <div class="chip-row" id="summary-chips">
-          <!-- chips injected via JS -->
-        </div>
-
-        <table class="leaderboard-table">
-          <thead>
-            <tr>
-              <th class="rank">#</th>
-              <th class="team">Team</th>
-              <th>MP</th>
-              <th>Victory</th>
-              <th>PLC Pts</th>
-              <th>ELIM Pts</th>
-              <th class="total">Total</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body">
-            <!-- rows injected via JS -->
-          </tbody>
-        </table>
-
-        <p id="leaderboard-status" class="status-text"></p>
-      </section>
-
-      <!-- FULL RESULTS -->
-      <section>
-        <h2>Match-by-Match Results</h2>
-        <div class="results-wrapper">
-          <table class="results-table">
+        <h2>Leaderboard (By Total Points)</h2>
+        <div class="leaderboard-scroll">
+          <table>
             <thead>
               <tr>
-                <th>Day</th>
-                <th>Stage</th>
-                <th>Tournament</th>
-                <th>Match</th>
-                <th>Slot</th>
+                <th style="width:36px;">#</th>
                 <th>Team</th>
-                <th>PLC</th>
-                <th>ELIM</th>
-                <th>Victory</th>
-                <th>PLC Pts</th>
-                <th>ELIM Pts</th>
-                <th>Total</th>
+                <th class="col-r">GP</th>
+                <th class="col-r">Victories</th>
+                <th class="col-r">Avg PLC</th>
+                <th class="col-r">Elims</th>
+                <th class="col-r">Total</th>
               </tr>
             </thead>
-            <tbody id="results-body">
-              <!-- rows injected via JS -->
-            </tbody>
+            <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-        <p id="results-status" class="status-text"></p>
+        <div id="leaderboard-status" class="status-text"></div>
+      </section>
+
+      <!-- RIGHT: Match-by-Match results -->
+      <section>
+        <h2>Match-by-Match Results</h2>
+        <div class="results-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:52px;">Day</th>
+                <th style="width:60px;">Match</th>
+                <th style="width:54px;">Slot</th>
+                <th>Tournament</th>
+                <th>Stage</th>
+                <th>Team</th>
+                <th class="col-r">PLC</th>
+                <th class="col-r">Elims</th>
+                <th style="width:80px;">Result</th>
+                <th class="col-r">PLC Pts</th>
+                <th class="col-r">Elim Pts</th>
+                <th class="col-r">Total</th>
+              </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+          <div id="results-empty" class="empty-state" style="display:none;">
+            No results match the current filters.
+          </div>
+        </div>
+        <div id="results-status" class="status-text"></div>
       </section>
     </main>
   </div>
 
-  <!-- Supabase CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script>
-    // ----- Supabase client -----
-    // Using same project as your bracket settings page.
+    // ===== Supabase Setup =====
     const SUPABASE_URL = 'https://fjdyppkanjnvyscqrfum.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZHlwcGthbmpudnlzY3FyZnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNDU1NzIsImV4cCI6MjA3NTkyMTU3Mn0.ssEN7uA9BVm9AkhsjkWxhPzV1-VQVxc4-u7LS2wt4Aw';
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // match_results columns (DB):
-    // id, day, stage, match_no, slot, team_name, placement, elimination,
-    // victory, placement_pts, elimination_pts, total, tournament
+    // ===== DOM REFS =====
+    const filterTournament = document.getElementById('filter-tournament');
+    const filterStage      = document.getElementById('filter-stage');
+    const filterDay        = document.getElementById('filter-day');
+    const filterMatch      = document.getElementById('filter-match');
+    const filterTeam       = document.getElementById('filter-team');
 
-    // ----- State -----
+    const summaryText      = document.getElementById('summary-text');
+    const leaderboardBody  = document.getElementById('leaderboard-body');
+    const leaderboardStatus= document.getElementById('leaderboard-status');
+    const resultsBody      = document.getElementById('results-body');
+    const resultsStatus    = document.getElementById('results-status');
+    const resultsEmpty     = document.getElementById('results-empty');
+
     let allResults = [];
 
-    // DOM refs
-    const tournamentSelect = document.getElementById('filter-tournament');
-    const stageSelect      = document.getElementById('filter-stage');
-    const daySelect        = document.getElementById('filter-day');
-    const teamInput        = document.getElementById('filter-team');
-    const summaryText      = document.getElementById('summary-text');
-    const summaryChips     = document.getElementById('summary-chips');
-    const leaderboardBody  = document.getElementById('leaderboard-body');
-    const resultsBody      = document.getElementById('results-body');
-    const leaderboardStatus = document.getElementById('leaderboard-status');
-    const resultsStatus     = document.getElementById('results-status');
+    // ===== UTIL =====
+    const toNum = (v, fallback = 0) => {
+      const n = Number(v);
+      return Number.isNaN(n) ? fallback : n;
+    };
 
-    // ----- Helpers -----
-    function buildFiltersFromData(){
-      const tournaments = Array.from(
-        new Set(
-          allResults
-            .map(r => r.tournament)
-            .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
-        )
-      ).sort((a,b) => String(a).localeCompare(String(b)));
+    const winVal = (v) =>
+      (v === true || v === 1 || v === '1' || v === 'true') ? 1 : 0;
 
-      const stages = Array.from(
-        new Set(
-          allResults
-            .map(r => r.stage)
-            .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
-        )
-      ).sort((a,b) => String(a).localeCompare(String(b)));
+    // Custom sorting for the RESULTS table:
+    // Total DESC, Victory DESC, Elimination DESC, Placement ASC
+    function sortResultsForDisplay(rows){
+      return rows.slice().sort((a, b) => {
+        // 1) Total desc (fallback: placement_pts + elimination_pts)
+        const totalA = toNum(
+          a.total ?? (toNum(a.placement_pts) + toNum(a.elimination_pts))
+        );
+        const totalB = toNum(
+          b.total ?? (toNum(b.placement_pts) + toNum(b.elimination_pts))
+        );
+        if (totalB !== totalA) return totalB - totalA;
 
-      const days = Array.from(
-        new Set(
-          allResults
-            .map(r => r.day)
-            .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
-        )
-      ).sort((a,b) => Number(a) - Number(b));
+        // 2) Victory desc
+        const winA = winVal(a.victory);
+        const winB = winVal(b.victory);
+        if (winB !== winA) return winB - winA;
 
-      // Tournament options
-      tournamentSelect.innerHTML = '<option value="all">All tournaments</option>';
-      tournaments.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = String(t);
-        opt.textContent = String(t);
-        tournamentSelect.appendChild(opt);
+        // 3) Elimination desc
+        const elimA = toNum(a.elimination);
+        const elimB = toNum(b.elimination);
+        if (elimB !== elimA) return elimB - elimA;
+
+        // 4) Placement asc (1 is best)
+        const plcA = toNum(a.placement, 999);
+        const plcB = toNum(b.placement, 999);
+        if (plcA !== plcB) return plcA - plcB;
+
+        // Fallback: Day → Match → Slot → Team
+        const dayA = toNum(a.day, 0);
+        const dayB = toNum(b.day, 0);
+        if (dayA !== dayB) return dayA - dayB;
+
+        const mA = toNum(a.match_no, 0);
+        const mB = toNum(b.match_no, 0);
+        if (mA !== mB) return mA - mB;
+
+        const sA = toNum(a.slot, 0);
+        const sB = toNum(b.slot, 0);
+        if (sA !== sB) return sA - sB;
+
+        const tA = (a.team_name || '').toLowerCase();
+        const tB = (b.team_name || '').toLowerCase();
+        return tA.localeCompare(tB);
+      });
+    }
+
+    // ===== LOAD DATA FROM SUPABASE =====
+    async function loadMatchResults(){
+      summaryText.textContent = 'Loading results from Supabase…';
+      leaderboardStatus.textContent = '';
+      resultsStatus.textContent = '';
+
+      const { data, error } = await client
+        .from('match_results')
+        .select('*')
+        .order('day', { ascending: true })
+        .order('match_no', { ascending: true })
+        .order('slot', { ascending: true });
+
+      if(error){
+        console.error('Error loading match_results:', error);
+        summaryText.textContent = 'Error loading data: ' + error.message;
+        leaderboardStatus.textContent = 'Failed to load leaderboard.';
+        resultsStatus.textContent = 'Failed to load results.';
+        return;
+      }
+
+      allResults = data || [];
+      buildFilterOptions();
+      applyFiltersAndRender();
+    }
+
+    // ===== FILTERS =====
+    function buildFilterOptions(){
+      const tournaments = new Set();
+      const stages = new Set();
+      const days = new Set();
+      const matches = new Set();
+
+      allResults.forEach(r => {
+        if(r.tournament) tournaments.add(r.tournament);
+        if(r.stage) stages.add(r.stage);
+        if(r.day !== null && r.day !== undefined) days.add(r.day);
+        if(r.match_no !== null && r.match_no !== undefined) matches.add(r.match_no);
       });
 
-      // Stage options
-      stageSelect.innerHTML = '<option value="all">All stages</option>';
-      stages.forEach(st => {
-        const opt = document.createElement('option');
-        opt.value = String(st);
-        opt.textContent = String(st);
-        stageSelect.appendChild(opt);
-      });
+      // Helper to rebuild a select with "ALL" + options
+      function rebuildSelect(selectEl, allLabel, values, formatter){
+        const current = selectEl.value;
+        selectEl.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = 'ALL';
+        optAll.textContent = allLabel;
+        selectEl.appendChild(optAll);
 
-      // Day options
-      daySelect.innerHTML = '<option value="all">All days</option>';
-      days.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = String(d);
-        opt.textContent = 'Day ' + d;
-        daySelect.appendChild(opt);
-      });
+        Array.from(values).sort((a,b) => {
+          if(typeof a === 'number' && typeof b === 'number') return a - b;
+          return String(a).localeCompare(String(b));
+        }).forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = String(v);
+          opt.textContent = formatter ? formatter(v) : String(v);
+          selectEl.appendChild(opt);
+        });
+
+        // try to keep previous selection if still valid
+        if(current && Array.from(selectEl.options).some(o => o.value === current)){
+          selectEl.value = current;
+        }else{
+          selectEl.value = 'ALL';
+        }
+      }
+
+      rebuildSelect(filterTournament, 'All tournaments', tournaments, v => v);
+      rebuildSelect(filterStage, 'All stages', stages, v => v);
+      rebuildSelect(filterDay, 'All days', days, v => 'Day ' + v);
+      rebuildSelect(filterMatch, 'All matches', matches, v => 'Match ' + v);
     }
 
     function getFilteredResults(){
-      const tournamentVal = tournamentSelect.value;
-      const stageVal      = stageSelect.value;
-      const dayVal        = daySelect.value;
-      const teamQ         = teamInput.value.trim().toLowerCase();
+      const tVal = filterTournament.value;
+      const sVal = filterStage.value;
+      const dVal = filterDay.value;
+      const mVal = filterMatch.value;
+      const teamQuery = filterTeam.value.trim().toLowerCase();
 
-      return allResults.filter(row => {
-        if(tournamentVal !== 'all'){
-          const t = row.tournament ? String(row.tournament) : '';
-          if(t !== tournamentVal) return false;
+      return allResults.filter(r => {
+        if(tVal !== 'ALL' && String(r.tournament || '') !== tVal) return false;
+        if(sVal !== 'ALL' && String(r.stage || '') !== sVal) return false;
+
+        if(dVal !== 'ALL'){
+          const d = toNum(r.day, null);
+          if(String(d) !== dVal) return false;
         }
-        if(stageVal !== 'all' && String(row.stage) !== stageVal) return false;
-        if(dayVal !== 'all' && String(row.day) !== dayVal) return false;
-        if(teamQ){
-          const name = (row.team_name || '').toLowerCase();
-          if(!name.includes(teamQ)) return false;
+
+        if(mVal !== 'ALL'){
+          const m = toNum(r.match_no, null);
+          if(String(m) !== mVal) return false;
         }
+
+        if(teamQuery){
+          const name = (r.team_name || '').toLowerCase();
+          if(!name.includes(teamQuery)) return false;
+        }
+
         return true;
       });
-    }
-
-    function renderSummary(filtered){
-      const totalMatches = filtered.length;
-      const uniqueTeams = new Set(filtered.map(r => r.team_name || '').filter(Boolean)).size;
-
-      const tournamentVal = tournamentSelect.value;
-      const stageVal      = stageSelect.value;
-      const dayVal        = daySelect.value;
-
-      let tournamentLabel = 'All tournaments';
-      if(tournamentVal !== 'all') tournamentLabel = String(tournamentVal);
-
-      let stageLabel = 'All stages';
-      if(stageVal !== 'all') stageLabel = 'Stage ' + stageVal;
-
-      let dayLabel = 'All days';
-      if(dayVal !== 'all') dayLabel = 'Day ' + dayVal;
-
-      summaryText.textContent =
-        `${totalMatches} match entries • ${uniqueTeams} team(s) • ${tournamentLabel} • ${stageLabel} • ${dayLabel}`;
-
-      // Chips
-      summaryChips.innerHTML = '';
-
-      const chipData = [
-        { label:'Matches', value: totalMatches },
-        { label:'Teams', value: uniqueTeams },
-        { label:'Tournament', value: tournamentLabel },
-        { label:'Stage', value: stageLabel },
-        { label:'Day', value: dayLabel }
-      ];
-
-      chipData.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'chip';
-        div.innerHTML = `${c.label}: <strong>${c.value}</strong>`;
-        summaryChips.appendChild(div);
-      });
-    }
-
-    function renderLeaderboard(filtered){
-      leaderboardBody.innerHTML = '';
-
-      if(!filtered.length){
-        leaderboardStatus.textContent = 'No data for the current filter.';
-        return;
-      }
-
-      // Aggregate per team
-      const teamMap = new Map();
-
-      filtered.forEach(row => {
-        const team = row.team_name || 'Unknown';
-        if(!teamMap.has(team)){
-          teamMap.set(team, {
-            team,
-            matches:0,
-            booyah:0,
-            plc:0,
-            elim:0,
-            total:0
-          });
-        }
-        const agg = teamMap.get(team);
-        agg.matches += 1;
-
-        const victoryVal = row.victory;
-        if(victoryVal === true || victoryVal === '1' || victoryVal === 1){
-          agg.booyah += 1;
-        }
-
-        const plcPts  = Number(row.placement_pts ?? 0);
-        const elimPts = Number(row.elimination_pts ?? 0);
-        const total   = Number(row.total ?? (plcPts + elimPts));
-
-        agg.plc   += isNaN(plcPts) ? 0 : plcPts;
-        agg.elim  += isNaN(elimPts) ? 0 : elimPts;
-        agg.total += isNaN(total) ? 0 : total;
-      });
-
-      const rows = Array.from(teamMap.values())
-        .sort((a,b) => {
-          if(b.total !== a.total) return b.total - a.total;
-          if(b.booyah !== a.booyah) return b.booyah - a.booyah;
-          return a.team.localeCompare(b.team);
-        });
-
-      rows.forEach((t, idx) => {
-        const tr = document.createElement('tr');
-
-        const tdRank = document.createElement('td');
-        tdRank.className = 'rank';
-        tdRank.textContent = idx + 1;
-        tr.appendChild(tdRank);
-
-        const tdTeam = document.createElement('td');
-        tdTeam.className = 'team';
-        tdTeam.textContent = t.team;
-        tr.appendChild(tdTeam);
-
-        const tdMP = document.createElement('td');
-        tdMP.textContent = t.matches;
-        tr.appendChild(tdMP);
-
-        const tdBooyah = document.createElement('td');
-        tdBooyah.textContent = t.booyah;
-        tr.appendChild(tdBooyah);
-
-        const tdPlc = document.createElement('td');
-        tdPlc.textContent = t.plc;
-        tr.appendChild(tdPlc);
-
-        const tdElim = document.createElement('td');
-        tdElim.textContent = t.elim;
-        tr.appendChild(tdElim);
-
-        const tdTotal = document.createElement('td');
-        tdTotal.className = 'total';
-        tdTotal.textContent = t.total;
-        tr.appendChild(tdTotal);
-
-        leaderboardBody.appendChild(tr);
-      });
-
-      leaderboardStatus.textContent =
-        `Showing ${rows.length} team(s). Sorted by Total → Victory → Team name.`;
-    }
-
-    function renderResultsTable(filtered){
-      resultsBody.innerHTML = '';
-
-      if(!filtered.length){
-        resultsStatus.textContent = 'No match rows for the current filter.';
-        return;
-      }
-
-      filtered.forEach(row => {
-        const tr = document.createElement('tr');
-
-        const tdDay = document.createElement('td');
-        tdDay.textContent = row.day ?? '';
-        tr.appendChild(tdDay);
-
-        const tdStage = document.createElement('td');
-        tdStage.textContent = row.stage ?? '';
-        tr.appendChild(tdStage);
-
-        const tdTournament = document.createElement('td');
-        tdTournament.textContent = row.tournament ?? '';
-        tr.appendChild(tdTournament);
-
-        const tdMatch = document.createElement('td');
-        const matchLabel = row.match_no ?? '';
-        tdMatch.textContent = matchLabel;
-        tr.appendChild(tdMatch);
-
-        const tdSlot = document.createElement('td');
-        tdSlot.textContent = row.slot ?? '';
-        tr.appendChild(tdSlot);
-
-        const tdTeam = document.createElement('td');
-        tdTeam.className = 'team';
-        tdTeam.textContent = row.team_name || '';
-        tr.appendChild(tdTeam);
-
-        const tdPlacement = document.createElement('td');
-        tdPlacement.textContent = row.placement ?? '';
-        tr.appendChild(tdPlacement);
-
-        const tdElim = document.createElement('td');
-        tdElim.textContent = row.elimination ?? '';
-        tr.appendChild(tdElim);
-
-        const tdVictory = document.createElement('td');
-        tdVictory.className = 'victory';
-        const v = row.victory;
-        tdVictory.textContent =
-          (v === true || v === 1 || v === '1') ? 'VICTORY' : '';
-        tr.appendChild(tdVictory);
-
-        const tdPlcPts = document.createElement('td');
-        tdPlcPts.textContent = row.placement_pts ?? '';
-        tr.appendChild(tdPlcPts);
-
-        const tdElimPts = document.createElement('td');
-        tdElimPts.textContent = row.elimination_pts ?? '';
-        tr.appendChild(tdElimPts);
-
-        const tdTotal = document.createElement('td');
-        tdTotal.textContent = row.total ?? '';
-        tr.appendChild(tdTotal);
-
-        resultsBody.appendChild(tr);
-      });
-
-      resultsStatus.textContent =
-        `Showing ${filtered.length} row(s) from match_results.`;
     }
 
     function applyFiltersAndRender(){
@@ -668,64 +561,244 @@
         resultsBody.innerHTML = '';
         leaderboardStatus.textContent = '';
         resultsStatus.textContent = '';
+        resultsEmpty.style.display = 'block';
         return;
       }
 
       const filtered = getFilteredResults();
+      const sortedForResults = sortResultsForDisplay(filtered);
+
       renderSummary(filtered);
       renderLeaderboard(filtered);
-      renderResultsTable(filtered);
+      renderResultsTable(sortedForResults);
     }
 
-    // ----- Load data from Supabase -----
-    async function loadMatchResults(){
-      summaryText.textContent = 'Loading match data from Supabase…';
-
-      try{
-        const { data, error } = await client
-          .from('match_results')
-          .select('*')
-          .order('tournament', { ascending:true })
-          .order('day', { ascending:true })
-          .order('match_no', { ascending:true })
-          .order('slot', { ascending:true });
-
-        if(error){
-          console.error('Error loading match_results:', error);
-          summaryText.textContent = 'Error loading data: ' + error.message;
-          leaderboardStatus.textContent = '';
-          resultsStatus.textContent = '';
-          return;
-        }
-
-        allResults = data || [];
-
-        if(!allResults.length){
-          summaryText.textContent = 'No rows found in match_results.';
-          leaderboardStatus.textContent = 'No data to show.';
-          resultsStatus.textContent = 'No data to show.';
-          return;
-        }
-
-        buildFiltersFromData();
-        applyFiltersAndRender();
-      }catch(err){
-        console.error('Unexpected error loading match_results:', err);
-        summaryText.textContent = 'Unexpected error loading data.';
+    // ===== SUMMARY =====
+    function renderSummary(rows){
+      if(!rows.length){
+        summaryText.textContent = 'No rows match the current filters.';
+        return;
       }
+
+      const uniqueTeams = new Set();
+      const uniqueMatches = new Set();
+      let totalWins = 0;
+      let totalElims = 0;
+      let totalPoints = 0;
+
+      rows.forEach(r => {
+        if(r.team_name) uniqueTeams.add(r.team_name);
+        uniqueMatches.add(`${r.day}|${r.match_no}`);
+        totalWins += winVal(r.victory);
+        totalElims += toNum(r.elimination);
+        totalPoints += toNum(r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts)));
+      });
+
+      const tLabel = filterTournament.value === 'ALL'
+        ? 'All tournaments'
+        : filterTournament.value;
+      const stageLabel = filterStage.value === 'ALL'
+        ? 'All stages'
+        : filterStage.value;
+
+      summaryText.textContent =
+        `${rows.length} rows • ${uniqueTeams.size} teams • ${uniqueMatches.size} matches • `
+        + `${totalWins} victories • ${totalElims} eliminations • ${totalPoints} total points `
+        + `• Tournament: ${tLabel} • Stage: ${stageLabel}`;
     }
 
-    // ----- Listeners -----
-    tournamentSelect.addEventListener('change', applyFiltersAndRender);
-    stageSelect.addEventListener('change', applyFiltersAndRender);
-    daySelect.addEventListener('change', applyFiltersAndRender);
-    teamInput.addEventListener('input', () => {
-      if(window.__teamFilterTimer) clearTimeout(window.__teamFilterTimer);
-      window.__teamFilterTimer = setTimeout(applyFiltersAndRender, 150);
+    // ===== LEADERBOARD =====
+    function computeTeamAggregates(rows){
+      const map = new Map();
+
+      rows.forEach(r => {
+        const name = r.team_name || '(Unnamed)';
+        if(!map.has(name)){
+          map.set(name, {
+            team: name,
+            games: 0,
+            wins: 0,
+            elims: 0,
+            totalPoints: 0,
+            placementSum: 0
+          });
+        }
+        const s = map.get(name);
+        s.games++;
+        s.wins += winVal(r.victory);
+        s.elims += toNum(r.elimination);
+        s.totalPoints += toNum(r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts)));
+        s.placementSum += toNum(r.placement, 0);
+      });
+
+      return Array.from(map.values()).map(s => ({
+        ...s,
+        avgPlacement: s.games ? (s.placementSum / s.games) : 0
+      }));
+    }
+
+    function renderLeaderboard(rows){
+      leaderboardBody.innerHTML = '';
+
+      if(!rows.length){
+        leaderboardStatus.textContent = 'No data for leaderboard.';
+        return;
+      }
+
+      const stats = computeTeamAggregates(rows);
+
+      stats.sort((a,b) => {
+        if(b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        if(b.wins !== a.wins) return b.wins - a.wins;
+        if(b.elims !== a.elims) return b.elims - a.elims;
+        return a.avgPlacement - b.avgPlacement;
+      });
+
+      stats.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+
+        const tdRank = document.createElement('td');
+        const badge = document.createElement('div');
+        badge.className = 'rank-badge';
+        badge.textContent = idx + 1;
+        tdRank.appendChild(badge);
+        tr.appendChild(tdRank);
+
+        const tdTeam = document.createElement('td');
+        tdTeam.className = 'team-name';
+        tdTeam.textContent = s.team;
+        tr.appendChild(tdTeam);
+
+        const tdGames = document.createElement('td');
+        tdGames.className = 'col-r';
+        tdGames.textContent = s.games;
+        tr.appendChild(tdGames);
+
+        const tdWins = document.createElement('td');
+        tdWins.className = 'col-r';
+        tdWins.textContent = s.wins;
+        tr.appendChild(tdWins);
+
+        const tdAvgPlc = document.createElement('td');
+        tdAvgPlc.className = 'col-r';
+        tdAvgPlc.textContent = s.avgPlacement ? s.avgPlacement.toFixed(2) : '-';
+        tr.appendChild(tdAvgPlc);
+
+        const tdElims = document.createElement('td');
+        tdElims.className = 'col-r';
+        tdElims.textContent = s.elims;
+        tr.appendChild(tdElims);
+
+        const tdTotal = document.createElement('td');
+        tdTotal.className = 'col-r';
+        tdTotal.textContent = s.totalPoints;
+        tr.appendChild(tdTotal);
+
+        leaderboardBody.appendChild(tr);
+      });
+
+      leaderboardStatus.textContent = `Showing ${stats.length} teams (sorted by Total, Victories, Elims, Avg Placement).`;
+    }
+
+    // ===== RESULTS TABLE =====
+    function renderResultsTable(rows){
+      resultsBody.innerHTML = '';
+
+      if(!rows.length){
+        resultsEmpty.style.display = 'block';
+        resultsStatus.textContent = 'No rows match the current filters.';
+        return;
+      }
+      resultsEmpty.style.display = 'none';
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+
+        const tdDay = document.createElement('td');
+        tdDay.textContent = r.day ?? '';
+        tr.appendChild(tdDay);
+
+        const tdMatch = document.createElement('td');
+        tdMatch.textContent = r.match_no ?? '';
+        tr.appendChild(tdMatch);
+
+        const tdSlot = document.createElement('td');
+        tdSlot.textContent = r.slot ?? '';
+        tr.appendChild(tdSlot);
+
+        const tdTourn = document.createElement('td');
+        tdTourn.textContent = r.tournament || '';
+        tr.appendChild(tdTourn);
+
+        const tdStage = document.createElement('td');
+        tdStage.textContent = r.stage || '';
+        tr.appendChild(tdStage);
+
+        const tdTeam = document.createElement('td');
+        tdTeam.textContent = r.team_name || '';
+        tr.appendChild(tdTeam);
+
+        const tdPlc = document.createElement('td');
+        tdPlc.className = 'col-r';
+        tdPlc.textContent = r.placement ?? '';
+        tr.appendChild(tdPlc);
+
+        const tdElims = document.createElement('td');
+        tdElims.className = 'col-r';
+        tdElims.textContent = r.elimination ?? 0;
+        tr.appendChild(tdElims);
+
+        const tdResult = document.createElement('td');
+        const tag = document.createElement('span');
+        tag.classList.add('tag-pill');
+        if(winVal(r.victory)){
+          tag.classList.add('tag-win');
+          tag.textContent = 'Victory';
+        }else{
+          tag.classList.add('tag-loss');
+          tag.textContent = 'No Victory';
+        }
+        tdResult.appendChild(tag);
+        tr.appendChild(tdResult);
+
+        const plcPts = r.placement_pts ?? (r.total - r.elimination_pts);
+        const tdPlcPts = document.createElement('td');
+        tdPlcPts.className = 'col-r';
+        tdPlcPts.textContent = toNum(plcPts,0);
+        tr.appendChild(tdPlcPts);
+
+        const elimPts = r.elimination_pts ?? 0;
+        const tdElimPts = document.createElement('td');
+        tdElimPts.className = 'col-r';
+        tdElimPts.textContent = toNum(elimPts,0);
+        tr.appendChild(tdElimPts);
+
+        const total = r.total ?? (toNum(plcPts,0) + toNum(elimPts,0));
+        const tdTotal = document.createElement('td');
+        tdTotal.className = 'col-r';
+        tdTotal.textContent = total;
+        tr.appendChild(tdTotal);
+
+        resultsBody.appendChild(tr);
+      });
+
+      resultsStatus.textContent = `Showing ${rows.length} rows, sorted by Total, Victory, Elims, then Placement.`;
+    }
+
+    // ===== EVENT HOOKS =====
+    filterTournament.addEventListener('change', applyFiltersAndRender);
+    filterStage.addEventListener('change', applyFiltersAndRender);
+    filterDay.addEventListener('change', applyFiltersAndRender);
+    filterMatch.addEventListener('change', applyFiltersAndRender);
+    filterTeam.addEventListener('input', () => {
+      // small debounce could be added; for now just filter
+      applyFiltersAndRender();
     });
 
-    // ----- Init -----
-    document.addEventListener('DOMContentLoaded', loadMatchResults);
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMatchResults();
+    });
   </script>
 </body>
 </html>
