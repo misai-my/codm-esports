@@ -5,7 +5,6 @@
   <title>Tournament Bracketing — Settings</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  
   <style>
     :root{
       --bg:#05060a;
@@ -2436,7 +2435,7 @@
       });
     }
 
-    // ------- SAVE TO DATABASE -------
+    // ------- SAVE TO DATABASE + DOWNLOAD JSON -------
     function renderSaveStatus(dirty){
       if(dirty){
         saveStatus.textContent = 'Changes not yet saved to database.';
@@ -2447,6 +2446,37 @@
       }else{
         saveStatus.textContent = 'Not yet saved to database.';
         saveStatusPill.textContent = 'Not saved to database';
+      }
+    }
+
+    // Helper: download current bracket as JSON
+    function downloadBracketJSON(payload, bracketId){
+      try{
+        const nameBase = (payload.name || 'bracket').trim() || 'bracket';
+        const safeName = nameBase
+          .replace(/[^a-z0-9_\-]+/gi, '_')
+          .slice(0, 60) || 'bracket';
+
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `${safeName}_#${bracketId || 'draft'}_${stamp}.json`;
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: 'application/json'
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 0);
+      }catch(err){
+        console.error('Error generating JSON download:', err);
       }
     }
 
@@ -2497,7 +2527,18 @@
           alert('Error saving bracket: ' + error.message);
           renderSaveStatus(true);
         }else{
-          state.lastSavedId = data.id;
+          const bracketId = data.id;
+          state.lastSavedId = bracketId;
+
+          // include id in downloaded JSON
+          const downloadPayload = {
+            id: bracketId,
+            ...payload
+          };
+
+          // download JSON together with successful save
+          downloadBracketJSON(downloadPayload, bracketId);
+
           await loadTournamentList();
           renderSaveStatus(false);
         }
