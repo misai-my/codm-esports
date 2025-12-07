@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CODM — Map Veto (Admin View)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#05060a; --panel:#141828; --panel2:#191e30;
+    --ink:#f6f7fb; --muted:#9ca3c7;
+    --brand:#ffe93b; --accent:#7fd2ff;
+    --ban:#ff6b6b; --pick:#62e887;
+    --line:#272b3f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{
+    background:#05060a;
+    color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+  }
+  body{padding:16px}
+
+  .shell{
+    max-width:980px;
+    margin:0 auto;
+    background:radial-gradient(circle at top,#1b2035 0,#05060a 52%);
+    border-radius:16px;
+    padding:18px 18px 20px;
+    border:1px solid #262a3c;
+    box-shadow:0 22px 60px rgba(0,0,0,.8);
+  }
+  h1{
+    font-size:1.4rem;
+    margin-bottom:4px;
+  }
+  .sub{
+    font-size:.85rem;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .session-join{
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .session-join input{
+    max-width:120px;
+    background:var(--panel2);
+    border-radius:999px;
+    border:1px solid var(--line);
+    padding:5px 8px;
+    font-size:.8rem;
+    color:var(--ink);
+  }
+  .session-status{font-size:.8rem;color:var(--muted);margin-bottom:10px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:12px;
+  }
+  @media(max-width:768px){
+    .grid{grid-template-columns:1fr}
+  }
+
+  .panel{
+    background:var(--panel);
+    border-radius:12px;
+    padding:12px 14px;
+    border:1px solid var(--line);
+  }
+  .panel h2{
+    font-size:.95rem;
+    margin-bottom:8px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:#d2d8ff;
+  }
+  .row{
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+    font-size:.88rem;
+    margin-bottom:4px;
+  }
+  .row label{color:var(--muted)}
+  .row span.value{font-weight:600;color:var(--ink)}
+
+  .phase{
+    margin-top:4px;
+    padding:6px 10px;
+    border-radius:8px;
+    background:linear-gradient(90deg,#20263a,#151a28);
+    border:1px solid #323853;
+    font-size:.85rem;
+  }
+  .phase span.label{
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    font-size:.7rem;
+    color:var(--muted);
+  }
+  .phase span.value{
+    display:block;
+    margin-top:2px;
+    font-weight:600;
+  }
+
+  .bans, .summary-text{
+    margin-top:6px;
+    font-size:.85rem;
+  }
+  .bans div, .summary-text div{margin-bottom:2px}
+
+  .map-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border-radius:999px;
+    padding:2px 8px;
+    font-size:.78rem;
+    border:1px solid var(--line);
+    background:var(--panel2);
+  }
+  .map-badge.ban{border-color:#ff6b6b99;color:#ffc2c2}
+  .map-badge.pick{border-color:#62e887aa;color:#bdf7d2}
+  .map-badge small{color:var(--muted);font-size:.7rem}
+
+  .ticker{
+    margin-top:10px;
+    padding:6px 8px;
+    border-radius:8px;
+    border:1px dashed #3c425a;
+    font-size:.8rem;
+    color:var(--muted);
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border-radius:999px;
+    padding:3px 9px;
+    font-size:.75rem;
+    border:1px solid var(--line);
+    color:var(--muted);
+  }
+  .pill strong{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div>
+      <h1>CODM Map Veto — Admin View</h1>
+      <div class="sub">Read-only view. Connect with the same match code as the Teams page.</div>
+    </div>
+    <div class="session-join">
+      <input type="text" id="sessionCodeInput" placeholder="Match code" />
+      <button class="btn secondary" id="joinSessionBtn">Connect</button>
+    </div>
+  </div>
+  <div class="session-status" id="sessionStatus">Not connected.</div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Match Info</h2>
+      <div class="row">
+        <label>Team 1:</label><span class="value" id="t1Name">—</span>
+      </div>
+      <div class="row">
+        <label>Team 2:</label><span class="value" id="t2Name">—</span>
+      </div>
+      <div class="row">
+        <label>Format:</label><span class="value" id="formatVal">—</span>
+      </div>
+      <div class="row">
+        <label>Game #:</label><span class="value" id="gameVal">—</span>
+      </div>
+      <div class="row">
+        <label>Mode:</label><span class="value" id="modeVal">—</span>
+      </div>
+      <div class="row">
+        <label>Coin Call:</label><span class="value" id="coinCall">—</span>
+      </div>
+      <div class="row">
+        <label>Coin Result:</label><span class="value" id="coinResult">—</span>
+      </div>
+      <div class="row">
+        <label>Coin Winner:</label><span class="value" id="coinWinner">—</span>
+      </div>
+      <div class="row">
+        <label>Start Team:</label><span class="value" id="startTeam">—</span>
+      </div>
+      <div class="row">
+        <label>Wait Team:</label><span class="value" id="waitTeam">—</span>
+      </div>
+
+      <div class="phase">
+        <span class="label">Current Phase</span>
+        <span class="value" id="phaseLabel">—</span>
+      </div>
+
+      <div class="ticker" id="tickerText">
+        Not connected to any session.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Bans, Pick &amp; Side</h2>
+      <div class="bans" id="bansBlock">
+        No bans yet.
+      </div>
+      <div style="margin-top:6px;">
+        <div class="row">
+          <label>Picked Map:</label><span class="value" id="pickedMap">—</span>
+        </div>
+        <div class="row">
+          <label>Side Choice:</label><span class="value" id="sideChoice">—</span>
+        </div>
+      </div>
+
+      <div class="summary-text" id="summaryBlock" style="margin-top:8px;">
+      </div>
+
+      <div style="margin-top:10px;">
+        <span class="pill">
+          Session ID:&nbsp;<strong id="sessionId">—</strong>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+  const TABLE = 'codm_veto_sessions';
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function defaultState(){
+    return {
+      seriesId: null,
+      team1Name: '',
+      team2Name: '',
+      meta: {
+        format: 'BO3',
+        gameNumber: 1,
+        mode: 'Hardpoint'
+      },
+      coinCaller: 'team1',
+      coinCall: null,
+      coinResult: null,
+      coinWinner: null,
+      startTeam: null,
+      waitTeam: null,
+      phase: 'setup',
+      turnTeam: null,
+      bans: [],
+      pick: null,
+      side: null
+    };
+  }
+
+  let state = defaultState();
+  let sessionCode = null;
+  let channel = null;
+
+  const sessionCodeInput = document.getElementById('sessionCodeInput');
+  const sessionStatus = document.getElementById('sessionStatus');
+
+  const t1NameEl = document.getElementById('t1Name');
+  const t2NameEl = document.getElementById('t2Name');
+  const formatValEl = document.getElementById('formatVal');
+  const gameValEl = document.getElementById('gameVal');
+  const modeValEl = document.getElementById('modeVal');
+  const coinCallEl = document.getElementById('coinCall');
+  const coinResultEl = document.getElementById('coinResult');
+  const coinWinnerEl = document.getElementById('coinWinner');
+  const startTeamEl = document.getElementById('startTeam');
+  const waitTeamEl = document.getElementById('waitTeam');
+  const phaseLabelEl = document.getElementById('phaseLabel');
+  const tickerTextEl = document.getElementById('tickerText');
+  const bansBlockEl = document.getElementById('bansBlock');
+  const pickedMapEl = document.getElementById('pickedMap');
+  const sideChoiceEl = document.getElementById('sideChoice');
+  const summaryBlockEl = document.getElementById('summaryBlock');
+  const sessionIdEl = document.getElementById('sessionId');
+
+  function teamName(key){
+    if(key === 'team1') return state.team1Name || 'Team 1';
+    if(key === 'team2') return state.team2Name || 'Team 2';
+    return '';
+  }
+
+  function phaseLabelText(phase){
+    switch(phase){
+      case 'setup': return 'Setup';
+      case 'coin': return 'Coin Flip';
+      case 'choose_role': return 'Coin Winner Chooses Start / Wait';
+      case 'ban1': return 'Ban #1';
+      case 'ban2': return 'Ban #2';
+      case 'pick': return 'Map Pick';
+      case 'side': return 'Side Selection';
+      case 'done': return 'Completed';
+      default: return '—';
+    }
+  }
+
+  function phaseTickerText(){
+    switch(state.phase){
+      case 'setup':
+        return 'Waiting for team names and coin flip to begin.';
+      case 'coin':
+        return 'Team 1 is choosing Heads/Tails and flipping the coin.';
+      case 'choose_role':
+        return 'Coin winner is choosing whether to START bans or WAIT & pick side.';
+      case 'ban1':
+        return teamName(state.startTeam) + ' is banning the first map.';
+      case 'ban2':
+        return teamName(state.waitTeam) + ' is banning the second map.';
+      case 'pick':
+        return teamName(state.startTeam) + ' is picking the final map.';
+      case 'side':
+        return teamName(state.waitTeam) + ' is choosing RED or BLUE side.';
+      case 'done':
+        return 'Veto completed. Use the summary for overlays and graphics.';
+      default:
+        return 'Waiting for the Teams page to start the session.';
+    }
+  }
+
+  function render(){
+    t1NameEl.textContent = state.team1Name || '—';
+    t2NameEl.textContent = state.team2Name || '—';
+
+    const meta = state.meta || {};
+    formatValEl.textContent = meta.format || '—';
+    gameValEl.textContent = meta.gameNumber || '—';
+    modeValEl.textContent = meta.mode || '—';
+
+    if(state.coinCall){
+      coinCallEl.textContent = 'Team 1 called ' + state.coinCall;
+    }else{
+      coinCallEl.textContent = '—';
+    }
+    coinResultEl.textContent = state.coinResult || '—';
+    coinWinnerEl.textContent = state.coinWinner ? teamName(state.coinWinner) : '—';
+
+    startTeamEl.textContent = state.startTeam ? teamName(state.startTeam) : '—';
+    waitTeamEl.textContent = state.waitTeam ? teamName(state.waitTeam) : '—';
+
+    phaseLabelEl.textContent = phaseLabelText(state.phase);
+    tickerTextEl.textContent = sessionCode ? phaseTickerText() : 'Not connected to any session.';
+
+    // bans
+    if(!state.bans || !state.bans.length){
+      bansBlockEl.textContent = 'No bans yet.';
+    }else{
+      bansBlockEl.innerHTML = state.bans.map((b, i) => {
+        return '<div><span class="map-badge ban">Ban '+(i+1)+': '+b.map+
+          ' <small>by '+teamName(b.team)+'</small></span></div>';
+      }).join('');
+    }
+
+    // pick
+    if(state.pick){
+      pickedMapEl.textContent = teamName(state.pick.team) + ' picked ' + state.pick.map;
+    }else{
+      pickedMapEl.textContent = '—';
+    }
+
+    // side
+    if(state.side){
+      sideChoiceEl.textContent = teamName(state.side.team) + ' chose ' + state.side.choice + ' side.';
+    }else{
+      sideChoiceEl.textContent = '—';
+    }
+
+    // summary
+    const lines = [];
+    lines.push('Matchup: ' + (state.team1Name || 'Team 1') + ' vs ' + (state.team2Name || 'Team 2'));
+    lines.push('Format: ' + (meta.format || 'BO3') +
+      ' • Game ' + (meta.gameNumber || 1) +
+      ' • ' + (meta.mode || 'Hardpoint'));
+
+    if(state.coinCall){
+      lines.push('Coin: Team 1 called ' + state.coinCall +
+        ' → result ' + (state.coinResult || '—') +
+        (state.coinWinner ? ' → winner ' + teamName(state.coinWinner) : ''));
+    }
+
+    if(state.startTeam && state.waitTeam){
+      lines.push('Roles: Start — ' + teamName(state.startTeam) +
+        ', Wait — ' + teamName(state.waitTeam));
+    }
+
+    if(state.bans && state.bans.length){
+      state.bans.forEach((b,i) => {
+        lines.push('Ban '+(i+1)+': '+teamName(b.team)+' banned '+b.map);
+      });
+    }
+
+    if(state.pick){
+      lines.push('Picked Map: ' + teamName(state.pick.team) + ' picked ' + state.pick.map);
+    }
+
+    if(state.side){
+      lines.push('Side: ' + teamName(state.side.team) + ' chose ' + state.side.choice);
+    }
+
+    if(state.phase === 'done'){
+      lines.push('Status: Veto complete.');
+    }else{
+      lines.push('Status: In progress (' + phaseLabelText(state.phase) + ').');
+    }
+
+    summaryBlockEl.innerHTML = lines.map(l => '<div>'+l+'</div>').join('');
+    sessionIdEl.textContent = state.seriesId ? String(state.seriesId) : '—';
+  }
+
+  function subscribeToSession(){
+    if(channel){
+      client.removeChannel(channel);
+      channel = null;
+    }
+    if(!sessionCode) return;
+
+    channel = client
+      .channel('codm-veto-admin-' + sessionCode)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: TABLE, filter: 'code=eq.' + sessionCode },
+        payload => {
+          const newState = payload.new?.state;
+          if(newState){
+            state = Object.assign(defaultState(), newState);
+            render();
+          }
+        }
+      )
+      .subscribe();
+  }
+
+  async function joinSession(codeRaw){
+    const code = (codeRaw || '').trim().toUpperCase();
+    if(!code){
+      alert('Enter a match code.');
+      return;
+    }
+    sessionCode = code;
+    sessionStatus.textContent = 'Connecting to session ' + sessionCode + '...';
+
+    let data = null;
+    try{
+      const res = await client
+        .from(TABLE)
+        .select('state')
+        .eq('code', sessionCode)
+        .maybeSingle?.();
+
+      if(res && !res.error){
+        data = res.data;
+      }else if(res && res.error && res.error.code !== 'PGRST116'){
+        console.error(res.error);
+      }
+      if(!res){
+        const res2 = await client
+          .from(TABLE)
+          .select('state')
+          .eq('code', sessionCode)
+          .single();
+        if(!res2.error) data = res2.data;
+      }
+    }catch(e){
+      // ignore
+    }
+
+    if(!data){
+      sessionStatus.textContent = 'No session found for ' + sessionCode + ' yet. Waiting for Teams page to create it.';
+      state = defaultState();
+    }else{
+      state = Object.assign(defaultState(), data.state || data);
+      sessionStatus.textContent = 'Connected to session ' + sessionCode + '.';
+    }
+    subscribeToSession();
+    render();
+  }
+
+  document.getElementById('joinSessionBtn').addEventListener('click', () => {
+    joinSession(sessionCodeInput.value);
+  });
+
+  // Auto-connect via ?code=XXX
+  const params = new URLSearchParams(window.location.search);
+  const urlCode = params.get('code');
+  if(urlCode){
+    sessionCodeInput.value = urlCode.toUpperCase();
+    joinSession(urlCode);
+  }else{
+    render();
+  }
+})();
+</script>
+</body>
+</html>
