@@ -14,7 +14,6 @@
       --muted:#a3acc3;
       --brand:#ffe93b;
       --accent:#7fd2ff;
-      --danger:#ff6b6b;
       --line:#262b3d;
       --radius-lg:16px;
       --radius-sm:10px;
@@ -38,7 +37,7 @@
       max-width:1440px;
       display:flex;
       flex-direction:column;
-      gap:12px;
+      gap:10px;
     }
 
     header{
@@ -49,7 +48,7 @@
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:12px;
+      gap:10px;
       flex-wrap:wrap;
     }
     header h1{
@@ -64,12 +63,10 @@
 
     .header-right{
       display:flex;
-      flex-wrap:wrap;
-      gap:8px;
       align-items:center;
-      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
     }
-
     .pill{
       display:inline-flex;
       align-items:center;
@@ -90,7 +87,7 @@
       border-radius:var(--radius-lg);
       background:var(--panel);
       border:1px solid var(--line);
-      padding:10px 12px;
+      padding:8px 10px;
       display:flex;
       flex-wrap:wrap;
       gap:8px;
@@ -122,30 +119,22 @@
       border-color:var(--accent);
       box-shadow:0 0 0 1px rgba(127,210,255,.28);
     }
-
     .summary-text{
       font-size:.76rem;
       color:var(--muted);
-      margin-top:4px;
+      margin-top:2px;
     }
 
-    /* Layout main */
-    main{
-      display:grid;
-      grid-template-columns:minmax(320px,380px) 1fr;
-      gap:12px;
-      align-items:flex-start;
-    }
-
+    /* Results card */
     section{
       border-radius:var(--radius-lg);
       background:var(--panel);
       border:1px solid var(--line);
       padding:10px;
-      min-height:0;
       display:flex;
       flex-direction:column;
       gap:6px;
+      min-height:0;
     }
     section h2{
       font-size:.9rem;
@@ -155,14 +144,14 @@
       margin-bottom:2px;
     }
 
-    /* Leaderboard */
-    .leaderboard-scroll{
-      max-height:420px;
+    .results-scroll{
+      max-height:540px;
       overflow:auto;
       border-radius:var(--radius-sm);
       background:var(--panel2);
       border:1px solid var(--line);
     }
+
     table{
       width:100%;
       border-collapse:collapse;
@@ -183,6 +172,7 @@
       color:var(--muted);
       font-weight:500;
       font-size:.74rem;
+      white-space:nowrap;
     }
     tbody tr:nth-child(even){
       background:rgba(0,0,0,.06);
@@ -197,34 +187,7 @@
       text-overflow:ellipsis;
       max-width:220px;
     }
-    .rank-badge{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:22px;
-      height:22px;
-      border-radius:999px;
-      border:1px solid rgba(255,233,59,.4);
-      background:rgba(255,233,59,.1);
-      color:var(--brand);
-      font-size:.7rem;
-      font-weight:600;
-    }
 
-    .status-text{
-      font-size:.74rem;
-      color:var(--muted);
-      margin-top:4px;
-    }
-
-    /* Results table */
-    .results-scroll{
-      max-height:520px;
-      overflow:auto;
-      border-radius:var(--radius-sm);
-      background:var(--panel2);
-      border:1px solid var(--line);
-    }
     .tag-pill{
       display:inline-flex;
       align-items:center;
@@ -250,13 +213,12 @@
       font-size:.78rem;
       color:var(--muted);
     }
-
-    @media(max-width:1040px){
-      main{
-        display:flex;
-        flex-direction:column;
-      }
+    .status-text{
+      font-size:.74rem;
+      color:var(--muted);
+      margin-top:2px;
     }
+
     @media(max-width:720px){
       .filters{
         flex-direction:column;
@@ -272,12 +234,12 @@
     <header>
       <div>
         <h1>Match Results — Viewer</h1>
-        <span class="sub">Pulled live from Supabase <code>match_results</code> table</span>
+        <span class="sub">Pulling from Supabase <code>match_results</code></span>
       </div>
       <div class="header-right">
         <div class="pill">
           <span class="dot"></span>
-          <span id="connection-status">Connected to database</span>
+          <span id="connection-status">Connected</span>
         </div>
       </div>
     </header>
@@ -317,59 +279,35 @@
       </div>
     </section>
 
-    <main>
-      <!-- LEFT: Leaderboard -->
-      <section>
-        <h2>Leaderboard (By Total Points)</h2>
-        <div class="leaderboard-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:36px;">#</th>
-                <th>Team</th>
-                <th class="col-r">GP</th>
-                <th class="col-r">Victories</th>
-                <th class="col-r">Avg PLC</th>
-                <th class="col-r">Elims</th>
-                <th class="col-r">Total</th>
-              </tr>
-            </thead>
-            <tbody id="leaderboard-body"></tbody>
-          </table>
+    <!-- RESULTS -->
+    <section>
+      <h2>Results (sorted by Total, Victory, Elims, Placement)</h2>
+      <div class="results-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:54px;">Day</th>
+              <th style="width:70px;">Stage</th>
+              <th style="width:56px;">Match</th>
+              <th style="width:52px;">Slot</th>
+              <th>Tournament</th>
+              <th>Team</th>
+              <th class="col-r">Placement</th>
+              <th class="col-r">Elims</th>
+              <th style="width:86px;">Victory</th>
+              <th class="col-r">PLC Pts</th>
+              <th class="col-r">Elim Pts</th>
+              <th class="col-r">Total</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+        <div id="results-empty" class="empty-state" style="display:none;">
+          No results match the current filters.
         </div>
-        <div id="leaderboard-status" class="status-text"></div>
-      </section>
-
-      <!-- RIGHT: Match-by-Match results -->
-      <section>
-        <h2>Match-by-Match Results</h2>
-        <div class="results-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:52px;">Day</th>
-                <th style="width:60px;">Match</th>
-                <th style="width:54px;">Slot</th>
-                <th>Tournament</th>
-                <th>Stage</th>
-                <th>Team</th>
-                <th class="col-r">PLC</th>
-                <th class="col-r">Elims</th>
-                <th style="width:80px;">Result</th>
-                <th class="col-r">PLC Pts</th>
-                <th class="col-r">Elim Pts</th>
-                <th class="col-r">Total</th>
-              </tr>
-            </thead>
-            <tbody id="results-body"></tbody>
-          </table>
-          <div id="results-empty" class="empty-state" style="display:none;">
-            No results match the current filters.
-          </div>
-        </div>
-        <div id="results-status" class="status-text"></div>
-      </section>
-    </main>
+      </div>
+      <div id="results-status" class="status-text"></div>
+    </section>
   </div>
 
   <script>
@@ -379,7 +317,7 @@
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ===== DOM REFS =====
+    // DOM refs
     const filterTournament = document.getElementById('filter-tournament');
     const filterStage      = document.getElementById('filter-stage');
     const filterDay        = document.getElementById('filter-day');
@@ -387,15 +325,13 @@
     const filterTeam       = document.getElementById('filter-team');
 
     const summaryText      = document.getElementById('summary-text');
-    const leaderboardBody  = document.getElementById('leaderboard-body');
-    const leaderboardStatus= document.getElementById('leaderboard-status');
     const resultsBody      = document.getElementById('results-body');
-    const resultsStatus    = document.getElementById('results-status');
     const resultsEmpty     = document.getElementById('results-empty');
+    const resultsStatus    = document.getElementById('results-status');
 
     let allResults = [];
 
-    // ===== UTIL =====
+    // Helpers
     const toNum = (v, fallback = 0) => {
       const n = Number(v);
       return Number.isNaN(n) ? fallback : n;
@@ -404,11 +340,10 @@
     const winVal = (v) =>
       (v === true || v === 1 || v === '1' || v === 'true') ? 1 : 0;
 
-    // Custom sorting for the RESULTS table:
-    // Total DESC, Victory DESC, Elimination DESC, Placement ASC
+    // Custom sort: Total DESC, Victory DESC, Elims DESC, Placement ASC
     function sortResultsForDisplay(rows){
       return rows.slice().sort((a, b) => {
-        // 1) Total desc (fallback: placement_pts + elimination_pts)
+        // 1) Total points
         const totalA = toNum(
           a.total ?? (toNum(a.placement_pts) + toNum(a.elimination_pts))
         );
@@ -417,22 +352,22 @@
         );
         if (totalB !== totalA) return totalB - totalA;
 
-        // 2) Victory desc
+        // 2) Victory (1 > 0)
         const winA = winVal(a.victory);
         const winB = winVal(b.victory);
         if (winB !== winA) return winB - winA;
 
-        // 3) Elimination desc
+        // 3) Eliminations
         const elimA = toNum(a.elimination);
         const elimB = toNum(b.elimination);
         if (elimB !== elimA) return elimB - elimA;
 
-        // 4) Placement asc (1 is best)
+        // 4) Placement (1 is better, so ASC)
         const plcA = toNum(a.placement, 999);
         const plcB = toNum(b.placement, 999);
         if (plcA !== plcB) return plcA - plcB;
 
-        // Fallback: Day → Match → Slot → Team
+        // Tie-breakers: Day → Match → Slot → Team name
         const dayA = toNum(a.day, 0);
         const dayB = toNum(b.day, 0);
         if (dayA !== dayB) return dayA - dayB;
@@ -451,10 +386,9 @@
       });
     }
 
-    // ===== LOAD DATA FROM SUPABASE =====
+    // Load from Supabase
     async function loadMatchResults(){
       summaryText.textContent = 'Loading results from Supabase…';
-      leaderboardStatus.textContent = '';
       resultsStatus.textContent = '';
 
       const { data, error } = await client
@@ -467,7 +401,6 @@
       if(error){
         console.error('Error loading match_results:', error);
         summaryText.textContent = 'Error loading data: ' + error.message;
-        leaderboardStatus.textContent = 'Failed to load leaderboard.';
         resultsStatus.textContent = 'Failed to load results.';
         return;
       }
@@ -477,7 +410,7 @@
       applyFiltersAndRender();
     }
 
-    // ===== FILTERS =====
+    // Build filter options from data
     function buildFilterOptions(){
       const tournaments = new Set();
       const stages = new Set();
@@ -491,7 +424,6 @@
         if(r.match_no !== null && r.match_no !== undefined) matches.add(r.match_no);
       });
 
-      // Helper to rebuild a select with "ALL" + options
       function rebuildSelect(selectEl, allLabel, values, formatter){
         const current = selectEl.value;
         selectEl.innerHTML = '';
@@ -510,7 +442,6 @@
           selectEl.appendChild(opt);
         });
 
-        // try to keep previous selection if still valid
         if(current && Array.from(selectEl.options).some(o => o.value === current)){
           selectEl.value = current;
         }else{
@@ -524,6 +455,7 @@
       rebuildSelect(filterMatch, 'All matches', matches, v => 'Match ' + v);
     }
 
+    // Filter logic
     function getFilteredResults(){
       const tVal = filterTournament.value;
       const sVal = filterStage.value;
@@ -554,153 +486,41 @@
       });
     }
 
-    function applyFiltersAndRender(){
-      if(!allResults.length){
-        summaryText.textContent = 'No data loaded.';
-        leaderboardBody.innerHTML = '';
-        resultsBody.innerHTML = '';
-        leaderboardStatus.textContent = '';
-        resultsStatus.textContent = '';
-        resultsEmpty.style.display = 'block';
-        return;
-      }
-
-      const filtered = getFilteredResults();
-      const sortedForResults = sortResultsForDisplay(filtered);
-
-      renderSummary(filtered);
-      renderLeaderboard(filtered);
-      renderResultsTable(sortedForResults);
-    }
-
-    // ===== SUMMARY =====
     function renderSummary(rows){
       if(!rows.length){
         summaryText.textContent = 'No rows match the current filters.';
         return;
       }
 
-      const uniqueTeams = new Set();
-      const uniqueMatches = new Set();
+      const teamSet = new Set();
+      const matchSet = new Set();
       let totalWins = 0;
       let totalElims = 0;
       let totalPoints = 0;
 
       rows.forEach(r => {
-        if(r.team_name) uniqueTeams.add(r.team_name);
-        uniqueMatches.add(`${r.day}|${r.match_no}`);
+        if(r.team_name) teamSet.add(r.team_name);
+        matchSet.add(`${r.day}|${r.match_no}`);
         totalWins += winVal(r.victory);
         totalElims += toNum(r.elimination);
-        totalPoints += toNum(r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts)));
+        totalPoints += toNum(
+          r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts))
+        );
       });
 
       const tLabel = filterTournament.value === 'ALL'
         ? 'All tournaments'
         : filterTournament.value;
-      const stageLabel = filterStage.value === 'ALL'
+      const sLabel = filterStage.value === 'ALL'
         ? 'All stages'
         : filterStage.value;
 
       summaryText.textContent =
-        `${rows.length} rows • ${uniqueTeams.size} teams • ${uniqueMatches.size} matches • `
+        `${rows.length} rows • ${teamSet.size} teams • ${matchSet.size} matches • `
         + `${totalWins} victories • ${totalElims} eliminations • ${totalPoints} total points `
-        + `• Tournament: ${tLabel} • Stage: ${stageLabel}`;
+        + `• Tournament: ${tLabel} • Stage: ${sLabel}`;
     }
 
-    // ===== LEADERBOARD =====
-    function computeTeamAggregates(rows){
-      const map = new Map();
-
-      rows.forEach(r => {
-        const name = r.team_name || '(Unnamed)';
-        if(!map.has(name)){
-          map.set(name, {
-            team: name,
-            games: 0,
-            wins: 0,
-            elims: 0,
-            totalPoints: 0,
-            placementSum: 0
-          });
-        }
-        const s = map.get(name);
-        s.games++;
-        s.wins += winVal(r.victory);
-        s.elims += toNum(r.elimination);
-        s.totalPoints += toNum(r.total ?? (toNum(r.placement_pts) + toNum(r.elimination_pts)));
-        s.placementSum += toNum(r.placement, 0);
-      });
-
-      return Array.from(map.values()).map(s => ({
-        ...s,
-        avgPlacement: s.games ? (s.placementSum / s.games) : 0
-      }));
-    }
-
-    function renderLeaderboard(rows){
-      leaderboardBody.innerHTML = '';
-
-      if(!rows.length){
-        leaderboardStatus.textContent = 'No data for leaderboard.';
-        return;
-      }
-
-      const stats = computeTeamAggregates(rows);
-
-      stats.sort((a,b) => {
-        if(b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-        if(b.wins !== a.wins) return b.wins - a.wins;
-        if(b.elims !== a.elims) return b.elims - a.elims;
-        return a.avgPlacement - b.avgPlacement;
-      });
-
-      stats.forEach((s, idx) => {
-        const tr = document.createElement('tr');
-
-        const tdRank = document.createElement('td');
-        const badge = document.createElement('div');
-        badge.className = 'rank-badge';
-        badge.textContent = idx + 1;
-        tdRank.appendChild(badge);
-        tr.appendChild(tdRank);
-
-        const tdTeam = document.createElement('td');
-        tdTeam.className = 'team-name';
-        tdTeam.textContent = s.team;
-        tr.appendChild(tdTeam);
-
-        const tdGames = document.createElement('td');
-        tdGames.className = 'col-r';
-        tdGames.textContent = s.games;
-        tr.appendChild(tdGames);
-
-        const tdWins = document.createElement('td');
-        tdWins.className = 'col-r';
-        tdWins.textContent = s.wins;
-        tr.appendChild(tdWins);
-
-        const tdAvgPlc = document.createElement('td');
-        tdAvgPlc.className = 'col-r';
-        tdAvgPlc.textContent = s.avgPlacement ? s.avgPlacement.toFixed(2) : '-';
-        tr.appendChild(tdAvgPlc);
-
-        const tdElims = document.createElement('td');
-        tdElims.className = 'col-r';
-        tdElims.textContent = s.elims;
-        tr.appendChild(tdElims);
-
-        const tdTotal = document.createElement('td');
-        tdTotal.className = 'col-r';
-        tdTotal.textContent = s.totalPoints;
-        tr.appendChild(tdTotal);
-
-        leaderboardBody.appendChild(tr);
-      });
-
-      leaderboardStatus.textContent = `Showing ${stats.length} teams (sorted by Total, Victories, Elims, Avg Placement).`;
-    }
-
-    // ===== RESULTS TABLE =====
     function renderResultsTable(rows){
       resultsBody.innerHTML = '';
 
@@ -711,12 +531,18 @@
       }
       resultsEmpty.style.display = 'none';
 
-      rows.forEach(r => {
+      const sorted = sortResultsForDisplay(rows);
+
+      sorted.forEach(r => {
         const tr = document.createElement('tr');
 
         const tdDay = document.createElement('td');
         tdDay.textContent = r.day ?? '';
         tr.appendChild(tdDay);
+
+        const tdStage = document.createElement('td');
+        tdStage.textContent = r.stage || '';
+        tr.appendChild(tdStage);
 
         const tdMatch = document.createElement('td');
         tdMatch.textContent = r.match_no ?? '';
@@ -730,11 +556,8 @@
         tdTourn.textContent = r.tournament || '';
         tr.appendChild(tdTourn);
 
-        const tdStage = document.createElement('td');
-        tdStage.textContent = r.stage || '';
-        tr.appendChild(tdStage);
-
         const tdTeam = document.createElement('td');
+        tdTeam.className = 'team-name';
         tdTeam.textContent = r.team_name || '';
         tr.appendChild(tdTeam);
 
@@ -748,7 +571,7 @@
         tdElims.textContent = r.elimination ?? 0;
         tr.appendChild(tdElims);
 
-        const tdResult = document.createElement('td');
+        const tdVictory = document.createElement('td');
         const tag = document.createElement('span');
         tag.classList.add('tag-pill');
         if(winVal(r.victory)){
@@ -758,8 +581,8 @@
           tag.classList.add('tag-loss');
           tag.textContent = 'No Victory';
         }
-        tdResult.appendChild(tag);
-        tr.appendChild(tdResult);
+        tdVictory.appendChild(tag);
+        tr.appendChild(tdVictory);
 
         const plcPts = r.placement_pts ?? (r.total - r.elimination_pts);
         const tdPlcPts = document.createElement('td');
@@ -782,20 +605,33 @@
         resultsBody.appendChild(tr);
       });
 
-      resultsStatus.textContent = `Showing ${rows.length} rows, sorted by Total, Victory, Elims, then Placement.`;
+      resultsStatus.textContent =
+        `Showing ${rows.length} rows (sorted by Total, Victory, Elims, Placement).`;
     }
 
-    // ===== EVENT HOOKS =====
+    function applyFiltersAndRender(){
+      if(!allResults.length){
+        summaryText.textContent = 'No data loaded.';
+        resultsBody.innerHTML = '';
+        resultsEmpty.style.display = 'block';
+        resultsStatus.textContent = '';
+        return;
+      }
+      const filtered = getFilteredResults();
+      renderSummary(filtered);
+      renderResultsTable(filtered);
+    }
+
+    // Events
     filterTournament.addEventListener('change', applyFiltersAndRender);
     filterStage.addEventListener('change', applyFiltersAndRender);
     filterDay.addEventListener('change', applyFiltersAndRender);
     filterMatch.addEventListener('change', applyFiltersAndRender);
     filterTeam.addEventListener('input', () => {
-      // small debounce could be added; for now just filter
       applyFiltersAndRender();
     });
 
-    // ===== INIT =====
+    // Init
     document.addEventListener('DOMContentLoaded', () => {
       loadMatchResults();
     });
