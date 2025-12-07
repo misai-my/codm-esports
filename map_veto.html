@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CODM — Map Veto (Team View)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#05060a; --panel:#151826; --panel2:#1e2233;
+    --ink:#f6f7fb; --muted:#9ca3c7;
+    --brand:#ffe93b; --accent:#7fd2ff;
+    --ban:#ff6b6b; --pick:#62e887;
+    --line:#272b3f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{
+    background:radial-gradient(circle at top,#171c30 0,#05060a 55%);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+  }
+  body{padding:16px}
+
+  .shell{
+    max-width:980px;
+    margin:0 auto;
+    background:linear-gradient(145deg,#171b2a,#0c0f18);
+    border:1px solid #252a3d;
+    border-radius:16px;
+    padding:18px 18px 20px;
+    box-shadow:0 24px 60px rgba(0,0,0,.65);
+  }
+  h1{
+    font-size:1.4rem;
+    margin-bottom:4px;
+  }
+  .sub{
+    font-size:.85rem;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+
+  .session-pill{
+    font-size:.8rem;
+    color:var(--muted);
+  }
+  .session-pill strong{color:var(--ink)}
+
+  .session-status{
+    font-size:.8rem;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  .session-status.error{color:#ff9f9f}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+  .panel{
+    background:var(--panel);
+    border-radius:12px;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    flex:1 1 260px;
+    min-width:0;
+  }
+  .panel h2{
+    font-size:.95rem;
+    margin-bottom:8px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    color:#d5dbff;
+  }
+
+  .meta-line{
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+    font-size:.85rem;
+    margin-bottom:2px;
+  }
+  .meta-line span.label{color:var(--muted)}
+  .meta-line span.value{font-weight:600}
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border-radius:999px;
+    padding:3px 9px;
+    font-size:.75rem;
+    border:1px solid var(--line);
+    color:var(--muted);
+  }
+  .pill strong{color:var(--ink);font-weight:600}
+
+  .coin-options{
+    margin-top:6px;
+    display:flex;
+    gap:12px;
+    font-size:.85rem;
+    flex-wrap:wrap;
+  }
+  .coin-options label{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    cursor:pointer;
+  }
+  .small{
+    font-size:.8rem;
+    color:var(--muted);
+    margin-top:4px;
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid transparent;
+    font-size:.85rem;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--brand);
+    color:#111;
+    margin-top:6px;
+  }
+  .btn.secondary{
+    background:transparent;
+    color:var(--muted);
+    border-color:var(--line);
+  }
+  .btn:disabled{
+    opacity:.4;
+    cursor:default;
+  }
+
+  .phase{
+    margin-top:8px;
+    padding:6px 10px;
+    border-radius:8px;
+    background:linear-gradient(90deg,#20263a,#171b2b);
+    border:1px solid #323853;
+    font-size:.85rem;
+  }
+  .phase span.label{
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    font-size:.7rem;
+    color:var(--muted);
+  }
+  .phase span.value{
+    display:block;
+    margin-top:2px;
+    font-weight:600;
+  }
+
+  .status-line{
+    font-size:.85rem;
+    margin-top:6px;
+    color:var(--muted);
+  }
+  .status-line strong{color:var(--ink)}
+
+  .map-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+    gap:10px;
+    margin-top:10px;
+  }
+  .map-card{
+    background:var(--panel2);
+    border-radius:10px;
+    padding:8px 8px 6px;
+    border:1px solid var(--line);
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    min-height:64px;
+  }
+  .map-name{
+    font-size:.85rem;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .map-status{
+    font-size:.75rem;
+    color:var(--muted);
+  }
+  .map-card.banned{
+    border-color:rgba(255,107,107,.8);
+    background:linear-gradient(145deg,#35171f,#1c1014);
+  }
+  .map-card.picked{
+    border-color:rgba(98,232,135,.9);
+    background:linear-gradient(145deg,#143326,#0e1c16);
+  }
+  .map-card.disabled{
+    opacity:.45;
+    cursor:default;
+  }
+
+  .side-choices{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .side-btn{
+    flex:1 1 140px;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#171b2a;
+    color:var(--ink);
+    font-size:.85rem;
+    font-weight:600;
+    cursor:pointer;
+    text-align:center;
+  }
+  .side-btn.red{border-color:#ff6b6b88}
+  .side-btn.blue{border-color:#7fd2ff88}
+  .side-btn:disabled{opacity:.4;cursor:default}
+
+  .summary{
+    font-size:.8rem;
+    color:var(--muted);
+  }
+  .summary div{margin-bottom:2px}
+
+  @media (max-width:640px){
+    .shell{padding:12px}
+    h1{font-size:1.1rem}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div>
+      <h1>CODM Map Veto — Team View</h1>
+      <div class="sub">
+        This device is used by one team only. The admin gives you the match link with your team assigned.
+      </div>
+    </div>
+    <div class="session-pill" id="whoAmI">No team assigned (missing URL params).</div>
+  </div>
+
+  <div class="session-status" id="sessionStatus">Add ?code=ABC123&team=1 or 2 to the URL.</div>
+
+  <div class="row">
+    <!-- LEFT: Info + Coin -->
+    <div class="panel">
+      <h2>1. Match Info & Coin Flip</h2>
+
+      <div class="meta-line">
+        <span class="label">Your Team:</span>
+        <span class="value" id="myTeamName">—</span>
+      </div>
+      <div class="meta-line">
+        <span class="label">Opponent:</span>
+        <span class="value" id="oppTeamName">—</span>
+      </div>
+      <div class="meta-line">
+        <span class="label">Format:</span>
+        <span class="value" id="formatVal">—</span>
+      </div>
+      <div class="meta-line">
+        <span class="label">Game #:</span>
+        <span class="value" id="gameVal">—</span>
+      </div>
+      <div class="meta-line">
+        <span class="label">Mode:</span>
+        <span class="value" id="modeVal">—</span>
+      </div>
+
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
+        <div class="pill">
+          <span>Coin flip call by&nbsp;<strong>Team 1</strong></span>
+        </div>
+
+        <div class="coin-options">
+          <label>
+            <input type="radio" name="coinCall" value="Heads" />
+            Heads
+          </label>
+          <label>
+            <input type="radio" name="coinCall" value="Tails" />
+            Tails
+          </label>
+        </div>
+        <button class="btn secondary" id="flipBtn">Flip Coin</button>
+
+        <div class="small" id="coinResultText">Result: —</div>
+        <div class="small" id="coinWinnerText">Winner: —</div>
+      </div>
+
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
+        <label class="small" style="margin-bottom:4px;">
+          Coin winner chooses to START bans or WAIT &amp; pick side:
+        </label>
+        <button class="btn secondary" id="chooseStartBtn">We START bans</button>
+        <button class="btn secondary" id="chooseWaitBtn">We WAIT &amp; pick side</button>
+        <div class="small" id="roleStatus">Start / Wait not chosen yet.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Bans, Pick, Side -->
+    <div class="panel">
+      <h2>2. Bans, Pick &amp; Side</h2>
+
+      <div class="phase">
+        <span class="label">Current Phase</span>
+        <span class="value" id="phaseLabel">Setup</span>
+      </div>
+      <div class="status-line" id="turnStatus">Waiting for admin to start the session.</div>
+
+      <div class="map-grid" id="mapGrid"></div>
+
+      <div id="sideWrapper" style="display:none;">
+        <div class="status-line" style="margin-top:10px;">
+          Wait team chooses side:
+        </div>
+        <div class="side-choices">
+          <button class="side-btn red" id="sideRedBtn">Pick RED side</button>
+          <button class="side-btn blue" id="sideBlueBtn">Pick BLUE side</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="panel" style="margin-top:12px;">
+    <h2>3. Summary</h2>
+    <div class="summary" id="summaryLines">
+      No actions yet.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ==== CONFIG: Supabase ====
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';   // ← replace
+  const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';                 // ← replace
+  const TABLE = 'codm_veto_sessions';
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const MAPS = [
+    'Firing Range','Standoff','Summit','Raid','Slums',
+    'Takeoff','Crossfire','Hackney Yard','Meltdown','Apocalypse'
+  ];
+
+  function defaultState(){
+    return {
+      seriesId: null,
+      team1Name: '',
+      team2Name: '',
+      meta: { format:'BO3', gameNumber:1, mode:'Hardpoint' },
+      coinCaller: 'team1',
+      coinCall: null,
+      coinResult: null,
+      coinWinner: null,
+      startTeam: null,
+      waitTeam: null,
+      phase: 'setup',       // 'setup','coin','choose_role','ban1','ban2','pick','side','done'
+      turnTeam: null,       // whose action it is in ban/pick/side phases
+      bans: [],             // [{team,map}]
+      pick: null,           // {team,map}
+      side: null            // {team,choice}
+    };
+  }
+
+  let state = defaultState();
+  let sessionCode = null;
+  let myTeam = null;        // 'team1' or 'team2'
+  let sessionReady = false;
+  let channel = null;
+
+  // DOM
+  const whoAmI = document.getElementById('whoAmI');
+  const sessionStatus = document.getElementById('sessionStatus');
+
+  const myTeamNameEl = document.getElementById('myTeamName');
+  const oppTeamNameEl = document.getElementById('oppTeamName');
+  const formatValEl = document.getElementById('formatVal');
+  const gameValEl = document.getElementById('gameVal');
+  const modeValEl = document.getElementById('modeVal');
+
+  const coinResultText = document.getElementById('coinResultText');
+  const coinWinnerText = document.getElementById('coinWinnerText');
+  const roleStatus = document.getElementById('roleStatus');
+  const phaseLabel = document.getElementById('phaseLabel');
+  const turnStatus = document.getElementById('turnStatus');
+  const mapGrid = document.getElementById('mapGrid');
+  const sideWrapper = document.getElementById('sideWrapper');
+  const sideRedBtn = document.getElementById('sideRedBtn');
+  const sideBlueBtn = document.getElementById('sideBlueBtn');
+  const summaryLines = document.getElementById('summaryLines');
+
+  const flipBtn = document.getElementById('flipBtn');
+  const chooseStartBtn = document.getElementById('chooseStartBtn');
+  const chooseWaitBtn = document.getElementById('chooseWaitBtn');
+
+  function teamName(key){
+    if(key === 'team1') return state.team1Name || 'Team 1';
+    if(key === 'team2') return state.team2Name || 'Team 2';
+    return '';
+  }
+  function otherTeam(key){ return key === 'team1' ? 'team2' : 'team1'; }
+
+  function mapStatus(map){
+    const b = state.bans.find(x => x.map === map);
+    if(b) return {type:'ban', by:b.team};
+    if(state.pick && state.pick.map === map) return {type:'pick', by:state.pick.team};
+    return {type:'free', by:null};
+  }
+
+  // === Supabase helpers ===
+  async function pushState(){
+    if(!sessionReady){
+      alert('Session is not ready yet. Ask the admin to start this code.');
+      return;
+    }
+    try{
+      await client.from(TABLE).upsert({ code: sessionCode, state });
+    }catch(err){
+      console.error('pushState error', err);
+      sessionStatus.textContent = 'Error saving state. Check console.';
+      sessionStatus.classList.add('error');
+    }
+  }
+
+  function subscribeToSession(){
+    if(channel){
+      client.removeChannel(channel);
+      channel = null;
+    }
+    if(!sessionCode) return;
+
+    channel = client
+      .channel('codm-veto-' + sessionCode)
+      .on(
+        'postgres_changes',
+        { event:'*', schema:'public', table:TABLE, filter:'code=eq.' + sessionCode },
+        payload => {
+          const newState = payload.new?.state;
+          if(newState){
+            state = Object.assign(defaultState(), newState);
+            sessionReady = true;
+            renderAll(true); // fromRemote
+          }
+        }
+      )
+      .subscribe();
+  }
+
+  async function loadSession(){
+    if(!sessionCode) return;
+    sessionStatus.classList.remove('error');
+    sessionStatus.textContent = 'Connecting to session ' + sessionCode + '...';
+
+    const { data, error } = await client
+      .from(TABLE)
+      .select('state')
+      .eq('code', sessionCode)
+      .maybeSingle();
+
+    if(error && error.code !== 'PGRST116'){
+      console.error(error);
+      sessionStatus.textContent = 'Error loading session. See console.';
+      sessionStatus.classList.add('error');
+      state = defaultState();
+    }else if(!data){
+      sessionStatus.textContent = 'No session data yet for ' + sessionCode + '. Ask admin to create it.';
+      state = defaultState();
+      sessionReady = false;
+    }else{
+      state = Object.assign(defaultState(), data.state || data);
+      sessionReady = true;
+      sessionStatus.textContent =
+        'Connected to ' + sessionCode + ' as ' +
+        (myTeam === 'team1' ? 'Team 1' : 'Team 2') +
+        ' (' + teamName(myTeam) + ').';
+    }
+
+    subscribeToSession();
+    renderAll();
+  }
+
+  // === Rendering ===
+  function renderMaps(){
+    mapGrid.innerHTML = '';
+    const canUseMapsPhase = ['ban1','ban2','pick'].includes(state.phase);
+    const myTurn = canUseMapsPhase && sessionReady && myTeam && state.turnTeam === myTeam;
+
+    MAPS.forEach(map => {
+      const st = mapStatus(map);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'map-card';
+      card.dataset.map = map;
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'map-name';
+      nameEl.textContent = map;
+      card.appendChild(nameEl);
+
+      const statusEl = document.createElement('div');
+      statusEl.className = 'map-status';
+
+      if(st.type === 'ban'){
+        card.classList.add('banned');
+        statusEl.textContent = 'Banned by ' + teamName(st.by);
+      }else if(st.type === 'pick'){
+        card.classList.add('picked');
+        statusEl.textContent = 'Picked by ' + teamName(st.by);
+      }else{
+        statusEl.textContent = 'Available';
+      }
+
+      // Enable only if it's this team's turn and map is free
+      const canClick = myTurn && st.type === 'free';
+      if(!canClick){
+        card.classList.add('disabled');
+        card.disabled = true;
+      }
+
+      card.appendChild(statusEl);
+      card.addEventListener('click', onMapClick);
+      mapGrid.appendChild(card);
+    });
+  }
+
+  function renderPhase(){
+    let label = '';
+    let info = '';
+    const meta = state.meta || {};
+
+    switch(state.phase){
+      case 'setup':
+        label = 'Setup';
+        info = 'Waiting for admin to prepare this veto session.';
+        break;
+      case 'coin':
+        label = 'Coin Flip';
+        if(myTeam === 'team1'){
+          info = 'YOUR TURN: Choose Heads or Tails, then press Flip.';
+        }else{
+          info = 'Team 1 is choosing Heads or Tails and flipping the coin.';
+        }
+        break;
+      case 'choose_role':
+        label = 'Coin Winner Chooses Start / Wait';
+        if(!state.coinWinner){
+          info = 'Waiting for coin flip result.';
+        }else if(myTeam === state.coinWinner){
+          info = 'YOUR TURN: Decide if you START bans or WAIT & pick side.';
+        }else{
+          info = teamName(state.coinWinner) + ' is deciding Start / Wait.';
+        }
+        break;
+      case 'ban1':
+        label = 'Ban #1';
+        if(!state.startTeam){
+          info = 'Waiting for roles to be chosen.';
+        }else if(myTeam === state.startTeam){
+          info = 'YOUR TURN: Ban one map.';
+        }else{
+          info = teamName(state.startTeam) + ' is banning the first map.';
+        }
+        break;
+      case 'ban2':
+        label = 'Ban #2';
+        if(!state.waitTeam){
+          info = 'Waiting for roles to be chosen.';
+        }else if(myTeam === state.waitTeam){
+          info = 'YOUR TURN: Ban one map.';
+        }else{
+          info = teamName(state.waitTeam) + ' is banning the second map.';
+        }
+        break;
+      case 'pick':
+        label = 'Map Pick';
+        if(!state.startTeam){
+          info = 'Waiting for roles to be chosen.';
+        }else if(myTeam === state.startTeam){
+          info = 'YOUR TURN: Pick the map from the remaining pool.';
+        }else{
+          info = teamName(state.startTeam) + ' is picking the map.';
+        }
+        break;
+      case 'side':
+        label = 'Side Selection';
+        if(!state.waitTeam){
+          info = 'Waiting for roles to be chosen.';
+        }else if(myTeam === state.waitTeam){
+          info = 'YOUR TURN: Choose RED or BLUE side on ' + (state.pick?.map || 'the map') + '.';
+        }else{
+          info = teamName(state.waitTeam) + ' is choosing RED or BLUE side.';
+        }
+        break;
+      case 'done':
+        label = 'Completed';
+        info = 'Veto finished. Confirm summary with admin / observer.';
+        break;
+      default:
+        label = '—';
+        info = '';
+    }
+
+    phaseLabel.textContent = label;
+    if(!sessionCode){
+      turnStatus.textContent = 'Add ?code=ABC123&team=1 or 2 to the URL.';
+    }else{
+      turnStatus.textContent = info;
+    }
+
+    // side buttons only visible in side phase
+    sideWrapper.style.display = state.phase === 'side' ? 'block' : 'none';
+
+    // enable / disable side buttons
+    const sideEnabled = sessionReady && state.phase === 'side' && myTeam === state.waitTeam;
+    sideRedBtn.disabled = !sideEnabled;
+    sideBlueBtn.disabled = !sideEnabled;
+
+    // coin + role buttons
+    const flipEnabled = sessionReady && state.phase === 'coin' && myTeam === 'team1';
+    flipBtn.disabled = !flipEnabled;
+
+    const canChooseRole = sessionReady && state.phase === 'choose_role' && myTeam === state.coinWinner;
+    chooseStartBtn.disabled = !canChooseRole;
+    chooseWaitBtn.disabled = !canChooseRole;
+  }
+
+  function renderForm(){
+    // Who am I
+    if(!myTeam || !sessionCode){
+      whoAmI.textContent = 'No team assigned (missing code/team in URL).';
+    }else{
+      const teamLabel = myTeam === 'team1' ? 'Team 1' : 'Team 2';
+      whoAmI.textContent = 'You are ' + teamLabel + ' • Match Code: ' + sessionCode;
+    }
+
+    // Names & meta
+    const meta = state.meta || {};
+    const myName = myTeam === 'team1' ? state.team1Name : state.team2Name;
+    const oppName = myTeam === 'team1' ? state.team2Name : state.team1Name;
+
+    myTeamNameEl.textContent = myName || (myTeam ? (myTeam === 'team1' ? 'Team 1' : 'Team 2') : '—');
+    oppTeamNameEl.textContent = oppName || (myTeam ? (myTeam === 'team1' ? 'Team 2' : 'Team 1') : '—');
+    formatValEl.textContent = meta.format || '—';
+    gameValEl.textContent = meta.gameNumber || '—';
+    modeValEl.textContent = meta.mode || '—';
+
+    // Coin info
+    const radios = document.querySelectorAll('input[name="coinCall"]');
+    radios.forEach(r => {
+      r.checked = (r.value === state.coinCall);
+      // Only Team 1 can change coin call during coin phase
+      r.disabled = !(sessionReady && state.phase === 'coin' && myTeam === 'team1');
+    });
+
+    coinResultText.textContent = 'Result: ' + (state.coinResult || '—');
+    coinWinnerText.textContent = 'Winner: ' + (state.coinWinner ? teamName(state.coinWinner) : '—');
+
+    if(state.startTeam && state.waitTeam){
+      roleStatus.textContent =
+        'Start: ' + teamName(state.startTeam) +
+        ' | Wait: ' + teamName(state.waitTeam);
+    }else{
+      roleStatus.textContent = 'Start / Wait not chosen yet.';
+    }
+  }
+
+  function renderSummary(){
+    const lines = [];
+    const meta = state.meta || {};
+
+    lines.push('Matchup: ' + (state.team1Name || 'Team 1') + ' vs ' + (state.team2Name || 'Team 2'));
+    lines.push('Format: ' + (meta.format || 'BO3') +
+      ' • Game ' + (meta.gameNumber || 1) +
+      ' • ' + (meta.mode || 'Hardpoint'));
+
+    if(state.coinCall){
+      lines.push('Coin call: Team 1 called ' + state.coinCall +
+        ' → Result: ' + (state.coinResult || '—'));
+    }
+    if(state.coinWinner){
+      lines.push('Coin winner: ' + teamName(state.coinWinner));
+    }
+    if(state.startTeam && state.waitTeam){
+      lines.push('Roles — Start: ' + teamName(state.startTeam) +
+        ', Wait: ' + teamName(state.waitTeam));
+    }
+
+    if(state.bans.length){
+      state.bans.forEach((b, i) => {
+        lines.push('Ban ' + (i+1) + ': ' + teamName(b.team) + ' banned ' + b.map);
+      });
+    }
+
+    if(state.pick){
+      lines.push('Picked Map: ' + teamName(state.pick.team) + ' picked ' + state.pick.map);
+    }
+
+    if(state.side){
+      lines.push('Side Choice: ' + teamName(state.side.team) + ' chose ' + state.side.choice + ' side.');
+    }
+
+    if(state.phase === 'done'){
+      lines.push('Status: Veto complete.');
+    }else{
+      lines.push('Status: Veto in progress (' + state.phase + ').');
+    }
+
+    summaryLines.innerHTML = lines.map(l => '<div>'+l+'</div>').join('');
+  }
+
+  function renderAll(fromRemote){
+    renderForm();
+    renderPhase();
+    renderMaps();
+    renderSummary();
+  }
+
+  // === Event Handlers ===
+  function onMapClick(e){
+    if(!sessionReady || !myTeam) return;
+    const map = e.currentTarget.dataset.map;
+    if(!['ban1','ban2','pick'].includes(state.phase)) return;
+
+    // Only current turn team can act
+    if(state.turnTeam !== myTeam) return;
+
+    const st = mapStatus(map);
+    if(st.type !== 'free') return;
+
+    if(state.phase === 'ban1'){
+      state.bans.push({team: state.startTeam, map});
+      state.phase = 'ban2';
+      state.turnTeam = state.waitTeam;
+    }else if(state.phase === 'ban2'){
+      state.bans.push({team: state.waitTeam, map});
+      state.phase = 'pick';
+      state.turnTeam = state.startTeam;
+    }else if(state.phase === 'pick'){
+      state.pick = {team: state.startTeam, map};
+      state.phase = 'side';
+      state.turnTeam = state.waitTeam;
+    }
+
+    pushState().then(() => renderAll());
+  }
+
+  flipBtn.addEventListener('click', async () => {
+    if(!sessionReady || myTeam !== 'team1') return;
+    if(state.phase !== 'coin') return;
+
+    const radios = document.querySelectorAll('input[name="coinCall"]');
+    let call = null;
+    radios.forEach(r => { if(r.checked) call = r.value; });
+
+    if(!call){
+      alert('You must choose Heads or Tails before flipping.');
+      return;
+    }
+
+    state.coinCall = call;
+    const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+    state.coinResult = result;
+
+    state.coinWinner = (result === call) ? 'team1' : 'team2';
+    state.phase = 'choose_role';
+
+    await pushState();
+    renderAll();
+  });
+
+  chooseStartBtn.addEventListener('click', async () => {
+    if(!sessionReady || state.phase !== 'choose_role') return;
+    if(!state.coinWinner || myTeam !== state.coinWinner) return;
+
+    state.startTeam = state.coinWinner;
+    state.waitTeam = otherTeam(state.coinWinner);
+    state.phase = 'ban1';
+    state.turnTeam = state.startTeam;
+
+    await pushState();
+    renderAll();
+  });
+
+  chooseWaitBtn.addEventListener('click', async () => {
+    if(!sessionReady || state.phase !== 'choose_role') return;
+    if(!state.coinWinner || myTeam !== state.coinWinner) return;
+
+    state.waitTeam = state.coinWinner;
+    state.startTeam = otherTeam(state.coinWinner);
+    state.phase = 'ban1';
+    state.turnTeam = state.startTeam;
+
+    await pushState();
+    renderAll();
+  });
+
+  sideRedBtn.addEventListener('click', async () => {
+    if(!sessionReady || state.phase !== 'side') return;
+    if(myTeam !== state.waitTeam) return;
+
+    state.side = {team: state.waitTeam, choice:'Red'};
+    state.phase = 'done';
+    state.turnTeam = null;
+
+    await pushState();
+    renderAll();
+  });
+
+  sideBlueBtn.addEventListener('click', async () => {
+    if(!sessionReady || state.phase !== 'side') return;
+    if(myTeam !== state.waitTeam) return;
+
+    state.side = {team: state.waitTeam, choice:'Blue'};
+    state.phase = 'done';
+    state.turnTeam = null;
+
+    await pushState();
+    renderAll();
+  });
+
+  // === Init: parse URL, connect ===
+  const params = new URLSearchParams(window.location.search);
+  const urlCode = params.get('code');
+  const urlTeam = (params.get('team') || params.get('as') || '').toLowerCase();
+
+  if(urlCode){
+    sessionCode = urlCode.toUpperCase();
+  }
+
+  if(urlTeam === '1' || urlTeam === 'team1'){
+    myTeam = 'team1';
+  }else if(urlTeam === '2' || urlTeam === 'team2'){
+    myTeam = 'team2';
+  }
+
+  if(!sessionCode || !myTeam){
+    sessionStatus.textContent = 'Missing ?code=ABC123 and/or ?team=1|2 in the URL. Ask the admin for the correct link.';
+    sessionStatus.classList.add('error');
+    renderAll();
+  }else{
+    loadSession();
+  }
+})();
+</script>
+</body>
+</html>
