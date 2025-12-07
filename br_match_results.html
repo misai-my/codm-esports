@@ -313,7 +313,7 @@
               <th class="rank">#</th>
               <th class="team">Team</th>
               <th>MP</th>
-              <th>Booyah</th>
+              <th>Victory</th>
               <th>PLC Pts</th>
               <th>ELIM Pts</th>
               <th class="total">Total</th>
@@ -639,7 +639,7 @@
         tdVictory.className = 'victory';
         const v = row.victory;
         tdVictory.textContent =
-          (v === true || v === 1 || v === '1') ? 'BOOYAH' : '';
+          (v === true || v === 1 || v === '1') ? 'VICTORY' : '';
         tr.appendChild(tdVictory);
 
         const tdPlcPts = document.createElement('td');
