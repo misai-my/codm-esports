@@ -743,6 +743,10 @@
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Realtime channel + dirty flag
+    let bracketChannel = null;
+    let isDirty = false;
+
     // ------- STATE -------
     const state = {
       participants: [],        // [{id, name}]
@@ -841,7 +845,6 @@
         topX: (typeof s.topX === 'number' ? s.topX : 0)
       }));
 
-      // Ensure last stage finishes the bracket (champion) if left blank
       const lastIdx = stages.length - 1;
       if(!stages[lastIdx].topX || stages[lastIdx].topX <= 0){
         stages[lastIdx].topX = 1;
@@ -880,7 +883,7 @@
           roundsForStage++;
           roundCursor++;
           totalRoundsFromStages++;
-          if(totalRoundsFromStages > 32) break; // safety
+          if(totalRoundsFromStages > 32) break;
         }
 
         const endRound = roundCursor - 1;
@@ -937,7 +940,6 @@
 
       const hasValidStages = stages.length && stages.some(st => st.topX && st.topX > 0);
 
-      // If no valid stages specified, treat as "play to champion".
       if(!hasValidStages){
         while(remaining > 1 && totalRounds < 32){
           const matches = Math.floor(remaining / 2);
@@ -964,7 +966,6 @@
         };
       }
 
-      // With stages: chain them; each stage uses minimum rounds to reach its topX (or fewer if math can't hit exactly).
       for(let i=0; i<stages.length && remaining>1 && totalRounds<32; i++){
         const st = stages[i];
         if(!st.topX || st.topX <= 0) continue;
@@ -999,7 +1000,6 @@
         remaining = localRemaining;
       }
 
-      // If for some reason nothing got recorded, fall back to champion.
       if(!stageRanges.length){
         remaining    = totalPlayers;
         roundCursor  = 1;
@@ -1065,7 +1065,7 @@
       return schedule;
     }
 
-    // ----- SWISS (rotation-based, 1 bye max per round, no repeat BYE) -----
+    // ----- SWISS -----
     function buildSwissSchedule(players){
       const arr = players.slice();
 
@@ -1162,7 +1162,6 @@
         return;
       }
 
-      // DOUBLE ELIM or any remaining elim mode still using power-of-two meta
       const rounds = Math.ceil(Math.log2(n));
       const bracketSize = 1 << rounds;
       const byes = bracketSize - n;
@@ -1289,11 +1288,9 @@
         const line = raw.trim();
         if(!line) continue;
 
-        // Take first column if CSV
         const firstCell = line.split(',')[0].trim();
         if(!firstCell) continue;
 
-        // Skip very simple header-looking rows like "Seed" or "Name"
         const lc = firstCell.toLowerCase();
         if((lc.includes('seed') || lc.includes('name')) && !/\d/.test(firstCell)){
           continue;
@@ -1325,7 +1322,6 @@
             return;
           }
 
-          // Replace current participants with imported list
           state.participants = [];
           nextParticipantId = 1;
           names.forEach(n => state.participants.push(createParticipant(n)));
@@ -1475,7 +1471,6 @@
       }
     }
 
-    // NEW: reset match to 0–0 & clear winner
     function resetMatch(matchId){
       const m = state.matchById[matchId];
       if(!m) return;
@@ -1495,7 +1490,6 @@
       renderSaveStatus(true);
     }
 
-    // UPDATED: allow ties + 0–0 reset, now returns boolean
     function setMatchResult(matchId, score1, score2){
       const m = state.matchById[matchId];
       if(!m) return false;
@@ -1515,7 +1509,6 @@
       const format = state.settings.format || 'single';
       const isElim = (format === 'single' || format === 'double');
 
-      // 0–0 → treat as reset/clear
       if(s1 === 0 && s2 === 0){
         if(isElim && m.winnerId){
           clearAdvancement(m);
@@ -1528,7 +1521,6 @@
         return true;
       }
 
-      // Equal non-zero scores → tie (no winner, no advancement)
       if(s1 === s2){
         if(isElim && m.winnerId){
           clearAdvancement(m);
@@ -1541,7 +1533,6 @@
         return true;
       }
 
-      // Normal win/lose result
       if(isElim){
         clearAdvancement(m);
       }
@@ -1560,7 +1551,7 @@
       return true;
     }
 
-    // ------- SINGLE ELIMINATION (SEQUENTIAL, 0–1 BYE PER ROUND, STAGE-AWARE) -------
+    // ------- SINGLE ELIMINATION (SEQUENTIAL) -------
     function generateSingleElimBracketSequential(seeded, maxRoundsOpt){
       const n = seeded.length;
 
@@ -1581,17 +1572,15 @@
       let roundIndex = 1;
       const maxRounds = (typeof maxRoundsOpt === 'number' && maxRoundsOpt > 0)
         ? maxRoundsOpt
-        : 32; // safety cap if no stages
+        : 32;
 
       while(currentTokens.length > 1 && roundIndex <= maxRounds){
         const roundMatches = [];
         const nextTokens = [];
 
-        // If odd count, exactly ONE bye token auto-advances
         if(currentTokens.length % 2 === 1){
           let byeIdx = -1;
 
-          // Prefer a player who hasn’t had a bye yet
           for(let i=0; i<currentTokens.length; i++){
             const t = currentTokens[i];
             if(t.type === 'player' && !byeUsedMap[t.playerId]){
@@ -1599,18 +1588,15 @@
               break;
             }
           }
-          // Fallback: last token
           if(byeIdx === -1) byeIdx = currentTokens.length - 1;
 
           const [byeToken] = currentTokens.splice(byeIdx, 1);
           if(byeToken.type === 'player'){
             byeUsedMap[byeToken.playerId] = true;
           }
-          // This token goes straight to next round
           nextTokens.push(byeToken);
         }
 
-        // Now we have an even number of tokens; pair them
         for(let i=0; i<currentTokens.length; i+=2){
           const t1 = currentTokens[i];
           const t2 = currentTokens[i+1];
@@ -1643,13 +1629,11 @@
 
       state.settings.totalRounds = state.rounds.length;
       state.settings.bracketSize = n;
-      // byes count is computed in meta; we keep it there.
     }
 
     // ------- GENERATION FOR EACH FORMAT -------
     function generateElimBracket(format, seeded){
       if(format === 'single'){
-        // Stage-aware sequential single elim
         const meta = computeSequentialStageMeta(seeded.length, state.settings.stages);
         state.stageRanges          = meta.stageRanges || [];
         state.settings.totalRounds = meta.totalRounds;
@@ -1659,8 +1643,6 @@
         return;
       }
 
-      // For DOUBLE ELIM (or other elim variants you might add later),
-      // we keep the power-of-two style bracket + byes.
       const n = seeded.length;
       const maxRounds  = Math.ceil(Math.log2(n));
       const bracketSize = 1 << maxRounds;
@@ -1728,7 +1710,6 @@
         prevRoundMatches = curRound;
       }
 
-      // Auto-advance BYE matches in round 1
       for(const m of state.rounds[0]){
         if(m.p1 && m.p1.isBye && m.p2 && !m.p2.isBye){
           m.winnerId = m.p2.id;
@@ -1808,7 +1789,6 @@
       if(state.settings.seedingMode === 'random'){
         shuffleArray(seeded);
       }
-      // 'seeded' & 'list' use current order
 
       const format = state.settings.format || 'single';
 
@@ -1835,7 +1815,7 @@
       bracketContainer.innerHTML = '';
       const div = document.createElement('div');
       div.className = 'empty-state';
-      div.innerHTML = 'Add participants on the left and click <strong>Generate bracket</strong> to see the tree or schedule.';
+      div.innerHTML = 'Add at least 2 participants and click <strong>Generate bracket</strong> to see the tree or schedule.';
       bracketContainer.appendChild(div);
 
       const existing = bracketContainer.querySelector('#bracket-lines');
@@ -1970,7 +1950,6 @@
 
       const totals = computeScoreSummaryTotals();
 
-      // Order by total desc, then name asc
       const ordered = state.participants.slice().sort((a,b) => {
         const ta = totals[a.id] || 0;
         const tb = totals[b.id] || 0;
@@ -2005,7 +1984,6 @@
       ordered.forEach(p => {
         const tr = document.createElement('tr');
 
-        // Seed based on original participants order
         let seed = '—';
         const idx = state.participants.findIndex(pp => pp.id === p.id);
         if(idx !== -1) seed = idx + 1;
@@ -2086,7 +2064,6 @@
         roundsCount = state.settings.totalRounds || state.rounds.length;
         bracketSize = state.settings.bracketSize || n;
         byes        = state.settings.byes || 0;
-        // stageRanges already computed by computeSequentialStageMeta
       }else if(format === 'double'){
         const rounds = Math.ceil(Math.log2(Math.max(n,2)));
         roundsCount = state.settings.totalRounds || rounds;
@@ -2220,7 +2197,7 @@
             reportBtn.disabled = true;
           }
 
-          // UPDATED: report score now auto-saves to DB (silent, no download)
+          // When reporting score, auto-save silently so realtime broadcasts out
           reportBtn.addEventListener('click', async () => {
             const scoreInputs = card.querySelectorAll('.score-input');
             const s1 = scoreInputs[0].value;
@@ -2257,7 +2234,97 @@
     });
 
     // ------- TOURNAMENT LOADING / SWITCHING -------
+    function cleanupRealtime(){
+      if(bracketChannel){
+        client.removeChannel(bracketChannel);
+        bracketChannel = null;
+      }
+    }
+
+    function setupRealtimeForBracket(bracketId){
+      if(!bracketId) return;
+      cleanupRealtime();
+
+      bracketChannel = client
+        .channel('bracket-changes-' + bracketId)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'brackets', filter: 'id=eq.' + bracketId },
+          (payload) => {
+            console.log('Realtime bracket update', payload);
+            if(payload && payload.new){
+              applyBracketRow(payload.new, { fromRealtime: true });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Realtime status:', status);
+        });
+    }
+
+    function applyBracketRow(row, options = {}){
+      const { fromRealtime = false } = options;
+
+      // If user has unsaved local changes, don't clobber them with realtime
+      if(fromRealtime && isDirty){
+        console.log('Skipping realtime apply because of unsaved local changes.');
+        return;
+      }
+
+      state.lastSavedId = row.id;
+      state.settings = Object.assign({
+        name: row.name || 'My Tournament',
+        format: 'single',
+        bestOf: 3,
+        seedingMode: 'seeded',
+        thirdPlace: false,
+        totalRounds: null,
+        bracketSize: null,
+        byes: null,
+        stages: [{ name: 'Qualifier', topX: 0 }]
+      }, row.settings || {});
+
+      ensureStagesDefault();
+
+      const d = row.data || {};
+      state.participants        = d.participants || [];
+      state.bracketParticipants = d.bracketParticipants || [];
+      state.rounds              = d.rounds || [];
+
+      state.matchById = {};
+      state.matchCounter = 0;
+      state.rounds.forEach(round => {
+        round.forEach(m => {
+          state.matchById[m.id] = m;
+          const num = parseInt(String(m.id).replace('m',''),10);
+          if(!Number.isNaN(num) && num > state.matchCounter){
+            state.matchCounter = num;
+          }
+        });
+      });
+
+      state.stageRanges = [];
+
+      nameInput.value = state.settings.name || '';
+      formatSelect.value = state.settings.format || 'single';
+      bestOfSelect.value = String(state.settings.bestOf || 1);
+      seedingSelect.value = state.settings.seedingMode || 'seeded';
+      thirdPlaceToggle.checked = !!state.settings.thirdPlace;
+
+      renderParticipants();
+      renderStages();
+      if(state.rounds.length){
+        renderBracket();
+      }else{
+        renderEmptyBracket();
+      }
+      renderSaveStatus(false);
+      updateBracketMath();
+    }
+
     function resetStateForNewTournament(){
+      cleanupRealtime();
+
       nextParticipantId = 1;
       state.participants = [];
       state.bracketParticipants = [];
@@ -2371,55 +2438,8 @@
           return;
         }
 
-        state.lastSavedId = data.id;
-        state.settings = Object.assign({
-          name: data.name || 'My Tournament',
-          format: 'single',
-          bestOf: 3,
-          seedingMode: 'seeded',
-          thirdPlace: false,
-          totalRounds: null,
-          bracketSize: null,
-          byes: null,
-          stages: [{ name: 'Qualifier', topX: 0 }]
-        }, data.settings || {});
-
-        ensureStagesDefault();
-
-        const d = data.data || {};
-        state.participants        = d.participants || [];
-        state.bracketParticipants = d.bracketParticipants || [];
-        state.rounds              = d.rounds || [];
-
-        state.matchById = {};
-        state.matchCounter = 0;
-        state.rounds.forEach(round => {
-          round.forEach(m => {
-            state.matchById[m.id] = m;
-            const num = parseInt(String(m.id).replace('m',''),10);
-            if(!Number.isNaN(num) && num > state.matchCounter){
-              state.matchCounter = num;
-            }
-          });
-        });
-
-        state.stageRanges = [];
-
-        nameInput.value = state.settings.name || '';
-        formatSelect.value = state.settings.format || 'single';
-        bestOfSelect.value = String(state.settings.bestOf || 1);
-        seedingSelect.value = state.settings.seedingMode || 'seeded';
-        thirdPlaceToggle.checked = !!state.settings.thirdPlace;
-
-        renderParticipants();
-        renderStages();
-        if(state.rounds.length){
-          renderBracket();
-        }else{
-          renderEmptyBracket();
-        }
-        renderSaveStatus(false);
-        updateBracketMath();
+        applyBracketRow(data, { fromRealtime: false });
+        setupRealtimeForBracket(id);
       }catch(err){
         console.error('Unexpected error loading bracket:', err);
         alert('Unexpected error loading bracket.');
@@ -2442,6 +2462,8 @@
 
     // ------- SAVE TO DATABASE -------
     function renderSaveStatus(dirty){
+      isDirty = !!dirty;
+
       if(dirty){
         saveStatus.textContent = 'Changes not yet saved to database.';
         saveStatusPill.textContent = 'Unsaved changes';
@@ -2454,7 +2476,6 @@
       }
     }
 
-    // Helper: download current bracket as JSON (used only for manual save)
     function downloadBracketJSON(payload, bracketId){
       try{
         const nameBase = (payload.name || 'bracket').trim() || 'bracket';
@@ -2485,7 +2506,6 @@
       }
     }
 
-    // UPDATED: supports { silent } for auto-save (no alerts / no download)
     async function saveBracketToSupabase(options = {}){
       const { silent = false } = options;
 
@@ -2549,12 +2569,10 @@
             ...payload
           };
 
-          // Only download JSON on manual save (not on auto-save from Report button)
           if(!silent){
             downloadBracketJSON(downloadPayload, bracketId);
           }
 
-          // If this was a new bracket, add it to the dropdown and select it.
           if(isNew && tournamentSelect){
             const opt = document.createElement('option');
             opt.value = String(bracketId);
@@ -2563,6 +2581,9 @@
             tournamentSelect.appendChild(opt);
             tournamentSelect.value = String(bracketId);
           }
+
+          // Ensure realtime is listening to the current bracket
+          setupRealtimeForBracket(bracketId);
 
           renderSaveStatus(false);
         }
