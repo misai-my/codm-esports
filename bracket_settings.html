@@ -465,7 +465,7 @@
     .player-row{
       display:grid;
       grid-template-columns:22px minmax(0,1fr) 40px;
-      align-items:flex-start;          /* so multi-line names align nicely */
+      align-items:flex-start;
       gap:4px;
       font-size:.8rem;
     }
@@ -475,9 +475,9 @@
       text-align:right;
     }
     .player-row span.name{
-      white-space:normal;              /* allow wrapping */
-      overflow-wrap:break-word;        /* break long words if needed */
-      word-break:break-word;           /* extra safety for long tags */
+      white-space:normal;
+      overflow-wrap:break-word;
+      word-break:break-word;
     }
     .player-row.bye span.name{
       color:var(--muted);
@@ -1495,21 +1495,21 @@
       renderSaveStatus(true);
     }
 
-    // UPDATED: allow ties + 0–0 reset
+    // UPDATED: allow ties + 0–0 reset, now returns boolean
     function setMatchResult(matchId, score1, score2){
       const m = state.matchById[matchId];
-      if(!m) return;
+      if(!m) return false;
 
       if(!m.p1 || !m.p2){
         alert('Both slots must have participants to report a result.');
-        return;
+        return false;
       }
 
       const s1 = parseInt(score1,10);
       const s2 = parseInt(score2,10);
       if(Number.isNaN(s1) || Number.isNaN(s2)){
         alert('Please enter numeric scores for both players.');
-        return;
+        return false;
       }
 
       const format = state.settings.format || 'single';
@@ -1525,7 +1525,7 @@
         m.winnerId = null;
         renderBracket();
         renderSaveStatus(true);
-        return;
+        return true;
       }
 
       // Equal non-zero scores → tie (no winner, no advancement)
@@ -1538,7 +1538,7 @@
         m.winnerId = null;
         renderBracket();
         renderSaveStatus(true);
-        return;
+        return true;
       }
 
       // Normal win/lose result
@@ -1557,6 +1557,7 @@
 
       renderBracket();
       renderSaveStatus(true);
+      return true;
     }
 
     // ------- SINGLE ELIMINATION (SEQUENTIAL, 0–1 BYE PER ROUND, STAGE-AWARE) -------
@@ -2219,11 +2220,15 @@
             reportBtn.disabled = true;
           }
 
-          reportBtn.addEventListener('click', () => {
+          // UPDATED: report score now auto-saves to DB (silent, no download)
+          reportBtn.addEventListener('click', async () => {
             const scoreInputs = card.querySelectorAll('.score-input');
             const s1 = scoreInputs[0].value;
             const s2 = scoreInputs[1].value;
-            setMatchResult(m.id, s1, s2);
+            const ok = setMatchResult(m.id, s1, s2);
+            if(ok){
+              await saveBracketToSupabase({ silent: true });
+            }
           });
 
           const resetBtn = document.createElement('button');
@@ -2435,7 +2440,7 @@
       });
     }
 
-    // ------- SAVE TO DATABASE + DOWNLOAD JSON -------
+    // ------- SAVE TO DATABASE -------
     function renderSaveStatus(dirty){
       if(dirty){
         saveStatus.textContent = 'Changes not yet saved to database.';
@@ -2449,7 +2454,7 @@
       }
     }
 
-    // Helper: download current bracket as JSON
+    // Helper: download current bracket as JSON (used only for manual save)
     function downloadBracketJSON(payload, bracketId){
       try{
         const nameBase = (payload.name || 'bracket').trim() || 'bracket';
@@ -2480,11 +2485,16 @@
       }
     }
 
-    async function saveBracketToSupabase(){
+    // UPDATED: supports { silent } for auto-save (no alerts / no download)
+    async function saveBracketToSupabase(options = {}){
+      const { silent = false } = options;
+
       syncSettingsFromUI();
 
       if(!state.rounds.length){
-        alert('Generate a bracket before saving to database.');
+        if(!silent){
+          alert('Generate a bracket before saving to database.');
+        }
         return;
       }
 
@@ -2501,8 +2511,10 @@
       const isNew = !state.lastSavedId || (tournamentSelect && tournamentSelect.value === 'new');
 
       try{
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving...';
+        if(!silent){
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving...';
+        }
         renderSaveStatus(true);
 
         let data, error;
@@ -2524,35 +2536,51 @@
 
         if(error){
           console.error('database save error:', error);
-          alert('Error saving bracket: ' + error.message);
+          if(!silent){
+            alert('Error saving bracket: ' + error.message);
+          }
           renderSaveStatus(true);
         }else{
           const bracketId = data.id;
           state.lastSavedId = bracketId;
 
-          // include id in downloaded JSON
           const downloadPayload = {
             id: bracketId,
             ...payload
           };
 
-          // download JSON together with successful save
-          downloadBracketJSON(downloadPayload, bracketId);
+          // Only download JSON on manual save (not on auto-save from Report button)
+          if(!silent){
+            downloadBracketJSON(downloadPayload, bracketId);
+          }
 
-          await loadTournamentList();
+          // If this was a new bracket, add it to the dropdown and select it.
+          if(isNew && tournamentSelect){
+            const opt = document.createElement('option');
+            opt.value = String(bracketId);
+            const nm = state.settings.name || 'Untitled';
+            opt.textContent = `#${bracketId} — ${nm}`;
+            tournamentSelect.appendChild(opt);
+            tournamentSelect.value = String(bracketId);
+          }
+
           renderSaveStatus(false);
         }
       }catch(err){
         console.error('Network error while saving bracket:', err);
-        alert('Error saving bracket: ' + (err.message || err));
+        if(!silent){
+          alert('Error saving bracket: ' + (err.message || err));
+        }
         renderSaveStatus(true);
       }finally{
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save bracket to database';
+        if(!silent){
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save bracket to database';
+        }
       }
     }
 
-    saveBtn.addEventListener('click', saveBracketToSupabase);
+    saveBtn.addEventListener('click', () => saveBracketToSupabase());
 
     // ------- INIT -------
     function init(){
