@@ -337,7 +337,7 @@
     #score-summary-section{
       display:flex;
       flex-direction:column;
-      max-height:350px;
+      max-height:420px;
       overflow:hidden;
     }
 
@@ -377,6 +377,12 @@
       color:var(--muted);
       font-weight:500;
       text-align:left;
+    }
+    .score-summary-table td.score-rank{
+      width:32px;
+      text-align:right;
+      color:var(--muted);
+      font-variant-numeric:tabular-nums;
     }
     .score-summary-table td.score-seed{
       width:44px;
@@ -672,7 +678,7 @@
             </div>
 
             <p class="helper-text">
-              1) Select tournament (or create new) • 2) Add participants • 3) Generate bracket • 4) Report scores • 5) Save/update.  
+              1) Select tournament (or create new) • 2) Add participants • 3) Generate bracket • 4) Report scores (auto-saves) • 5) Save/update.  
               Public can view on <code>bracket_view.html</code>.
             </p>
             <!-- live bracket math helper -->
@@ -747,7 +753,7 @@
     let bracketChannel = null;
     let isDirty = false;
 
-    // ------- STATE -------
+    // ------- STATE ------- 
     const state = {
       participants: [],        // [{id, name}]
       bracketParticipants: [], // includes real players only for single elim
@@ -797,7 +803,7 @@
 
     let nextParticipantId = 1;
 
-    // ------- UTILITIES -------
+    // ------- UTILITIES ------- 
     function createParticipant(name){
       return {
         id: 'p' + (nextParticipantId++),
@@ -833,7 +839,7 @@
       return id ? parseInt(id,10) : null;
     }
 
-    // ----- Power-of-two stage meta (used for DOUBLE ELIM and legacy) -----
+    // ----- Power-of-two stage meta (used for DOUBLE ELIM and legacy) ----- 
     function computeStageRoundMeta(bracketSize, stagesRaw){
       const stageRanges = [];
       if(!bracketSize || bracketSize < 2 || !Array.isArray(stagesRaw) || !stagesRaw.length){
@@ -904,7 +910,7 @@
       };
     }
 
-    // ----- NEW: Sequential single-elim stage meta (1 bye max per round) -----
+    // ----- NEW: Sequential single-elim stage meta (1 bye max per round) ----- 
     function computeSequentialStageMeta(totalPlayers, stagesRaw){
       const stageRanges = [];
 
@@ -1035,7 +1041,7 @@
       };
     }
 
-    // ----- ROUND ROBIN -----
+    // ----- ROUND ROBIN ----- 
     function buildRoundRobinSchedule(players){
       const arr = players.slice();
       const hasBye = arr.length % 2 === 1;
@@ -1065,7 +1071,7 @@
       return schedule;
     }
 
-    // ----- SWISS -----
+    // ----- SWISS ----- 
     function buildSwissSchedule(players){
       const arr = players.slice();
 
@@ -1102,7 +1108,7 @@
       return schedule;
     }
 
-    // ----- BRACKET MATH HELPER -----
+    // ----- BRACKET MATH HELPER ----- 
     function updateBracketMath(){
       if(!bracketMath) return;
       const n = state.participants.length;
@@ -1190,15 +1196,30 @@
         `${n} participants • up to ${rounds} rounds • bracket size ${bracketSize} • byes ${byes}${stageInfo}`;
     }
 
-    function recomputeBracketStructureIfExists(){
-      if(state.participants.length >= 2 && state.rounds.length){
-        generateBracket();
+    function recomputeBracketStructureIfExists(allowRebuild = true){
+      const hasParticipants = state.participants.length >= 2;
+      const hasBracket = state.rounds.length > 0;
+
+      if(!hasParticipants){
+        updateBracketMath();
+        return;
+      }
+
+      if(hasBracket){
+        if(allowRebuild){
+          generateBracket();
+        }else{
+          // keep existing matches & scores; only refresh meta + labels
+          updateBracketMath();
+          renderBracket();
+        }
       }else{
+        // no bracket yet: just update math preview
         updateBracketMath();
       }
     }
 
-    // ------- PARTICIPANTS UI -------
+    // ------- PARTICIPANTS UI ------- 
     function renderParticipants(){
       participantsBody.innerHTML = '';
       state.participants.forEach((p, idx) => {
@@ -1233,7 +1254,7 @@
           state.participants.splice(idx, 1);
           renderParticipants();
           renderSaveStatus(true);
-          recomputeBracketStructureIfExists();
+          recomputeBracketStructureIfExists(true);
           renderScoreSummary();
         });
         actionsTd.appendChild(removeBtn);
@@ -1250,14 +1271,14 @@
       state.participants.push(createParticipant());
       renderParticipants();
       renderSaveStatus(true);
-      recomputeBracketStructureIfExists();
+      recomputeBracketStructureIfExists(true);
     });
 
     shuffleBtn.addEventListener('click', () => {
       shuffleArray(state.participants);
       renderParticipants();
       renderSaveStatus(true);
-      recomputeBracketStructureIfExists();
+      recomputeBracketStructureIfExists(true);
     });
 
     clearBtn.addEventListener('click', () => {
@@ -1278,7 +1299,7 @@
       updateBracketMath();
     });
 
-    // ------- UPLOAD PARTICIPANTS (CSV/TXT) -------
+    // ------- UPLOAD PARTICIPANTS (CSV/TXT) ------- 
     function parseParticipantNamesFromText(text){
       const lines = text.split(/\r?\n/);
       const names = [];
@@ -1328,7 +1349,7 @@
 
           renderParticipants();
           renderSaveStatus(true);
-          recomputeBracketStructureIfExists();
+          recomputeBracketStructureIfExists(true);
 
           alert(`Imported ${names.length} participants from "${file.name}".`);
           uploadInput.value = '';
@@ -1343,7 +1364,7 @@
       });
     }
 
-    // ------- STAGES UI -------
+    // ------- STAGES UI ------- 
     function renderStages(){
       ensureStagesDefault();
       stagesList.innerHTML = '';
@@ -1364,7 +1385,8 @@
         nameInputStage.addEventListener('input', () => {
           state.settings.stages[index].name = nameInputStage.value;
           renderSaveStatus(true);
-          updateBracketMath();
+          // Update labels/meta only, don't rebuild bracket
+          recomputeBracketStructureIfExists(false);
         });
         row.appendChild(nameInputStage);
 
@@ -1379,7 +1401,8 @@
           const val = parseInt(qualInput.value,10);
           state.settings.stages[index].topX = Number.isNaN(val) ? 0 : val;
           renderSaveStatus(true);
-          recomputeBracketStructureIfExists();
+          // Recompute math + labels, keep existing bracket & scores
+          recomputeBracketStructureIfExists(false);
         });
         row.appendChild(qualInput);
 
@@ -1391,7 +1414,7 @@
           state.settings.stages.splice(index,1);
           renderStages();
           renderSaveStatus(true);
-          recomputeBracketStructureIfExists();
+          recomputeBracketStructureIfExists(false);
         });
         row.appendChild(removeBtn);
 
@@ -1408,11 +1431,11 @@
         });
         renderStages();
         renderSaveStatus(true);
-        recomputeBracketStructureIfExists();
+        recomputeBracketStructureIfExists(false);
       });
     }
 
-    // ------- MATCH / BRACKET CORE -------
+    // ------- MATCH / BRACKET CORE ------- 
     function createMatch(roundNumber, indexInRound, p1, p2){
       const id = 'm' + (++state.matchCounter);
       const match = {
@@ -1494,17 +1517,16 @@
       const m = state.matchById[matchId];
       if(!m) return false;
 
+      // require both participants to exist to apply a result
       if(!m.p1 || !m.p2){
-        alert('Both slots must have participants to report a result.');
         return false;
       }
 
-      const s1 = parseInt(score1,10);
-      const s2 = parseInt(score2,10);
-      if(Number.isNaN(s1) || Number.isNaN(s2)){
-        alert('Please enter numeric scores for both players.');
-        return false;
-      }
+      let s1 = parseInt(score1,10);
+      let s2 = parseInt(score2,10);
+
+      if(Number.isNaN(s1)) s1 = 0;
+      if(Number.isNaN(s2)) s2 = 0;
 
       const format = state.settings.format || 'single';
       const isElim = (format === 'single' || format === 'double');
@@ -1551,7 +1573,7 @@
       return true;
     }
 
-    // ------- SINGLE ELIMINATION (SEQUENTIAL) -------
+    // ------- SINGLE ELIMINATION (SEQUENTIAL) ------- 
     function generateSingleElimBracketSequential(seeded, maxRoundsOpt){
       const n = seeded.length;
 
@@ -1631,7 +1653,7 @@
       state.settings.bracketSize = n;
     }
 
-    // ------- GENERATION FOR EACH FORMAT -------
+    // ------- GENERATION FOR EACH FORMAT ------- 
     function generateElimBracket(format, seeded){
       if(format === 'single'){
         const meta = computeSequentialStageMeta(seeded.length, state.settings.stages);
@@ -1808,7 +1830,7 @@
       updateBracketMath();
     }
 
-    // ------- BRACKET RENDER -------
+    // ------- BRACKET RENDER ------- 
     function renderEmptyBracket(){
       bracketTitle.textContent = 'No bracket generated yet.';
       bracketMeta.textContent = '';
@@ -1909,7 +1931,7 @@
       }
     }
 
-    // ------- SCORE SUMMARY HELPERS -------
+    // ------- SCORE SUMMARY HELPERS ------- 
     function computeScoreSummaryTotals(){
       const totals = {};
       state.participants.forEach(p => {
@@ -1963,6 +1985,10 @@
       const thead = document.createElement('thead');
       const headRow = document.createElement('tr');
 
+      const thRank = document.createElement('th');
+      thRank.textContent = '#';
+      headRow.appendChild(thRank);
+
       const thSeed = document.createElement('th');
       thSeed.textContent = 'Seed';
       headRow.appendChild(thSeed);
@@ -1981,12 +2007,17 @@
 
       const tbody = document.createElement('tbody');
 
-      ordered.forEach(p => {
+      ordered.forEach((p, index) => {
         const tr = document.createElement('tr');
 
+        const tdRank = document.createElement('td');
+        tdRank.className = 'score-rank';
+        tdRank.textContent = index + 1;
+        tr.appendChild(tdRank);
+
         let seed = '—';
-        const idx = state.participants.findIndex(pp => pp.id === p.id);
-        if(idx !== -1) seed = idx + 1;
+        const seedIdx = state.participants.findIndex(pp => pp.id === p.id);
+        if(seedIdx !== -1) seed = seedIdx + 1;
 
         const tdSeed = document.createElement('td');
         tdSeed.className = 'score-seed';
@@ -2039,6 +2070,25 @@
       scoreInput.min = '0';
       scoreInput.className = 'score-input';
       scoreInput.value = slot === 1 ? (match.s1 ?? 0) : (match.s2 ?? 0);
+
+      const hasRealPlayer = !!(p && !p.isBye);
+
+      if(!hasRealPlayer){
+        scoreInput.disabled = true;
+      }else{
+        // Auto-save on change
+        scoreInput.addEventListener('change', async () => {
+          const card = scoreInput.closest('.match-card');
+          if(!card) return;
+          const inputs = card.querySelectorAll('.score-input');
+          const s1 = inputs[0] ? inputs[0].value : 0;
+          const s2 = inputs[1] ? inputs[1].value : 0;
+          const ok = setMatchResult(match.id, s1, s2);
+          if(ok){
+            await saveBracketToSupabase({ silent: true });
+          }
+        });
+      }
 
       row.appendChild(seedSpan);
       row.appendChild(nameSpan);
@@ -2189,31 +2239,14 @@
             status.innerHTML = `<span class="pending">Awaiting result…</span>`;
           }
 
-          const reportBtn = document.createElement('button');
-          reportBtn.className = 'primary';
-          reportBtn.textContent = 'Report score';
-
-          if(isPureBye){
-            reportBtn.disabled = true;
-          }
-
-          // When reporting score, auto-save silently so realtime broadcasts out
-          reportBtn.addEventListener('click', async () => {
-            const scoreInputs = card.querySelectorAll('.score-input');
-            const s1 = scoreInputs[0].value;
-            const s2 = scoreInputs[1].value;
-            const ok = setMatchResult(m.id, s1, s2);
-            if(ok){
-              await saveBracketToSupabase({ silent: true });
-            }
-          });
-
           const resetBtn = document.createElement('button');
           resetBtn.textContent = 'Reset';
-          resetBtn.addEventListener('click', () => resetMatch(m.id));
+          resetBtn.addEventListener('click', async () => {
+            resetMatch(m.id);
+            await saveBracketToSupabase({ silent: true });
+          });
 
           actions.appendChild(status);
-          actions.appendChild(reportBtn);
           actions.appendChild(resetBtn);
           card.appendChild(actions);
 
@@ -2233,7 +2266,7 @@
       }
     });
 
-    // ------- TOURNAMENT LOADING / SWITCHING -------
+    // ------- TOURNAMENT LOADING / SWITCHING ------- 
     function cleanupRealtime(){
       if(bracketChannel){
         client.removeChannel(bracketChannel);
@@ -2345,6 +2378,13 @@
       state.stageRanges = [];
       state.lastSavedId = null;
 
+      // Clear id from URL when going to a fresh tournament
+      try{
+        const url = new URL(window.location);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url);
+      }catch(e){}
+
       const demoNames = ['Player 1','Player 2','Player 3','Player 4','Player 5','Player 6','Player 7','Player 8'];
       demoNames.forEach(n => state.participants.push(createParticipant(n)));
 
@@ -2449,18 +2489,24 @@
     if(tournamentSelect){
       tournamentSelect.addEventListener('change', () => {
         const val = tournamentSelect.value;
+        const url = new URL(window.location);
+
         if(val === 'new'){
+          url.searchParams.delete('id');
+          window.history.replaceState({}, '', url);
           resetStateForNewTournament();
         }else{
           const id = parseInt(val,10);
           if(!Number.isNaN(id)){
+            url.searchParams.set('id', String(id));
+            window.history.replaceState({}, '', url);
             loadTournament(id);
           }
         }
       });
     }
 
-    // ------- SAVE TO DATABASE -------
+    // ------- SAVE TO DATABASE ------- 
     function renderSaveStatus(dirty){
       isDirty = !!dirty;
 
@@ -2582,6 +2628,15 @@
             tournamentSelect.value = String(bracketId);
           }
 
+          // Keep URL in sync so refresh retains selected tournament
+          if(tournamentSelect){
+            try{
+              const url = new URL(window.location);
+              url.searchParams.set('id', String(bracketId));
+              window.history.replaceState({}, '', url);
+            }catch(e){}
+          }
+
           // Ensure realtime is listening to the current bracket
           setupRealtimeForBracket(bracketId);
 
@@ -2603,7 +2658,7 @@
 
     saveBtn.addEventListener('click', () => saveBracketToSupabase());
 
-    // ------- INIT -------
+    // ------- INIT ------- 
     function init(){
       renderEmptyBracket();
       renderSaveStatus(false);
