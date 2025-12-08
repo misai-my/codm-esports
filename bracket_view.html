@@ -490,6 +490,7 @@
     };
 
     let lastSummaryRows = [];
+    let bracketChannel = null;   // realtime subscription channel
 
     // ===== URL Helpers =====
     function getBracketIdFromURL(){
@@ -509,6 +510,38 @@
         url.searchParams.set('id', val);
       }
       window.history.replaceState(null, '', url.toString());
+    }
+
+    // ===== Realtime helpers =====
+    function cleanupRealtime(){
+      if(bracketChannel){
+        client.removeChannel(bracketChannel);
+        bracketChannel = null;
+      }
+    }
+
+    function setupRealtimeForBracket(bracketId){
+      if(!bracketId) return;
+      cleanupRealtime();
+
+      bracketChannel = client
+        .channel('public-bracket-' + bracketId)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'brackets', filter: 'id=eq.' + bracketId },
+          (payload) => {
+            console.log('Realtime bracket update (public view)', payload);
+            if(payload && payload.new){
+              applyBracketRow(payload.new);
+            }else{
+              // Fallback: re-load from DB
+              loadBracket(bracketId);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Realtime status (public view):', status);
+        });
     }
 
     // ===== Stage meta (same logic as settings) =====
@@ -643,6 +676,44 @@
       }
     }
 
+    // ===== Apply a row (used by load + realtime) =====
+    function applyBracketRow(data){
+      state.bracketId           = data.id;
+      state.settings            = data.settings || {};
+      const d                   = data.data || {};
+      state.participants        = d.participants || [];
+      state.bracketParticipants = d.bracketParticipants || [];
+      state.rounds              = d.rounds || [];
+      state.stageRanges         = [];
+
+      const bracketName = state.settings.name || data.name || 'Tournament Bracket';
+      const updatedAt   = data.updated_at || data.created_at;
+      const updatedLabel = updatedAt ? new Date(updatedAt).toLocaleString() : 'just now';
+
+      headerMeta.textContent = `Showing #${data.id} — ${bracketName} • Updated ${updatedLabel}`;
+
+      // Sync dropdown to loaded id (but don't override "latest" selection)
+      if(tournamentSelect){
+        const valStr = String(data.id);
+        if(tournamentSelect.value !== 'latest' && tournamentSelect.value !== valStr){
+          const exists = [...tournamentSelect.options].some(o => o.value === valStr);
+          if(exists){
+            tournamentSelect.value = valStr;
+            updateUrlFromSelection();
+          }
+        }
+      }
+
+      renderBracket();
+
+      // Re-apply search filter after loading (if user typed something)
+      if(searchInput && searchInput.value.trim()){
+        const q = searchInput.value.trim().toLowerCase();
+        applyScoreSummaryFilter(q);
+        applyBracketSearchHighlight(q);
+      }
+    }
+
     // ===== Load a specific bracket =====
     async function loadBracket(explicitId){
       const urlId = getBracketIdFromURL();
@@ -698,35 +769,8 @@
           return;
         }
 
-        state.bracketId           = data.id;
-        state.settings            = data.settings || {};
-        const d                   = data.data || {};
-        state.participants        = d.participants || [];
-        state.bracketParticipants = d.bracketParticipants || [];
-        state.rounds              = d.rounds || [];
-        state.stageRanges         = [];
-
-        const bracketName = state.settings.name || data.name || 'Tournament Bracket';
-        headerMeta.textContent = `Showing #${data.id} — ${bracketName} • Updated ${new Date(data.created_at).toLocaleString()}`;
-
-        // Sync dropdown to loaded id
-        if(tournamentSelect){
-          const valStr = String(data.id);
-          if(tournamentSelect.value !== valStr){
-            const exists = [...tournamentSelect.options].some(o => o.value === valStr);
-            tournamentSelect.value = exists ? valStr : 'latest';
-            updateUrlFromSelection();
-          }
-        }
-
-        renderBracket();
-
-        // Re-apply search filter after loading (if user typed something)
-        if(searchInput && searchInput.value.trim()){
-          const q = searchInput.value.trim().toLowerCase();
-          applyScoreSummaryFilter(q);
-          applyBracketSearchHighlight(q);
-        }
+        applyBracketRow(data);
+        setupRealtimeForBracket(data.id);
       }catch(err){
         console.error('Unexpected error loading bracket:', err);
         headerMeta.textContent = 'Unexpected error loading bracket.';
