@@ -3,390 +3,285 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CODM Score Overlay (OBS Chroma)</title>
+  <title>CODM Top Logo + Score Overlay (OBS Chroma)</title>
   <style>
     :root{
-      --green:#00ff00; /* OBS chroma key background */
-      --panel:#0f1622;
-      --panel2:#131c2a;
-      --line:rgba(255,255,255,.14);
-      --ink:#eef4ff;
-      --muted:#aab6cf;
-      --left:#30b4ff;
-      --right:#ffd34d;
-      --danger:#ff6b6b;
-      --shadow:0 12px 28px rgba(0,0,0,.35);
-      --radius:14px;
+      /* OBS chroma key */
+      --green: #00ff00;
+
+      /* placement (adjust to match your broadcast frame) */
+      --top-y: 6px;
+      --center-gap: 400px;      /* empty space in the middle */
+      --logo-size: 78px;
+      --score-w: 58px;
+      --chip-h: 78px;
+      --radius: 8px;
+
+      /* colors */
+      --blue1:#49bfff;
+      --blue2:#1e8cff;
+      --yellow1:#ffd84d;
+      --yellow2:#f2b400;
+      --ink:#ffffff;
+      --line: rgba(255,255,255,.18);
+      --shadow: 0 8px 18px rgba(0,0,0,.28);
+
+      /* hidden editor */
+      --panel-bg: rgba(10,14,20,.92);
+      --panel-line: rgba(255,255,255,.12);
+      --muted:#aeb8cf;
     }
 
     *{ box-sizing:border-box; }
-    html, body{
+    html,body{
       margin:0;
       width:100%;
       height:100%;
       overflow:hidden;
-      background:var(--green);
+      background: var(--green);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color:var(--ink);
+      color: var(--ink);
     }
 
     body{
-      background:var(--green);
+      background: var(--green);
+      user-select:none;
     }
 
     .stage{
       position:relative;
       width:100vw;
       height:100vh;
-      background:var(--green);
+      background: var(--green);
     }
 
-    /* ===== TOP OVERLAY ===== */
-    .scorebar-wrap{
+    /* ===== ONLY VISIBLE OVERLAY PART ===== */
+    .top-overlay{
       position:absolute;
-      top:14px;
-      left:50%;
-      transform:translateX(-50%);
-      width:min(1180px, 96vw);
-      display:flex;
-      justify-content:center;
-      pointer-events:none; /* overlay itself won't block game view */
+      top:0;
+      left:0;
+      right:0;
+      height:110px; /* overlay only lives in this strip */
+      pointer-events:none;
       z-index:10;
     }
 
-    .scorebar{
-      width:min(1120px, 94vw);
-      min-height:108px;
-      display:grid;
-      grid-template-columns: 1fr auto 1fr;
+    .team-chip{
+      position:absolute;
+      top:var(--top-y);
+      height:var(--chip-h);
+      display:flex;
       align-items:stretch;
-      gap:10px;
-      padding:8px;
-      border-radius:18px;
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      border:1px solid rgba(255,255,255,.14);
+      gap:0;
+      pointer-events:none;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.22));
+    }
+
+    /* left chip sits left of center gap */
+    .team-chip.left{
+      right: calc(50% + (var(--center-gap) / 2));
+      flex-direction: row; /* score | logo */
+    }
+
+    /* right chip sits right of center gap */
+    .team-chip.right{
+      left: calc(50% + (var(--center-gap) / 2));
+      flex-direction: row; /* logo | score */
+    }
+
+    .score-box{
+      width: var(--score-w);
+      height: var(--chip-h);
+      display:grid;
+      place-items:center;
+      font-weight: 1000;
+      font-size: 40px;
+      line-height:1;
+      color:#fff;
+      border:1px solid var(--line);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(3px);
-      pointer-events:none;
+      text-shadow: 0 2px 10px rgba(0,0,0,.35);
+      pointer-events:auto;
+      cursor:pointer;
     }
 
-    .side{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      align-items:center;
-      gap:12px;
-      min-width:0;
-      border-radius:14px;
+    .team-chip.left .score-box{
+      border-radius: 6px 0 0 6px;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
+                  linear-gradient(135deg, var(--blue1), var(--blue2));
+      margin-right:2px;
+    }
+
+    .team-chip.right .score-box{
+      border-radius: 0 6px 6px 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
+                  linear-gradient(135deg, var(--yellow1), var(--yellow2));
+      color:#fff;
+      margin-left:2px;
+    }
+
+    .logo-box{
+      width: var(--logo-size);
+      height: var(--logo-size);
+      border-radius: 0;
       overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(10,14,20,.9);
-      position:relative;
-    }
-
-    .side.right{
-      grid-template-columns: auto 1fr;
-    }
-
-    .side.left::before,
-    .side.right::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      opacity:.16;
-      pointer-events:none;
-    }
-    .side.left::before{
+      border:1px solid var(--line);
       background:
-        linear-gradient(120deg, rgba(48,180,255,.5), transparent 60%);
-    }
-    .side.right::before{
-      background:
-        linear-gradient(240deg, rgba(255,211,77,.7), transparent 60%);
-    }
-
-    .team-meta{
-      min-width:0;
-      padding:12px 14px;
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-      z-index:1;
-    }
-
-    .side.left .team-meta{
-      align-items:flex-start;
-      text-align:left;
-    }
-    .side.right .team-meta{
-      align-items:flex-end;
-      text-align:right;
-    }
-
-    .team-name{
-      font-weight:900;
-      font-size:20px;
-      line-height:1;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:100%;
-      text-shadow:0 1px 10px rgba(0,0,0,.35);
-    }
-
-    .team-role{
-      font-weight:800;
-      font-size:11px;
-      letter-spacing:.14em;
-      text-transform:uppercase;
-      color:var(--muted);
-      opacity:.95;
-    }
-
-    .team-score{
-      min-width:84px;
-      align-self:stretch;
-      display:grid;
-      place-items:center;
-      font-weight:1000;
-      font-size:52px;
-      line-height:1;
-      letter-spacing:.02em;
-      z-index:1;
-      background:rgba(255,255,255,.03);
-      border-left:1px solid rgba(255,255,255,.08);
-      border-right:1px solid rgba(255,255,255,.08);
-      text-shadow:0 2px 12px rgba(0,0,0,.35);
-    }
-
-    .side.left .team-score{ color:var(--left); }
-    .side.right .team-score{ color:var(--right); }
-
-    .middle{
-      min-width:310px;
-      display:grid;
-      grid-template-rows: auto auto;
-      gap:8px;
-      align-content:center;
-      justify-items:center;
-      padding:6px 8px;
-      border-radius:14px;
-      background:rgba(9,12,18,.92);
-      border:1px solid rgba(255,255,255,.1);
+        radial-gradient(circle at 25% 20%, rgba(255,255,255,.08), transparent 42%),
+        #0c131c;
+      box-shadow: var(--shadow);
       position:relative;
-      overflow:hidden;
+      pointer-events:auto; /* click to upload */
+      cursor:pointer;
     }
 
-    .middle::before{
-      content:"";
-      position:absolute;
-      inset:0;
+    .team-chip.left .logo-box{
+      border-radius: 0 6px 6px 0;
       background:
-        radial-gradient(circle at 18% 30%, rgba(48,180,255,.18), transparent 35%),
-        radial-gradient(circle at 82% 35%, rgba(255,211,77,.22), transparent 35%);
-      pointer-events:none;
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
+        linear-gradient(135deg, rgba(73,191,255,.18), rgba(30,140,255,.08)),
+        #0c131c;
     }
 
-    .logo-row{
-      position:relative;
-      z-index:1;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-
-    .photo-slot{
-      width:72px;
-      height:72px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.16);
+    .team-chip.right .logo-box{
+      border-radius: 6px 0 0 6px;
       background:
-        linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.02)),
-        #0b1018;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-      overflow:hidden;
-      display:grid;
-      place-items:center;
-      position:relative;
-      flex:0 0 auto;
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
+        linear-gradient(135deg, rgba(255,216,77,.20), rgba(242,180,0,.08)),
+        #0c131c;
     }
 
-    .photo-slot img{
+    .logo-box img{
       width:100%;
       height:100%;
       object-fit:cover;
-      display:block;
+      display:none;
     }
 
-    .photo-slot .placeholder{
-      width:100%;
-      height:100%;
-      display:grid;
-      place-items:center;
-      font-weight:900;
-      font-size:20px;
-      color:rgba(255,255,255,.75);
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      background:
-        radial-gradient(circle at 25% 25%, rgba(255,255,255,.07), transparent 40%),
-        linear-gradient(135deg, #131b28, #0a0f17);
-    }
-
-    .vs-badge{
-      min-width:70px;
-      height:40px;
-      padding:0 14px;
-      border-radius:999px;
-      display:grid;
-      place-items:center;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.12);
-      font-weight:900;
-      letter-spacing:.16em;
-      text-transform:uppercase;
-      color:#fff;
-      font-size:13px;
-      text-shadow:0 1px 10px rgba(0,0,0,.4);
-    }
-
-    .subtitle{
-      position:relative;
-      z-index:1;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      color:var(--muted);
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-
-    .pill{
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      color:var(--ink);
-      border-radius:999px;
-      padding:6px 10px;
-      line-height:1;
-      font-weight:800;
-      letter-spacing:.06em;
-    }
-
-    .timer-pill{
-      color:#ffcc66;
-    }
-
-    /* ===== CONTROL PANEL (hide during live use) ===== */
-    .controls{
+    .logo-box .placeholder{
       position:absolute;
-      left:14px;
-      bottom:14px;
-      width:min(480px, calc(100vw - 28px));
-      background:rgba(11,15,22,.92);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;
-      box-shadow:0 18px 40px rgba(0,0,0,.35);
+      inset:0;
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      font-size:18px;
+      letter-spacing:.08em;
+      color:rgba(255,255,255,.82);
+      text-shadow:0 1px 8px rgba(0,0,0,.35);
+    }
+
+    /* tiny click hint (only in edit mode) */
+    .edit-hint{
+      position:absolute;
+      left:50%;
+      top:92px;
+      transform:translateX(-50%);
+      pointer-events:none;
+      color:rgba(255,255,255,.85);
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.05em;
+      text-shadow:0 1px 8px rgba(0,0,0,.3);
+      opacity:0;
+      transition:opacity .15s ease;
+    }
+    .stage.edit-mode .edit-hint{ opacity:1; }
+
+    /* ===== Hidden mini editor (default hidden) ===== */
+    .editor{
+      position:absolute;
+      left:12px;
+      bottom:12px;
+      width:min(420px, calc(100vw - 24px));
+      border-radius:14px;
+      background:var(--panel-bg);
+      border:1px solid var(--panel-line);
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
       backdrop-filter: blur(6px);
-      padding:12px;
+      padding:10px;
       z-index:20;
       transition: opacity .18s ease, transform .18s ease;
     }
 
-    .stage.hide-ui .controls{
+    .stage:not(.edit-mode) .editor{
       opacity:0;
+      transform:translateY(10px);
       pointer-events:none;
-      transform:translateY(8px);
     }
 
-    .controls h2{
-      margin:0 0 10px;
-      font-size:14px;
+    .editor h2{
+      margin:0 0 8px;
+      font-size:13px;
       letter-spacing:.04em;
     }
 
-    .grid{
+    .editor .grid{
       display:grid;
-      gap:10px;
-    }
-
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
     }
 
     .card{
-      background:rgba(255,255,255,.03);
+      border-radius:10px;
       border:1px solid rgba(255,255,255,.08);
-      border-radius:12px;
-      padding:10px;
+      background:rgba(255,255,255,.03);
+      padding:8px;
     }
 
     .card h3{
-      margin:0 0 8px;
-      font-size:12px;
+      margin:0 0 6px;
+      font-size:11px;
       color:var(--muted);
-      letter-spacing:.08em;
       text-transform:uppercase;
+      letter-spacing:.08em;
     }
 
     label{
       display:block;
-      font-size:11px;
+      margin:5px 0 3px;
+      font-size:10px;
       color:var(--muted);
-      margin:6px 0 4px;
       letter-spacing:.04em;
     }
 
-    input[type="text"], input[type="number"]{
+    input[type="number"], input[type="range"]{
       width:100%;
-      height:36px;
-      border-radius:10px;
+    }
+
+    input[type="number"]{
+      height:34px;
+      border-radius:8px;
       border:1px solid rgba(255,255,255,.12);
       background:#0d1320;
-      color:var(--ink);
-      padding:0 10px;
-      font-weight:700;
-      outline:none;
+      color:#fff;
+      padding:0 8px;
+      font-weight:800;
     }
 
-    input[type="text"]:focus, input[type="number"]:focus{
-      border-color:rgba(255,211,77,.45);
-      box-shadow:0 0 0 2px rgba(255,211,77,.10);
-    }
-
-    .btn-row{
+    .row{
       display:flex;
-      flex-wrap:wrap;
       gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
     }
 
     button{
       appearance:none;
       border:1px solid rgba(255,255,255,.12);
       background:#111a29;
-      color:var(--ink);
-      border-radius:10px;
-      padding:8px 10px;
-      min-height:36px;
-      font-weight:800;
+      color:#fff;
+      border-radius:8px;
+      padding:7px 9px;
+      min-height:34px;
       font-size:12px;
+      font-weight:800;
       cursor:pointer;
-      box-shadow:0 8px 20px rgba(0,0,0,.18);
     }
-
     button:hover{ filter:brightness(1.08); }
-    button:active{ transform:translateY(1px); }
+    .muted{ color:var(--muted); }
 
-    .btn-left{ border-color: rgba(48,180,255,.25); background: rgba(48,180,255,.10); }
-    .btn-right{ border-color: rgba(255,211,77,.28); background: rgba(255,211,77,.12); }
-    .btn-danger{ border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.12); }
-    .btn-ghost{ background: rgba(255,255,255,.03); color:var(--muted); }
-
-    .small{
+    .help{
+      margin-top:8px;
       font-size:11px;
       color:var(--muted);
       line-height:1.35;
@@ -394,237 +289,191 @@
 
     .kbd{
       display:inline-block;
-      min-width:18px;
-      text-align:center;
-      border:1px solid rgba(255,255,255,.18);
+      padding:1px 5px;
+      border:1px solid rgba(255,255,255,.16);
       border-bottom-width:2px;
       border-radius:6px;
-      padding:1px 5px;
       background:rgba(255,255,255,.04);
-      color:var(--ink);
+      color:#fff;
       font-weight:800;
-      font-size:11px;
-      margin:0 2px;
+      font-size:10px;
+      margin:0 1px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px){
+      :root{
+        --center-gap: 320px;
+        --logo-size: 70px;
+        --chip-h: 70px;
+        --score-w: 52px;
+      }
+      .score-box{ font-size: 34px; }
+      .edit-hint{ top:84px; }
     }
 
     @media (max-width: 900px){
-      .scorebar{
-        width:98vw;
-        gap:6px;
-        padding:6px;
+      :root{
+        --center-gap: 220px;
+        --logo-size: 58px;
+        --chip-h: 58px;
+        --score-w: 44px;
       }
-      .team-name{ font-size:14px; }
-      .team-score{ min-width:58px; font-size:34px; }
-      .middle{ min-width:220px; padding:6px; gap:6px; }
-      .photo-slot{ width:56px; height:56px; border-radius:10px; }
-      .vs-badge{ min-width:54px; height:32px; font-size:11px; padding:0 10px; }
-      .subtitle{ font-size:10px; gap:6px; }
-      .pill{ padding:5px 8px; }
-      .row{ grid-template-columns:1fr; }
-      .controls{ width:min(520px, calc(100vw - 20px)); left:10px; bottom:10px; }
+      .score-box{ font-size: 28px; }
+      .logo-box .placeholder{ font-size:14px; }
+      .top-overlay{ height:86px; }
+      .editor .grid{ grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
   <div class="stage" id="stage">
-    <!-- TOP OVERLAY -->
-    <div class="scorebar-wrap">
-      <div class="scorebar">
-        <!-- LEFT SIDE -->
-        <div class="side left">
-          <div class="team-meta">
-            <div class="team-role" id="leftRole">Defender</div>
-            <div class="team-name" id="leftNameDisplay">Team Blue</div>
-          </div>
-          <div class="team-score" id="leftScoreDisplay">0</div>
-        </div>
-
-        <!-- MIDDLE / PHOTOS -->
-        <div class="middle">
-          <div class="logo-row">
-            <div class="photo-slot" id="leftPhotoSlot" title="Left photo">
-              <img id="leftPhotoImg" alt="Left photo" style="display:none;" />
-              <div class="placeholder" id="leftPhotoPlaceholder">L</div>
-            </div>
-
-            <div class="vs-badge" id="centerLabelDisplay">VS</div>
-
-            <div class="photo-slot" id="rightPhotoSlot" title="Right photo">
-              <img id="rightPhotoImg" alt="Right photo" style="display:none;" />
-              <div class="placeholder" id="rightPhotoPlaceholder">R</div>
-            </div>
-          </div>
-
-          <div class="subtitle">
-            <span class="pill" id="roundDisplay">Round 1</span>
-            <span class="pill timer-pill" id="timerDisplay">00:00</span>
-          </div>
-        </div>
-
-        <!-- RIGHT SIDE -->
-        <div class="side right">
-          <div class="team-score" id="rightScoreDisplay">0</div>
-          <div class="team-meta">
-            <div class="team-role" id="rightRole">Attacker</div>
-            <div class="team-name" id="rightNameDisplay">Team Yellow</div>
-          </div>
+    <!-- Only this top strip is the visible overlay design -->
+    <div class="top-overlay" aria-label="Top score overlay">
+      <div class="team-chip left">
+        <div class="score-box" id="leftScoreBox" title="Left score (click to +1)">0</div>
+        <div class="logo-box" id="leftLogoBox" title="Click to upload left logo">
+          <img id="leftLogoImg" alt="Left logo" />
+          <div class="placeholder" id="leftPlaceholder">L</div>
         </div>
       </div>
+
+      <div class="team-chip right">
+        <div class="logo-box" id="rightLogoBox" title="Click to upload right logo">
+          <img id="rightLogoImg" alt="Right logo" />
+          <div class="placeholder" id="rightPlaceholder">R</div>
+        </div>
+        <div class="score-box" id="rightScoreBox" title="Right score (click to +1)">0</div>
+      </div>
+
+      <div class="edit-hint">Edit mode: click logos to upload • click score to +1 • right-click score to -1</div>
     </div>
 
-    <!-- CONTROL PANEL (hide during live use with H) -->
-    <div class="controls" id="controls">
-      <h2>Overlay Controls (OBS Chroma Page)</h2>
+    <!-- Hidden editor (toggle with E / H) -->
+    <div class="editor" id="editor">
+      <h2>Overlay Editor (hidden on live by default)</h2>
 
       <div class="grid">
-        <div class="row">
-          <div class="card">
-            <h3>Left Team</h3>
-            <label for="leftNameInput">Team Name</label>
-            <input id="leftNameInput" type="text" value="Team Blue" />
-            <label for="leftRoleInput">Label</label>
-            <input id="leftRoleInput" type="text" value="Defender" />
-            <label for="leftScoreInput">Score</label>
-            <input id="leftScoreInput" type="number" min="0" step="1" value="0" />
-            <label>Photo</label>
-            <div class="btn-row">
-              <button class="btn-left" id="leftUploadBtn">Upload Left Photo</button>
-              <button class="btn-ghost" id="leftClearBtn">Clear</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>Right Team</h3>
-            <label for="rightNameInput">Team Name</label>
-            <input id="rightNameInput" type="text" value="Team Yellow" />
-            <label for="rightRoleInput">Label</label>
-            <input id="rightRoleInput" type="text" value="Attacker" />
-            <label for="rightScoreInput">Score</label>
-            <input id="rightScoreInput" type="number" min="0" step="1" value="0" />
-            <label>Photo</label>
-            <div class="btn-row">
-              <button class="btn-right" id="rightUploadBtn">Upload Right Photo</button>
-              <button class="btn-ghost" id="rightClearBtn">Clear</button>
-            </div>
-          </div>
-        </div>
-
         <div class="card">
-          <h3>Center / Match Info</h3>
+          <h3>Left Team</h3>
+          <label>Score</label>
+          <input id="leftScoreInput" type="number" min="0" step="1" value="0">
           <div class="row">
-            <div>
-              <label for="centerLabelInput">Center Label</label>
-              <input id="centerLabelInput" type="text" value="VS" />
-            </div>
-            <div>
-              <label for="roundInput">Round Text</label>
-              <input id="roundInput" type="text" value="Round 1" />
-            </div>
-          </div>
-          <label for="timerInput">Timer / Small Text</label>
-          <input id="timerInput" type="text" value="00:00" />
-          <div class="btn-row" style="margin-top:8px;">
-            <button id="swapPhotosBtn">Swap Photos</button>
-            <button id="resetScoresBtn" class="btn-danger">Reset Scores</button>
-            <button id="resetAllBtn" class="btn-danger">Reset All</button>
-            <button id="toggleUiBtn">H • Hide UI</button>
+            <button id="leftPlusBtn">Left +1</button>
+            <button id="leftMinusBtn">Left -1</button>
+            <button id="leftUploadBtn">Upload Left Logo</button>
+            <button id="leftClearBtn">Clear</button>
           </div>
         </div>
 
         <div class="card">
-          <h3>Hotkeys</h3>
-          <div class="small">
-            <span class="kbd">Q</span>/<span class="kbd">A</span> = Left + / - score &nbsp; • &nbsp;
-            <span class="kbd">P</span>/<span class="kbd">L</span> = Right + / - score<br/>
-            <span class="kbd">R</span> = Reset scores &nbsp; • &nbsp;
-            <span class="kbd">H</span> = Hide/show controls<br/>
-            Click a photo slot (top) or the upload buttons to replace team logo/photo.<br/>
-            Tip: Add this page as OBS Browser Source, then apply Chroma Key (green).
+          <h3>Right Team</h3>
+          <label>Score</label>
+          <input id="rightScoreInput" type="number" min="0" step="1" value="0">
+          <div class="row">
+            <button id="rightPlusBtn">Right +1</button>
+            <button id="rightMinusBtn">Right -1</button>
+            <button id="rightUploadBtn">Upload Right Logo</button>
+            <button id="rightClearBtn">Clear</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Placement</h3>
+          <label>Top Offset (px)</label>
+          <input id="topYRange" type="range" min="0" max="40" step="1" value="6">
+          <label>Center Gap (px)</label>
+          <input id="centerGapRange" type="range" min="180" max="700" step="2" value="400">
+          <div class="row">
+            <button id="resetLayoutBtn">Reset Layout</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Session</h3>
+          <div class="row">
+            <button id="toggleEditBtn">Hide Editor</button>
+            <button id="resetScoresBtn">Reset Scores</button>
+            <button id="swapLogosBtn">Swap Logos</button>
+            <button id="resetAllBtn">Reset All</button>
+          </div>
+          <div class="help">
+            Hotkeys:
+            <span class="kbd">E</span>/<span class="kbd">H</span> editor,
+            <span class="kbd">Q</span>/<span class="kbd">A</span> left +/−,
+            <span class="kbd">P</span>/<span class="kbd">L</span> right +/−,
+            <span class="kbd">R</span> reset scores.
           </div>
         </div>
       </div>
 
-      <!-- hidden file inputs -->
-      <input type="file" id="leftFileInput" accept="image/*" hidden />
-      <input type="file" id="rightFileInput" accept="image/*" hidden />
+      <input type="file" id="leftFileInput" accept="image/*" hidden>
+      <input type="file" id="rightFileInput" accept="image/*" hidden>
     </div>
   </div>
 
   <script>
-    const STORAGE_KEY = "codm_score_overlay_v1";
+    const STORAGE_KEY = "codm_top_logo_score_overlay_v1";
 
     const state = {
-      leftName: "Team Blue",
-      leftRole: "Defender",
       leftScore: 0,
-      leftPhoto: "",
-      rightName: "Team Yellow",
-      rightRole: "Attacker",
       rightScore: 0,
-      rightPhoto: "",
-      centerLabel: "VS",
-      roundText: "Round 1",
-      timerText: "00:00",
-      hideUI: false
+      leftLogo: "",
+      rightLogo: "",
+      editMode: false,
+      layout: {
+        topY: 6,
+        centerGap: 400
+      }
     };
 
-    // Display elements
-    const el = {
-      stage: document.getElementById("stage"),
-      controls: document.getElementById("controls"),
+    const $ = (id) => document.getElementById(id);
+    const stage = $("stage");
 
-      leftNameDisplay: document.getElementById("leftNameDisplay"),
-      leftRole: document.getElementById("leftRole"),
-      leftScoreDisplay: document.getElementById("leftScoreDisplay"),
-      rightNameDisplay: document.getElementById("rightNameDisplay"),
-      rightRole: document.getElementById("rightRole"),
-      rightScoreDisplay: document.getElementById("rightScoreDisplay"),
+    const refs = {
+      leftScoreBox: $("leftScoreBox"),
+      rightScoreBox: $("rightScoreBox"),
+      leftScoreInput: $("leftScoreInput"),
+      rightScoreInput: $("rightScoreInput"),
 
-      leftPhotoImg: document.getElementById("leftPhotoImg"),
-      leftPhotoPlaceholder: document.getElementById("leftPhotoPlaceholder"),
-      rightPhotoImg: document.getElementById("rightPhotoImg"),
-      rightPhotoPlaceholder: document.getElementById("rightPhotoPlaceholder"),
-      leftPhotoSlot: document.getElementById("leftPhotoSlot"),
-      rightPhotoSlot: document.getElementById("rightPhotoSlot"),
+      leftLogoBox: $("leftLogoBox"),
+      rightLogoBox: $("rightLogoBox"),
+      leftLogoImg: $("leftLogoImg"),
+      rightLogoImg: $("rightLogoImg"),
+      leftPlaceholder: $("leftPlaceholder"),
+      rightPlaceholder: $("rightPlaceholder"),
 
-      centerLabelDisplay: document.getElementById("centerLabelDisplay"),
-      roundDisplay: document.getElementById("roundDisplay"),
-      timerDisplay: document.getElementById("timerDisplay"),
+      leftUploadBtn: $("leftUploadBtn"),
+      rightUploadBtn: $("rightUploadBtn"),
+      leftClearBtn: $("leftClearBtn"),
+      rightClearBtn: $("rightClearBtn"),
+      leftFileInput: $("leftFileInput"),
+      rightFileInput: $("rightFileInput"),
 
-      leftNameInput: document.getElementById("leftNameInput"),
-      leftRoleInput: document.getElementById("leftRoleInput"),
-      leftScoreInput: document.getElementById("leftScoreInput"),
-      rightNameInput: document.getElementById("rightNameInput"),
-      rightRoleInput: document.getElementById("rightRoleInput"),
-      rightScoreInput: document.getElementById("rightScoreInput"),
-      centerLabelInput: document.getElementById("centerLabelInput"),
-      roundInput: document.getElementById("roundInput"),
-      timerInput: document.getElementById("timerInput"),
+      leftPlusBtn: $("leftPlusBtn"),
+      leftMinusBtn: $("leftMinusBtn"),
+      rightPlusBtn: $("rightPlusBtn"),
+      rightMinusBtn: $("rightMinusBtn"),
+      resetScoresBtn: $("resetScoresBtn"),
+      swapLogosBtn: $("swapLogosBtn"),
+      resetAllBtn: $("resetAllBtn"),
 
-      leftUploadBtn: document.getElementById("leftUploadBtn"),
-      rightUploadBtn: document.getElementById("rightUploadBtn"),
-      leftClearBtn: document.getElementById("leftClearBtn"),
-      rightClearBtn: document.getElementById("rightClearBtn"),
-      swapPhotosBtn: document.getElementById("swapPhotosBtn"),
-      resetScoresBtn: document.getElementById("resetScoresBtn"),
-      resetAllBtn: document.getElementById("resetAllBtn"),
-      toggleUiBtn: document.getElementById("toggleUiBtn"),
-      leftFileInput: document.getElementById("leftFileInput"),
-      rightFileInput: document.getElementById("rightFileInput"),
+      topYRange: $("topYRange"),
+      centerGapRange: $("centerGapRange"),
+      resetLayoutBtn: $("resetLayoutBtn"),
+
+      toggleEditBtn: $("toggleEditBtn")
     };
 
-    function clampScore(n){
-      n = Number(n);
-      if (!Number.isFinite(n)) n = 0;
-      return Math.max(0, Math.floor(n));
+    function clampScore(v){
+      v = Number(v);
+      if (!Number.isFinite(v)) return 0;
+      return Math.max(0, Math.floor(v));
     }
 
     function saveState(){
-      try{
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      }catch(err){
-        console.warn("State not saved (localStorage issue):", err);
-      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch (e) { console.warn("Save failed:", e); }
     }
 
     function loadState(){
@@ -632,87 +481,70 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
         const parsed = JSON.parse(raw);
-        Object.assign(state, parsed || {});
+        if (!parsed || typeof parsed !== "object") return;
+        Object.assign(state, parsed);
         state.leftScore = clampScore(state.leftScore);
         state.rightScore = clampScore(state.rightScore);
-      }catch(err){
-        console.warn("Failed to load saved state:", err);
+        state.layout = {
+          topY: Number(parsed.layout?.topY ?? 6),
+          centerGap: Number(parsed.layout?.centerGap ?? 400)
+        };
+      }catch(e){
+        console.warn("Load failed:", e);
       }
     }
 
-    function setImage(side, dataUrl){
-      if (side === "left") state.leftPhoto = dataUrl || "";
-      if (side === "right") state.rightPhoto = dataUrl || "";
-      render();
-      saveState();
-    }
-
-    function renderImage(imgEl, placeholderEl, dataUrl){
+    function renderLogo(side, dataUrl){
+      const img = side === "left" ? refs.leftLogoImg : refs.rightLogoImg;
+      const ph  = side === "left" ? refs.leftPlaceholder : refs.rightPlaceholder;
       if (dataUrl){
-        imgEl.src = dataUrl;
-        imgEl.style.display = "block";
-        placeholderEl.style.display = "none";
+        img.src = dataUrl;
+        img.style.display = "block";
+        ph.style.display = "none";
       } else {
-        imgEl.removeAttribute("src");
-        imgEl.style.display = "none";
-        placeholderEl.style.display = "grid";
+        img.removeAttribute("src");
+        img.style.display = "none";
+        ph.style.display = "grid";
       }
+    }
+
+    function applyLayoutVars(){
+      document.documentElement.style.setProperty("--top-y", `${state.layout.topY}px`);
+      document.documentElement.style.setProperty("--center-gap", `${state.layout.centerGap}px`);
     }
 
     function render(){
-      // Displays
-      el.leftNameDisplay.textContent = state.leftName || "Team Blue";
-      el.leftRole.textContent = state.leftRole || "";
-      el.leftScoreDisplay.textContent = String(clampScore(state.leftScore));
+      state.leftScore = clampScore(state.leftScore);
+      state.rightScore = clampScore(state.rightScore);
 
-      el.rightNameDisplay.textContent = state.rightName || "Team Yellow";
-      el.rightRole.textContent = state.rightRole || "";
-      el.rightScoreDisplay.textContent = String(clampScore(state.rightScore));
+      refs.leftScoreBox.textContent = state.leftScore;
+      refs.rightScoreBox.textContent = state.rightScore;
 
-      el.centerLabelDisplay.textContent = (state.centerLabel || "VS").toUpperCase();
-      el.roundDisplay.textContent = state.roundText || "";
-      el.timerDisplay.textContent = state.timerText || "";
+      refs.leftScoreInput.value = state.leftScore;
+      refs.rightScoreInput.value = state.rightScore;
 
-      renderImage(el.leftPhotoImg, el.leftPhotoPlaceholder, state.leftPhoto);
-      renderImage(el.rightPhotoImg, el.rightPhotoPlaceholder, state.rightPhoto);
+      refs.topYRange.value = state.layout.topY;
+      refs.centerGapRange.value = state.layout.centerGap;
 
-      // Inputs
-      el.leftNameInput.value = state.leftName ?? "";
-      el.leftRoleInput.value = state.leftRole ?? "";
-      el.leftScoreInput.value = clampScore(state.leftScore);
-      el.rightNameInput.value = state.rightName ?? "";
-      el.rightRoleInput.value = state.rightRole ?? "";
-      el.rightScoreInput.value = clampScore(state.rightScore);
-      el.centerLabelInput.value = state.centerLabel ?? "";
-      el.roundInput.value = state.roundText ?? "";
-      el.timerInput.value = state.timerText ?? "";
+      renderLogo("left", state.leftLogo);
+      renderLogo("right", state.rightLogo);
 
-      el.stage.classList.toggle("hide-ui", !!state.hideUI);
-      el.toggleUiBtn.textContent = state.hideUI ? "H • Show UI" : "H • Hide UI";
+      stage.classList.toggle("edit-mode", !!state.editMode);
+      refs.toggleEditBtn.textContent = state.editMode ? "Hide Editor" : "Show Editor";
+
+      applyLayoutVars();
     }
 
-    function applyInputsToState(){
-      state.leftName = el.leftNameInput.value.trim() || "Team Blue";
-      state.leftRole = el.leftRoleInput.value.trim();
-      state.leftScore = clampScore(el.leftScoreInput.value);
-
-      state.rightName = el.rightNameInput.value.trim() || "Team Yellow";
-      state.rightRole = el.rightRoleInput.value.trim();
-      state.rightScore = clampScore(el.rightScoreInput.value);
-
-      state.centerLabel = el.centerLabelInput.value.trim() || "VS";
-      state.roundText = el.roundInput.value.trim();
-      state.timerText = el.timerInput.value.trim();
-
+    function setScore(side, value){
+      if (side === "left") state.leftScore = clampScore(value);
+      if (side === "right") state.rightScore = clampScore(value);
       render();
       saveState();
     }
 
-    function updateScore(side, delta){
-      if (side === "left") state.leftScore = clampScore(state.leftScore + delta);
-      if (side === "right") state.rightScore = clampScore(state.rightScore + delta);
-      render();
-      saveState();
+    function addScore(side, delta){
+      if (side === "left") setScore("left", state.leftScore + delta);
+      else setScore("right", state.rightScore + delta);
     }
 
     function resetScores(){
@@ -722,37 +554,17 @@
       saveState();
     }
 
-    function resetAll(){
-      state.leftName = "Team Blue";
-      state.leftRole = "Defender";
-      state.leftScore = 0;
-      state.leftPhoto = "";
-      state.rightName = "Team Yellow";
-      state.rightRole = "Attacker";
-      state.rightScore = 0;
-      state.rightPhoto = "";
-      state.centerLabel = "VS";
-      state.roundText = "Round 1";
-      state.timerText = "00:00";
+    function setLogo(side, dataUrl){
+      if (side === "left") state.leftLogo = dataUrl || "";
+      else state.rightLogo = dataUrl || "";
       render();
       saveState();
     }
 
-    function toggleUI(){
-      state.hideUI = !state.hideUI;
+    function toggleEditMode(force){
+      state.editMode = (typeof force === "boolean") ? force : !state.editMode;
       render();
       saveState();
-    }
-
-    function wireTextInputs(){
-      [
-        el.leftNameInput, el.leftRoleInput, el.leftScoreInput,
-        el.rightNameInput, el.rightRoleInput, el.rightScoreInput,
-        el.centerLabelInput, el.roundInput, el.timerInput
-      ].forEach(input => {
-        input.addEventListener("input", applyInputsToState);
-        input.addEventListener("change", applyInputsToState);
-      });
     }
 
     function readFileAsDataURL(file){
@@ -764,134 +576,184 @@
       });
     }
 
-    async function handleFileSelect(side, file){
-      if (!file) return;
-      if (!file.type || !file.type.startsWith("image/")) return;
-
+    async function onFilePick(side, file){
+      if (!file || !file.type || !file.type.startsWith("image/")) return;
       try{
         const dataUrl = await readFileAsDataURL(file);
-        setImage(side, dataUrl);
+        setLogo(side, dataUrl);
       }catch(err){
-        console.error("Failed to load image:", err);
+        console.error("Image load failed:", err);
       }
     }
 
-    function wireUploads(){
-      el.leftUploadBtn.addEventListener("click", () => el.leftFileInput.click());
-      el.rightUploadBtn.addEventListener("click", () => el.rightFileInput.click());
+    function wireUI(){
+      refs.leftScoreInput.addEventListener("input", () => setScore("left", refs.leftScoreInput.value));
+      refs.rightScoreInput.addEventListener("input", () => setScore("right", refs.rightScoreInput.value));
 
-      el.leftFileInput.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        await handleFileSelect("left", file);
+      refs.leftPlusBtn.addEventListener("click", () => addScore("left", +1));
+      refs.leftMinusBtn.addEventListener("click", () => addScore("left", -1));
+      refs.rightPlusBtn.addEventListener("click", () => addScore("right", +1));
+      refs.rightMinusBtn.addEventListener("click", () => addScore("right", -1));
+
+      refs.resetScoresBtn.addEventListener("click", resetScores);
+
+      refs.leftUploadBtn.addEventListener("click", () => refs.leftFileInput.click());
+      refs.rightUploadBtn.addEventListener("click", () => refs.rightFileInput.click());
+
+      refs.leftFileInput.addEventListener("change", async (e) => {
+        await onFilePick("left", e.target.files?.[0]);
+        e.target.value = "";
+      });
+      refs.rightFileInput.addEventListener("change", async (e) => {
+        await onFilePick("right", e.target.files?.[0]);
         e.target.value = "";
       });
 
-      el.rightFileInput.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        await handleFileSelect("right", file);
-        e.target.value = "";
-      });
+      refs.leftClearBtn.addEventListener("click", () => setLogo("left", ""));
+      refs.rightClearBtn.addEventListener("click", () => setLogo("right", ""));
 
-      el.leftClearBtn.addEventListener("click", () => setImage("left", ""));
-      el.rightClearBtn.addEventListener("click", () => setImage("right", ""));
-
-      // Clicking top slots also opens file picker
-      el.leftPhotoSlot.addEventListener("click", () => el.leftFileInput.click());
-      el.rightPhotoSlot.addEventListener("click", () => el.rightFileInput.click());
-
-      // Drag/drop support for photo slots
-      [el.leftPhotoSlot, el.rightPhotoSlot].forEach((slot, idx) => {
-        const side = idx === 0 ? "left" : "right";
-
-        ["dragenter","dragover"].forEach(evt => {
-          slot.addEventListener(evt, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            slot.style.outline = "2px solid rgba(255,211,77,.55)";
-          });
-        });
-
-        ["dragleave","drop"].forEach(evt => {
-          slot.addEventListener(evt, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            slot.style.outline = "";
-          });
-        });
-
-        slot.addEventListener("drop", async (e) => {
-          const file = e.dataTransfer?.files?.[0];
-          await handleFileSelect(side, file);
-        });
-      });
-    }
-
-    function wireButtons(){
-      el.swapPhotosBtn.addEventListener("click", () => {
-        const tmp = state.leftPhoto;
-        state.leftPhoto = state.rightPhoto;
-        state.rightPhoto = tmp;
+      refs.swapLogosBtn.addEventListener("click", () => {
+        const tmp = state.leftLogo;
+        state.leftLogo = state.rightLogo;
+        state.rightLogo = tmp;
         render();
         saveState();
       });
 
-      el.resetScoresBtn.addEventListener("click", resetScores);
-      el.resetAllBtn.addEventListener("click", resetAll);
-      el.toggleUiBtn.addEventListener("click", toggleUI);
+      refs.resetAllBtn.addEventListener("click", () => {
+        state.leftScore = 0;
+        state.rightScore = 0;
+        state.leftLogo = "";
+        state.rightLogo = "";
+        state.layout.topY = 6;
+        state.layout.centerGap = 400;
+        render();
+        saveState();
+      });
+
+      refs.topYRange.addEventListener("input", () => {
+        state.layout.topY = Number(refs.topYRange.value);
+        render();
+        saveState();
+      });
+
+      refs.centerGapRange.addEventListener("input", () => {
+        state.layout.centerGap = Number(refs.centerGapRange.value);
+        render();
+        saveState();
+      });
+
+      refs.resetLayoutBtn.addEventListener("click", () => {
+        state.layout.topY = 6;
+        state.layout.centerGap = 400;
+        render();
+        saveState();
+      });
+
+      refs.toggleEditBtn.addEventListener("click", () => toggleEditMode());
+
+      // Click overlay elements directly (useful during setup)
+      refs.leftLogoBox.addEventListener("click", () => {
+        if (!state.editMode) return;
+        refs.leftFileInput.click();
+      });
+      refs.rightLogoBox.addEventListener("click", () => {
+        if (!state.editMode) return;
+        refs.rightFileInput.click();
+      });
+
+      refs.leftScoreBox.addEventListener("click", () => {
+        if (!state.editMode) return;
+        addScore("left", +1);
+      });
+      refs.rightScoreBox.addEventListener("click", () => {
+        if (!state.editMode) return;
+        addScore("right", +1);
+      });
+
+      // right-click score to decrement (edit mode)
+      refs.leftScoreBox.addEventListener("contextmenu", (e) => {
+        if (!state.editMode) return;
+        e.preventDefault();
+        addScore("left", -1);
+      });
+      refs.rightScoreBox.addEventListener("contextmenu", (e) => {
+        if (!state.editMode) return;
+        e.preventDefault();
+        addScore("right", -1);
+      });
+
+      // Drag/drop logos (edit mode)
+      [refs.leftLogoBox, refs.rightLogoBox].forEach((box, idx) => {
+        const side = idx === 0 ? "left" : "right";
+
+        ["dragenter","dragover"].forEach(evt => {
+          box.addEventListener(evt, (e) => {
+            if (!state.editMode) return;
+            e.preventDefault();
+            box.style.outline = "2px solid rgba(255,255,255,.5)";
+          });
+        });
+        ["dragleave","drop"].forEach(evt => {
+          box.addEventListener(evt, (e) => {
+            if (!state.editMode) return;
+            e.preventDefault();
+            box.style.outline = "";
+          });
+        });
+
+        box.addEventListener("drop", async (e) => {
+          if (!state.editMode) return;
+          const file = e.dataTransfer?.files?.[0];
+          await onFilePick(side, file);
+        });
+      });
     }
 
     function wireKeyboard(){
       window.addEventListener("keydown", (e) => {
-        const t = e.target;
-        const tag = t?.tagName?.toLowerCase() || "";
-        const isTyping = ["input", "textarea", "select"].includes(tag) || t?.isContentEditable;
+        const target = e.target;
+        const tag = target?.tagName?.toLowerCase() || "";
+        const isTyping = ["input", "textarea", "select"].includes(tag) || target?.isContentEditable;
         const key = e.key.toLowerCase();
 
-        // Allow H even while typing (optional)
-        if (key === "h") {
+        if (key === "e" || key === "h"){
           e.preventDefault();
-          toggleUI();
+          toggleEditMode();
           return;
         }
-
         if (isTyping) return;
 
-        if (key === "q") { e.preventDefault(); updateScore("left", +1); }
-        else if (key === "a") { e.preventDefault(); updateScore("left", -1); }
-        else if (key === "p") { e.preventDefault(); updateScore("right", +1); }
-        else if (key === "l") { e.preventDefault(); updateScore("right", -1); }
-        else if (key === "r") { e.preventDefault(); resetScores(); }
+        if (key === "q"){ e.preventDefault(); addScore("left", +1); }
+        else if (key === "a"){ e.preventDefault(); addScore("left", -1); }
+        else if (key === "p"){ e.preventDefault(); addScore("right", +1); }
+        else if (key === "l"){ e.preventDefault(); addScore("right", -1); }
+        else if (key === "r"){ e.preventDefault(); resetScores(); }
       });
     }
 
     function applyUrlParams(){
       const params = new URLSearchParams(location.search);
 
-      if (params.get("hideui") === "1") state.hideUI = true;
+      // show editor on load: ?edit=1
+      if (params.get("edit") === "1") state.editMode = true;
+      if (params.get("hideui") === "1") state.editMode = false;
 
-      const leftName = params.get("left");
-      const rightName = params.get("right");
-      const leftScore = params.get("ls");
-      const rightScore = params.get("rs");
-      const round = params.get("round");
-      const timer = params.get("timer");
-      const center = params.get("center");
+      const ls = params.get("ls");
+      const rs = params.get("rs");
+      if (ls !== null) state.leftScore = clampScore(ls);
+      if (rs !== null) state.rightScore = clampScore(rs);
 
-      if (leftName) state.leftName = leftName;
-      if (rightName) state.rightName = rightName;
-      if (leftScore !== null) state.leftScore = clampScore(leftScore);
-      if (rightScore !== null) state.rightScore = clampScore(rightScore);
-      if (round) state.roundText = round;
-      if (timer) state.timerText = timer;
-      if (center) state.centerLabel = center;
+      const topY = params.get("top");
+      const gap = params.get("gap");
+      if (topY !== null && Number.isFinite(Number(topY))) state.layout.topY = Number(topY);
+      if (gap !== null && Number.isFinite(Number(gap))) state.layout.centerGap = Number(gap);
     }
 
     function init(){
       loadState();
       applyUrlParams();
-      wireTextInputs();
-      wireUploads();
-      wireButtons();
+      wireUI();
       wireKeyboard();
       render();
     }
