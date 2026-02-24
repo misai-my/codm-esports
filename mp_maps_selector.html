@@ -201,6 +201,13 @@
       overflow:hidden;
       box-shadow:var(--shadow);
       position:relative;
+      outline:none;
+    }
+
+    /* Optional subtle focus ring so you know the viewer is keyboard-focused */
+    .viewer:focus-within,
+    .viewer:focus{
+      box-shadow: var(--shadow), 0 0 0 2px rgba(255,211,77,.25);
     }
 
     iframe{
@@ -209,6 +216,7 @@
       border:0;
       background:#000;
       display:block;
+      outline:none;
     }
 
     .loading{
@@ -285,9 +293,11 @@
       </div>
     </section>
 
-    <section class="viewer" id="viewer">
+    <!-- ✅ tabindex makes viewer focusable -->
+    <section class="viewer" id="viewer" tabindex="0">
       <div class="loading" id="loading">Loading overlay page…</div>
-      <iframe id="previewFrame" title="CODM map overlay preview" allowfullscreen></iframe>
+      <!-- ✅ tabindex helps focus iframe element after mode switch -->
+      <iframe id="previewFrame" title="CODM map overlay preview" allowfullscreen tabindex="0"></iframe>
     </section>
   </main>
 
@@ -305,6 +315,7 @@
     };
 
     const frame = document.getElementById("previewFrame");
+    const viewer = document.getElementById("viewer");
     const loading = document.getElementById("loading");
     const activeUrlText = document.getElementById("activeUrlText");
     const modeButtons = [...document.querySelectorAll(".mode-btn")];
@@ -329,6 +340,17 @@
       loading.classList.add("hide");
     }
 
+    // ✅ Focus the viewer area / iframe so overlay hotkeys work immediately
+    function focusViewer(){
+      requestAnimationFrame(() => {
+        try {
+          frame.focus();
+        } catch (e) {
+          try { viewer.focus(); } catch (_) {}
+        }
+      });
+    }
+
     function loadView(view, pushState = true){
       if (!PAGES[view]) return;
       currentView = view;
@@ -348,6 +370,9 @@
         qs.set("view", view);
         history.replaceState(null, "", `${location.pathname}?${qs.toString()}`);
       }
+
+      // ✅ Move focus to viewer immediately (and again after load)
+      focusViewer();
     }
 
     function reloadCurrent(){
@@ -377,12 +402,19 @@
     });
     document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
 
+    // ✅ Click anywhere on viewer to refocus iframe for keyboard control
+    viewer.addEventListener("click", () => {
+      focusViewer();
+    });
+
     // iframe load event
     frame.addEventListener("load", () => {
       hideLoading();
+      // ✅ ensure selected mode gets keyboard focus after page loads
+      focusViewer();
     });
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts (dashboard only)
     window.addEventListener("keydown", (e) => {
       // avoid typing hijack if focused in an input/contenteditable (future-proof)
       const t = e.target;
@@ -397,17 +429,9 @@
       else if (key === "3") loadView("ctrl");
       else if (key === "r") reloadCurrent();
       else if (key === "f") toggleFullscreen();
-      else if (key === "arrowleft") {
-        // cycle left: hp <- snd <- ctrl
-        if (currentView === "hp") loadView("ctrl");
-        else if (currentView === "snd") loadView("hp");
-        else loadView("snd");
-      } else if (key === "arrowright") {
-        // cycle right: hp -> snd -> ctrl
-        if (currentView === "hp") loadView("snd");
-        else if (currentView === "snd") loadView("ctrl");
-        else loadView("hp");
-      }
+
+      // ✅ Removed ArrowLeft / ArrowRight dashboard mode switching
+      // This lets arrow keys pass to the selected HP/SND/CTRL overlay (after focus)
     });
 
     // Initial view from URL (?view=hp|snd|ctrl)
