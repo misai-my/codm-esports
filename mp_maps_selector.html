@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CODM Maps Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b0e13;
+      --panel:#131922;
+      --panel2:#0f141c;
+      --line:rgba(255,255,255,.10);
+      --ink:#eef3ff;
+      --muted:#aeb8cf;
+      --brand:#ffd34d;
+      --brand2:#ff8a3d;
+      --good:#57d38c;
+      --danger:#ff6b6b;
+      --radius:14px;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
+      --header-h:72px;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{
+      margin:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--ink);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    body{
+      display:grid;
+      grid-template-rows: var(--header-h) 1fr;
+      overflow:hidden;
+    }
+
+    .topbar{
+      display:grid;
+      grid-template-columns: 1fr auto auto;
+      gap:12px;
+      align-items:center;
+      padding:12px 14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), transparent), var(--panel);
+      border-bottom:1px solid var(--line);
+      box-shadow:0 8px 30px rgba(0,0,0,.25);
+      z-index:5;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .brand-badge{
+      width:34px;
+      height:34px;
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      color:#171a20;
+      background:linear-gradient(135deg, var(--brand), var(--brand2));
+      box-shadow:0 8px 18px rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+
+    .brand-text{
+      min-width:0;
+    }
+
+    .brand-text h1{
+      margin:0;
+      font-size:16px;
+      line-height:1.1;
+      letter-spacing:.02em;
+    }
+
+    .brand-text p{
+      margin:2px 0 0;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .mode-buttons{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 12px;
+      min-height:40px;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      box-shadow:0 8px 20px rgba(0,0,0,.2);
+    }
+
+    button:hover{ transform:translateY(-1px); }
+    button:active{ transform:translateY(0); }
+
+    .mode-btn{
+      min-width:72px;
+      letter-spacing:.03em;
+    }
+
+    .mode-btn.active{
+      background:rgba(255,211,77,.14);
+      border-color:rgba(255,211,77,.5);
+      color:#fff;
+    }
+
+    .actions{
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+
+    .action-btn{
+      font-size:12px;
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+    }
+
+    .action-btn.primary{
+      color:var(--ink);
+      border-color:rgba(87,211,140,.35);
+      background:rgba(87,211,140,.10);
+    }
+
+    .main{
+      min-height:0;
+      display:grid;
+      grid-template-rows: auto 1fr;
+      gap:10px;
+      padding:10px;
+    }
+
+    .status{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      box-shadow:var(--shadow);
+    }
+
+    .status-left{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+
+    .status-left .label{
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.10em;
+      font-weight:700;
+    }
+
+    .status-left .value{
+      font-size:14px;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .hotkeys{
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .viewer{
+      min-height:0;
+      background:#070a0f;
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      position:relative;
+    }
+
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#000;
+      display:block;
+    }
+
+    .loading{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background:
+        radial-gradient(circle at 25% 25%, rgba(255,211,77,.08), transparent 35%),
+        radial-gradient(circle at 75% 70%, rgba(77,211,255,.06), transparent 38%),
+        #0b1018;
+      color:var(--muted);
+      font-weight:700;
+      letter-spacing:.03em;
+      transition: opacity .2s ease;
+      pointer-events:none;
+    }
+
+    .loading.hide{
+      opacity:0;
+    }
+
+    @media (max-width: 980px){
+      body{
+        grid-template-rows:auto 1fr;
+      }
+      .topbar{
+        grid-template-columns: 1fr;
+        gap:10px;
+      }
+      .actions{
+        justify-content:flex-start;
+      }
+      .status{
+        grid-template-columns: 1fr;
+      }
+      .hotkeys{
+        white-space:normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">M</div>
+      <div class="brand-text">
+        <h1>CODM Maps Dashboard</h1>
+        <p>Switch map overlays fast (HP / SND / CTRL)</p>
+      </div>
+    </div>
+
+    <div class="mode-buttons" id="modeButtons">
+      <button class="mode-btn" data-view="hp" title="Shortcut: 1">1 • HP</button>
+      <button class="mode-btn" data-view="snd" title="Shortcut: 2">2 • SND</button>
+      <button class="mode-btn" data-view="ctrl" title="Shortcut: 3">3 • CTRL</button>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn" id="reloadBtn" title="Reload current iframe (R)">Reload</button>
+      <button class="action-btn primary" id="openNewTabBtn" title="Open current page in new tab">Open in Tab</button>
+      <button class="action-btn" id="fullscreenBtn" title="Fullscreen dashboard preview (F)">Fullscreen</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="status">
+      <div class="status-left">
+        <div class="label">Active Page</div>
+        <div class="value" id="activeUrlText">—</div>
+      </div>
+      <div class="hotkeys">
+        Hotkeys: <strong>1</strong>=HP • <strong>2</strong>=SND • <strong>3</strong>=CTRL • <strong>R</strong>=Reload • <strong>F</strong>=Fullscreen
+      </div>
+    </section>
+
+    <section class="viewer" id="viewer">
+      <div class="loading" id="loading">Loading overlay page…</div>
+      <iframe id="previewFrame" title="CODM map overlay preview" allowfullscreen></iframe>
+    </section>
+  </main>
+
+  <script>
+    const PAGES = {
+      hp:   "https://misai-my.github.io/codm-esports/mp_maps_hp.html",
+      snd:  "https://misai-my.github.io/codm-esports/mp_maps_snd.html",
+      ctrl: "https://misai-my.github.io/codm-esports/mp_maps_ctrl.html",
+    };
+
+    const LABELS = {
+      hp: "HP",
+      snd: "SND",
+      ctrl: "CTRL",
+    };
+
+    const frame = document.getElementById("previewFrame");
+    const loading = document.getElementById("loading");
+    const activeUrlText = document.getElementById("activeUrlText");
+    const modeButtons = [...document.querySelectorAll(".mode-btn")];
+
+    let currentView = "hp";
+
+    function setActiveButton(view){
+      modeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.view === view));
+    }
+
+    function updateStatus(view){
+      const url = PAGES[view];
+      activeUrlText.textContent = `${LABELS[view]} • ${url}`;
+      document.title = `CODM Maps Dashboard — ${LABELS[view]}`;
+    }
+
+    function showLoading(){
+      loading.classList.remove("hide");
+    }
+
+    function hideLoading(){
+      loading.classList.add("hide");
+    }
+
+    function loadView(view, pushState = true){
+      if (!PAGES[view]) return;
+      currentView = view;
+
+      setActiveButton(view);
+      updateStatus(view);
+      showLoading();
+
+      // tiny cache-buster helps if you want a fresh page state each switch/reload
+      const url = new URL(PAGES[view]);
+      url.searchParams.set("_ts", Date.now());
+
+      frame.src = url.toString();
+
+      if (pushState) {
+        const qs = new URLSearchParams(location.search);
+        qs.set("view", view);
+        history.replaceState(null, "", `${location.pathname}?${qs.toString()}`);
+      }
+    }
+
+    function reloadCurrent(){
+      loadView(currentView, false);
+    }
+
+    async function toggleFullscreen(){
+      try{
+        if (!document.fullscreenElement){
+          await document.documentElement.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      } catch (e){
+        console.warn("Fullscreen unavailable:", e);
+      }
+    }
+
+    // Buttons
+    modeButtons.forEach(btn => {
+      btn.addEventListener("click", () => loadView(btn.dataset.view));
+    });
+
+    document.getElementById("reloadBtn").addEventListener("click", reloadCurrent);
+    document.getElementById("openNewTabBtn").addEventListener("click", () => {
+      window.open(PAGES[currentView], "_blank", "noopener,noreferrer");
+    });
+    document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
+
+    // iframe load event
+    frame.addEventListener("load", () => {
+      hideLoading();
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener("keydown", (e) => {
+      // avoid typing hijack if focused in an input/contenteditable (future-proof)
+      const t = e.target;
+      const tag = t && t.tagName ? t.tagName.toLowerCase() : "";
+      const isTyping = ["input", "textarea", "select"].includes(tag) || (t && t.isContentEditable);
+      if (isTyping) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === "1") loadView("hp");
+      else if (key === "2") loadView("snd");
+      else if (key === "3") loadView("ctrl");
+      else if (key === "r") reloadCurrent();
+      else if (key === "f") toggleFullscreen();
+      else if (key === "arrowleft") {
+        // cycle left: hp <- snd <- ctrl
+        if (currentView === "hp") loadView("ctrl");
+        else if (currentView === "snd") loadView("hp");
+        else loadView("snd");
+      } else if (key === "arrowright") {
+        // cycle right: hp -> snd -> ctrl
+        if (currentView === "hp") loadView("snd");
+        else if (currentView === "snd") loadView("ctrl");
+        else loadView("hp");
+      }
+    });
+
+    // Initial view from URL (?view=hp|snd|ctrl)
+    const params = new URLSearchParams(location.search);
+    const initialView = (params.get("view") || "hp").toLowerCase();
+    loadView(PAGES[initialView] ? initialView : "hp", false);
+  </script>
+</body>
+</html>
