@@ -78,11 +78,14 @@
     }
 
     .map-card img{
+      position:absolute;          /* ✅ ensure proper stacking */
+      inset:0;
       width:100%;
       height:100%;
       object-fit:cover;
       display:block;
       pointer-events:none;
+      z-index:1;                  /* ✅ image layer */
     }
 
     .map-card .fallback{
@@ -101,6 +104,7 @@
         radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
         radial-gradient(circle at 75% 65%, rgba(255,220,90,.12), transparent 40%),
         linear-gradient(135deg, #1a1f29, #0f1218);
+      z-index:2;                  /* ✅ fallback sits above image until image loads */
     }
 
     /* Active / side layout to match your sample */
@@ -262,10 +266,11 @@
       CODM Map Carousel Overlay (Coverflow Style)
       - Pure green background for OBS chroma key
       - Keyboard + number buttons
-      - No "1/10" on cards (removed as requested)
+      - No "1/10" on cards
     */
 
     const MAPS = [
+      // ⚠️ Check exact filenames and case (GitHub Pages / OBS browser source is case-sensitive)
       { name: "Arsenal",    image: "maps/Arsenal.png" },
       { name: "Combine",    image: "maps/Combine.png" },
       { name: "Hacienda",   image: "maps/Hacienda.png" },
@@ -306,18 +311,27 @@
       fallback.className = "fallback";
       fallback.innerHTML = `<div>${escapeHtml(map.name)}</div>`;
 
+      // ✅ Default state: show fallback until image successfully loads
+      fallback.style.display = "grid";
+      img.style.display = "none";
+
       if (!map.image) {
         img.style.display = "none";
+        fallback.style.display = "grid";
       }
 
       img.onerror = () => {
+        console.warn("Image failed to load:", map.image);
         img.style.display = "none";
+        fallback.style.display = "grid";
       };
 
       img.onload = () => {
         img.style.display = "block";
+        fallback.style.display = "none"; // ✅ key fix
       };
 
+      // Append image + fallback (fallback is on top until hidden)
       card.appendChild(img);
       card.appendChild(fallback);
 
@@ -354,7 +368,6 @@
     }
 
     function wrappedDelta(i, current, len){
-      // returns shortest circular delta in range roughly [-len/2, +len/2]
       let d = i - current;
       if (d > len / 2) d -= len;
       if (d < -len / 2) d += len;
@@ -381,7 +394,6 @@
 
       mapNameText.textContent = MAPS[current].name;
 
-      // highlight number buttons
       [...numberButtonsEl.children].forEach((btn, i) => {
         btn.classList.toggle("active", i === current);
       });
