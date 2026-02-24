@@ -501,60 +501,55 @@
 
     // ✅ Spin fast -> slow -> stop on target
     function spinTo(targetIndex){
-      const len = MAPS.length;
-      if (!len) return;
+  const len = MAPS.length;
+  if (!len) return;
 
-      targetIndex = mod(targetIndex, len);
+  targetIndex = mod(targetIndex, len);
 
-      // For 1 map, no spin needed
-      if (len === 1){
-        goTo(targetIndex);
-        return;
-      }
+  if (len === 1){
+    goTo(targetIndex);
+    return;
+  }
 
-      cancelSpin();
-      isSpinning = true;
+  cancelSpin();
+  isSpinning = true;
 
-      // Always spin forward for a "wheel" feel
-      const dist = forwardDistance(current, targetIndex, len);
+  const dist = forwardDistance(current, targetIndex, len);
 
-      // Add extra loops so it feels dramatic even if target is adjacent/same
-      const extraLoops = (len >= 5) ? 2 : 3;
-      let totalSteps = (extraLoops * len) + dist;
+  // ✅ Increased loops for longer duration
+  const extraLoops = (len >= 8) ? 4 : 6; // was 2 / 3
+  let totalSteps = (extraLoops * len) + dist;
 
-      // If already on target, still do one full loop
-      if (totalSteps <= 0) totalSteps = len;
+  if (totalSteps <= 0) totalSteps = len * 2;
 
-      let step = 0;
+  let step = 0;
 
-      // Delay between steps grows over time (fast -> slow)
-      const startDelay = 70;   // fast at start
-      const endDelay   = 420;  // slow at the end (lets CSS settle)
+  // ✅ Slower overall timing (fast start, much slower finish)
+  const startDelay = 90;   // was 70
+  const endDelay   = 900;  // was 420
 
-      function tick(){
-        if (!isSpinning) return; // cancelled
+  function tick(){
+    if (!isSpinning) return;
 
-        if (step >= totalSteps){
-          isSpinning = false;
-          spinTimer = null;
-
-          // Safety snap to exact target
-          goTo(targetIndex, { fromSpin: true });
-          return;
-        }
-
-        next({ fromSpin: true });
-        step++;
-
-        const t = step / totalSteps;         // 0..1
-        const eased = Math.pow(t, 2.35);     // ease-out feel for delay growth
-        const delay = Math.round(startDelay + (endDelay - startDelay) * eased);
-
-        spinTimer = setTimeout(tick, delay);
-      }
-
-      tick();
+    if (step >= totalSteps){
+      isSpinning = false;
+      spinTimer = null;
+      goTo(targetIndex, { fromSpin: true }); // exact stop
+      return;
     }
+
+    next({ fromSpin: true });
+    step++;
+
+    const t = step / totalSteps;          // 0..1
+    const eased = Math.pow(t, 2.8);       // stronger slow-down at the end
+    const delay = Math.round(startDelay + (endDelay - startDelay) * eased);
+
+    spinTimer = setTimeout(tick, delay);
+  }
+
+  tick();
+}
 
     function toggleUI(){
       overlay.classList.toggle("hide-ui");
