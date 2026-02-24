@@ -78,14 +78,14 @@
     }
 
     .map-card img{
-      position:absolute;          /* ✅ ensure proper stacking */
+      position:absolute;          /* ensure proper stacking */
       inset:0;
       width:100%;
       height:100%;
       object-fit:cover;
       display:block;
       pointer-events:none;
-      z-index:1;                  /* ✅ image layer */
+      z-index:1;                  /* image layer */
     }
 
     .map-card .fallback{
@@ -104,7 +104,7 @@
         radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
         radial-gradient(circle at 75% 65%, rgba(255,220,90,.12), transparent 40%),
         linear-gradient(135deg, #1a1f29, #0f1218);
-      z-index:2;                  /* ✅ fallback sits above image until image loads */
+      z-index:2;                  /* fallback sits above image until image loads */
     }
 
     /* Active / side layout to match your sample */
@@ -251,8 +251,9 @@
       <div class="control-row">
         <button class="nav-btn" id="prevBtn" title="Previous (Left Arrow)">◀</button>
         <button class="nav-btn" id="nextBtn" title="Next (Right Arrow)">▶</button>
-        <button id="toggleUiBtn" title="Hide/Show UI (H)">Hide UI</button>
-        <button id="fsBtn" title="Fullscreen (F)">Fullscreen</button>
+        <button id="toggleUiBtn" title="Hide/Show UI (H)">H • Hide UI</button>
+        <button id="fsBtn" title="Fullscreen (F)">F • Fullscreen</button>
+        <button id="dashboardBtn" title="Return to Dashboard (D)">D • Dashboard</button>
       </div>
       <div class="status-pill" id="statusPill">
         Map: <strong id="mapNameText">—</strong>
@@ -266,8 +267,11 @@
       CODM Map Carousel Overlay (Coverflow Style)
       - Pure green background for OBS chroma key
       - Keyboard + number buttons
+      - D shortcut / button returns to dashboard
       - No "1/10" on cards
     */
+
+    const DASHBOARD_URL = "https://misai-my.github.io/codm-esports/mp_maps_selector.html";
 
     const MAPS = [
       // ⚠️ Check exact filenames and case (GitHub Pages / OBS browser source is case-sensitive)
@@ -296,6 +300,16 @@
       }[s]));
     }
 
+    function goToDashboard(){
+      try {
+        // If this page is running inside an iframe, navigate the top window
+        window.top.location.href = DASHBOARD_URL;
+      } catch (err) {
+        // Fallback for standalone/local runs
+        window.location.href = DASHBOARD_URL;
+      }
+    }
+
     function createCard(map, index){
       const card = document.createElement("div");
       card.className = "map-card";
@@ -311,7 +325,7 @@
       fallback.className = "fallback";
       fallback.innerHTML = `<div>${escapeHtml(map.name)}</div>`;
 
-      // ✅ Default state: show fallback until image successfully loads
+      // Default state: show fallback until image successfully loads
       fallback.style.display = "grid";
       img.style.display = "none";
 
@@ -328,7 +342,7 @@
 
       img.onload = () => {
         img.style.display = "block";
-        fallback.style.display = "none"; // ✅ key fix
+        fallback.style.display = "none"; // key fix
       };
 
       // Append image + fallback (fallback is on top until hidden)
@@ -432,6 +446,7 @@
     document.getElementById("nextBtn").addEventListener("click", next);
     document.getElementById("toggleUiBtn").addEventListener("click", toggleUI);
     document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+    document.getElementById("dashboardBtn").addEventListener("click", goToDashboard);
 
     // Keyboard controls
     window.addEventListener("keydown", (e) => {
@@ -448,13 +463,23 @@
       }
       else if (e.key.toLowerCase() === "h") toggleUI();
       else if (e.key.toLowerCase() === "f") toggleFullscreen();
+      else if (e.key.toLowerCase() === "d") goToDashboard();
     });
 
     // Optional URL params:
     // ?start=3      -> starts on map 3
     // ?hideui=1     -> hides controls on load
+    // ?dashboard=https://...  -> override dashboard return URL
     const params = new URLSearchParams(location.search);
     const start = Number(params.get("start"));
+    const dashboardOverride = params.get("dashboard");
+
+    if (dashboardOverride) {
+      // lets you reuse same page in different dashboards without editing code
+      // eslint-disable-next-line no-global-assign
+      try { new URL(dashboardOverride); } catch (_) {}
+    }
+
     if (Number.isFinite(start) && start >= 1 && start <= MAPS.length){
       current = start - 1;
     }
@@ -462,7 +487,37 @@
       overlay.classList.add("hide-ui");
     }
 
+    // Override dashboard URL if provided and valid
+    if (dashboardOverride) {
+      try {
+        const valid = new URL(dashboardOverride, window.location.href);
+        // reassign through window-scoped property to keep const immutable pattern simple
+        window.__dashboardUrl = valid.toString();
+      } catch (_) {
+        window.__dashboardUrl = DASHBOARD_URL;
+      }
+    } else {
+      window.__dashboardUrl = DASHBOARD_URL;
+    }
+
+    // Patch goToDashboard to use override if set
+    const originalGoToDashboard = goToDashboard;
+    window.goToDashboard = function(){
+      try {
+        window.top.location.href = window.__dashboardUrl || DASHBOARD_URL;
+      } catch (err) {
+        window.location.href = window.__dashboardUrl || DASHBOARD_URL;
+      }
+    };
+
+    // Re-bind button + key handler helper references to override-capable function
+    document.getElementById("dashboardBtn").removeEventListener?.("click", originalGoToDashboard);
+    document.getElementById("dashboardBtn").addEventListener("click", () => window.goToDashboard());
+
     buildCarousel();
   </script>
 </body>
 </html>
+
+    
+
