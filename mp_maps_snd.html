@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CODM Map SND</title>
+  <style>
+    :root{
+      --green-screen: #00ff00; /* OBS chroma key */
+      --ui-bg: rgba(12,14,18,.88);
+      --ui-line: rgba(255,255,255,.12);
+      --ui-text: #eef3ff;
+      --ui-muted: #aeb8cf;
+      --ui-accent: #ffd34d;
+
+      --card-radius: 14px;
+      --card-shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background: var(--green-screen);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ui-text);
+    }
+
+    body{
+      display:flex;
+      flex-direction:column;
+      background: var(--green-screen);
+    }
+
+    .overlay{
+      position:relative;
+      width:100vw;
+      height:100vh;
+      background: var(--green-screen);
+      overflow:hidden;
+    }
+
+    /* ===== Carousel Stage (visual only) ===== */
+    .carousel-stage{
+      position:absolute;
+      inset:0;
+      background: var(--green-screen);
+    }
+
+    .cards{
+      position:absolute;
+      inset:0;
+    }
+
+    .map-card{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:min(50vw, 920px);
+      aspect-ratio: 16 / 9;
+      transform: translate(-50%, -50%) scale(.6);
+      border-radius: var(--card-radius);
+      overflow:hidden;
+      background:#161a22;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255,255,255,.08);
+      opacity:0;
+      pointer-events:none;
+      transition:
+        transform 380ms ease,
+        opacity 280ms ease,
+        filter 280ms ease,
+        box-shadow 280ms ease;
+      z-index:1;
+      user-select:none;
+    }
+
+    .map-card img{
+      position:absolute;          /* ✅ ensure proper stacking */
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      pointer-events:none;
+      z-index:1;                  /* ✅ image layer */
+    }
+
+    .map-card .fallback{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:20px;
+      font-weight:900;
+      font-size: clamp(24px, 4vw, 48px);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      color:rgba(255,255,255,.9);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
+        radial-gradient(circle at 75% 65%, rgba(255,220,90,.12), transparent 40%),
+        linear-gradient(135deg, #1a1f29, #0f1218);
+      z-index:2;                  /* ✅ fallback sits above image until image loads */
+    }
+
+    /* Active / side layout to match your sample */
+    .map-card.is-active{
+      opacity:1;
+      z-index:5;
+      pointer-events:auto;
+      transform: translate(-50%, -50%) translateX(0) scale(1);
+      filter: none;
+    }
+
+    .map-card.is-prev{
+      opacity:1;
+      z-index:4;
+      transform: translate(-50%, -50%) translateX(calc(-1 * min(47vw, 760px))) scale(.44);
+      filter: brightness(.95) saturate(.95);
+      pointer-events:auto;
+    }
+
+    .map-card.is-next{
+      opacity:1;
+      z-index:4;
+      transform: translate(-50%, -50%) translateX(min(47vw, 760px)) scale(.44);
+      filter: brightness(.95) saturate(.95);
+      pointer-events:auto;
+    }
+
+    .map-card.is-hidden-left{
+      opacity:0;
+      z-index:1;
+      transform: translate(-50%, -50%) translateX(calc(-1 * min(75vw, 1200px))) scale(.30);
+      filter: brightness(.85);
+    }
+
+    .map-card.is-hidden-right{
+      opacity:0;
+      z-index:1;
+      transform: translate(-50%, -50%) translateX(min(75vw, 1200px)) scale(.30);
+      filter: brightness(.85);
+    }
+
+    /* ===== Controls (optional on-screen) ===== */
+    .controls{
+      position:absolute;
+      left:50%;
+      bottom:20px;
+      transform:translateX(-50%);
+      display:grid;
+      gap:8px;
+      justify-items:center;
+      z-index:10;
+      transition: opacity .2s ease;
+    }
+
+    .control-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid var(--ui-line);
+      background: var(--ui-bg);
+      color: var(--ui-text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 40px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+    button:hover{ transform: translateY(-1px); }
+    button:active{ transform: translateY(0); }
+
+    button.active{
+      border-color: rgba(255,211,77,.55);
+      background: rgba(255,211,77,.16);
+    }
+
+    .nav-btn{
+      min-width:50px;
+      font-size:16px;
+      line-height:1;
+    }
+
+    .status-pill{
+      border:1px solid var(--ui-line);
+      background: var(--ui-bg);
+      color: var(--ui-muted);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 140px;
+      text-align:center;
+      backdrop-filter: blur(4px);
+    }
+    .status-pill strong{
+      color: var(--ui-text);
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    /* Hide UI mode for clean OBS */
+    .overlay.hide-ui .controls{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    /* Small screens */
+    @media (max-width: 900px){
+      .map-card.is-prev{
+        transform: translate(-50%, -50%) translateX(calc(-1 * min(52vw, 520px))) scale(.38);
+      }
+      .map-card.is-next{
+        transform: translate(-50%, -50%) translateX(min(52vw, 520px)) scale(.38);
+      }
+      .controls{
+        bottom:10px;
+      }
+      button{
+        min-width:36px;
+        padding: 7px 8px;
+        font-size: 12px;
+      }
+      .nav-btn{
+        min-width:44px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay" id="overlay">
+    <div class="carousel-stage" id="carouselStage">
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <!-- On-screen controls (can hide with H key) -->
+    <div class="controls" id="controls">
+      <div class="control-row">
+        <button class="nav-btn" id="prevBtn" title="Previous (Left Arrow)">◀</button>
+        <button class="nav-btn" id="nextBtn" title="Next (Right Arrow)">▶</button>
+        <button id="toggleUiBtn" title="Hide/Show UI (H)">Hide UI</button>
+        <button id="fsBtn" title="Fullscreen (F)">Fullscreen</button>
+      </div>
+      <div class="status-pill" id="statusPill">
+        Map: <strong id="mapNameText">—</strong>
+      </div>
+      <div class="control-row" id="numberButtons"></div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      CODM Map Carousel Overlay (Coverflow Style)
+      - Pure green background for OBS chroma key
+      - Keyboard + number buttons
+      - No "1/10" on cards
+    */
+
+    const MAPS = [
+      // ⚠️ Check exact filenames and case (GitHub Pages / OBS browser source is case-sensitive)
+      { name: "Coastal",          image: "maps/Coastal.png" },
+      { name: "Firing Range",     image: "maps/Firing Range.png" },
+      { name: "Meltdown",         image: "maps/Meltdown.png" },
+      { name: "Slums",            image: "maps/Slums.png" },
+      { name: "Tunisia",          image: "maps/Tunisia.png" },
+    ];
+
+    const overlay = document.getElementById("overlay");
+    const cardsEl = document.getElementById("cards");
+    const numberButtonsEl = document.getElementById("numberButtons");
+    const mapNameText = document.getElementById("mapNameText");
+
+    let current = 0;
+    let cardNodes = [];
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      }[s]));
+    }
+
+    function createCard(map, index){
+      const card = document.createElement("div");
+      card.className = "map-card";
+      card.dataset.index = index;
+
+      const img = document.createElement("img");
+      img.alt = map.name;
+      img.src = map.image || "";
+      img.loading = "eager";
+      img.decoding = "async";
+
+      const fallback = document.createElement("div");
+      fallback.className = "fallback";
+      fallback.innerHTML = `<div>${escapeHtml(map.name)}</div>`;
+
+      // ✅ Default state: show fallback until image successfully loads
+      fallback.style.display = "grid";
+      img.style.display = "none";
+
+      if (!map.image) {
+        img.style.display = "none";
+        fallback.style.display = "grid";
+      }
+
+      img.onerror = () => {
+        console.warn("Image failed to load:", map.image);
+        img.style.display = "none";
+        fallback.style.display = "grid";
+      };
+
+      img.onload = () => {
+        img.style.display = "block";
+        fallback.style.display = "none"; // ✅ key fix
+      };
+
+      // Append image + fallback (fallback is on top until hidden)
+      card.appendChild(img);
+      card.appendChild(fallback);
+
+      // Click behavior:
+      // - clicking side previews jumps to them
+      // - clicking center advances to next
+      card.addEventListener("click", () => {
+        const idx = Number(card.dataset.index);
+        if (idx === current) next();
+        else goTo(idx);
+      });
+
+      return card;
+    }
+
+    function buildCarousel(){
+      cardsEl.innerHTML = "";
+      numberButtonsEl.innerHTML = "";
+      cardNodes = MAPS.map((map, i) => {
+        const card = createCard(map, i);
+        cardsEl.appendChild(card);
+        return card;
+      });
+
+      MAPS.forEach((map, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = (i < 9) ? String(i + 1) : "10";
+        btn.title = `Go to ${map.name}`;
+        btn.addEventListener("click", () => goTo(i));
+        numberButtonsEl.appendChild(btn);
+      });
+
+      render();
+    }
+
+    function wrappedDelta(i, current, len){
+      let d = i - current;
+      if (d > len / 2) d -= len;
+      if (d < -len / 2) d += len;
+      return d;
+    }
+
+    function render(){
+      const len = MAPS.length;
+      if (!len) return;
+
+      cardNodes.forEach((card, i) => {
+        card.classList.remove(
+          "is-active", "is-prev", "is-next", "is-hidden-left", "is-hidden-right"
+        );
+
+        const d = wrappedDelta(i, current, len);
+
+        if (d === 0) card.classList.add("is-active");
+        else if (d === -1) card.classList.add("is-prev");
+        else if (d === 1) card.classList.add("is-next");
+        else if (d < 0) card.classList.add("is-hidden-left");
+        else card.classList.add("is-hidden-right");
+      });
+
+      mapNameText.textContent = MAPS[current].name;
+
+      [...numberButtonsEl.children].forEach((btn, i) => {
+        btn.classList.toggle("active", i === current);
+      });
+    }
+
+    function goTo(index){
+      const len = MAPS.length;
+      if (!len) return;
+      current = ((index % len) + len) % len;
+      render();
+    }
+
+    function next(){ goTo(current + 1); }
+    function prev(){ goTo(current - 1); }
+
+    function toggleUI(){
+      overlay.classList.toggle("hide-ui");
+      document.getElementById("toggleUiBtn").textContent =
+        overlay.classList.contains("hide-ui") ? "Show UI" : "Hide UI";
+    }
+
+    async function toggleFullscreen(){
+      try{
+        if (!document.fullscreenElement){
+          await document.documentElement.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      }catch(err){
+        console.warn("Fullscreen unavailable:", err);
+      }
+    }
+
+    // Buttons
+    document.getElementById("prevBtn").addEventListener("click", prev);
+    document.getElementById("nextBtn").addEventListener("click", next);
+    document.getElementById("toggleUiBtn").addEventListener("click", toggleUI);
+    document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+
+    // Keyboard controls
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+
+      if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
+      else if (/^[1-9]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        if (idx < MAPS.length) goTo(idx);
+      }
+      else if (e.key === "0") {
+        if (MAPS.length >= 10) goTo(9);
+      }
+      else if (e.key.toLowerCase() === "h") toggleUI();
+      else if (e.key.toLowerCase() === "f") toggleFullscreen();
+    });
+
+    // Optional URL params:
+    // ?start=3      -> starts on map 3
+    // ?hideui=1     -> hides controls on load
+    const params = new URLSearchParams(location.search);
+    const start = Number(params.get("start"));
+    if (Number.isFinite(start) && start >= 1 && start <= MAPS.length){
+      current = start - 1;
+    }
+    if (params.get("hideui") === "1"){
+      overlay.classList.add("hide-ui");
+    }
+
+    buildCarousel();
+  </script>
+</body>
+</html>
