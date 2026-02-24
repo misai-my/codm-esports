@@ -78,14 +78,14 @@
     }
 
     .map-card img{
-      position:absolute;          /* ensure proper stacking */
+      position:absolute;
       inset:0;
       width:100%;
       height:100%;
       object-fit:cover;
       display:block;
       pointer-events:none;
-      z-index:1;                  /* image layer */
+      z-index:1;
     }
 
     .map-card .fallback{
@@ -104,10 +104,44 @@
         radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
         radial-gradient(circle at 75% 65%, rgba(255,220,90,.12), transparent 40%),
         linear-gradient(135deg, #1a1f29, #0f1218);
-      z-index:2;                  /* fallback sits above image until image loads */
+      z-index:2;
     }
 
-    /* Active / side layout to match your sample */
+    /* ✅ Lower-left map title overlay */
+    .map-card .map-title-overlay{
+      position:absolute;
+      left:14px;
+      bottom:12px;
+      z-index:3; /* above image + fallback */
+      max-width: calc(100% - 28px);
+
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(8,10,14,.62);
+      backdrop-filter: blur(4px);
+
+      color: #fff;
+      font-weight: 900;
+      font-size: clamp(12px, 1.2vw, 16px);
+      line-height: 1;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 10px rgba(0,0,0,.4);
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .map-card.is-prev .map-title-overlay,
+    .map-card.is-next .map-title-overlay{
+      opacity: .9;
+      transform: scale(.95);
+      transform-origin: left bottom;
+    }
+
+    /* Active / side layout */
     .map-card.is-active{
       opacity:1;
       z-index:5;
@@ -237,6 +271,14 @@
       .nav-btn{
         min-width:44px;
       }
+      .map-card .map-title-overlay{
+        left:10px;
+        bottom:10px;
+        padding: 7px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        max-width: calc(100% - 20px);
+      }
     }
   </style>
 </head>
@@ -251,8 +293,8 @@
       <div class="control-row">
         <button class="nav-btn" id="prevBtn" title="Previous (Left Arrow)">◀</button>
         <button class="nav-btn" id="nextBtn" title="Next (Right Arrow)">▶</button>
-        <button id="toggleUiBtn" title="Hide/Show UI (H)">H • Hide UI</button>
-        <button id="fsBtn" title="Fullscreen (F)">F • Fullscreen</button>
+        <button id="toggleUiBtn" title="Hide/Show UI (H)">Hide UI</button>
+        <button id="fsBtn" title="Fullscreen (F)">Fullscreen</button>
         <button id="dashboardBtn" title="Return to Dashboard (D)">D • Dashboard</button>
       </div>
       <div class="status-pill" id="statusPill">
@@ -268,10 +310,11 @@
       - Pure green background for OBS chroma key
       - Keyboard + number buttons
       - D shortcut / button returns to dashboard
+      - Lower-left title on each image
       - No "1/10" on cards
     */
 
-    const DASHBOARD_URL = "https://misai-my.github.io/codm-esports/mp_maps_selector.html";
+    let DASHBOARD_URL = "https://misai-my.github.io/codm-esports/map_dashboard.html";
 
     const MAPS = [
       // ⚠️ Check exact filenames and case (GitHub Pages / OBS browser source is case-sensitive)
@@ -300,10 +343,8 @@
 
     function goToDashboard(){
       try {
-        // If this page is running inside an iframe, navigate the top window
         window.top.location.href = DASHBOARD_URL;
       } catch (err) {
-        // Fallback for standalone/local runs
         window.location.href = DASHBOARD_URL;
       }
     }
@@ -323,6 +364,11 @@
       fallback.className = "fallback";
       fallback.innerHTML = `<div>${escapeHtml(map.name)}</div>`;
 
+      // ✅ Lower-left title overlay
+      const titleOverlay = document.createElement("div");
+      titleOverlay.className = "map-title-overlay";
+      titleOverlay.textContent = map.name;
+
       // Default state: show fallback until image successfully loads
       fallback.style.display = "grid";
       img.style.display = "none";
@@ -340,12 +386,13 @@
 
       img.onload = () => {
         img.style.display = "block";
-        fallback.style.display = "none"; // key fix
+        fallback.style.display = "none";
       };
 
-      // Append image + fallback (fallback is on top until hidden)
+      // Append image + fallback + title overlay
       card.appendChild(img);
       card.appendChild(fallback);
+      card.appendChild(titleOverlay);
 
       // Click behavior:
       // - clicking side previews jumps to them
@@ -379,8 +426,8 @@
       render();
     }
 
-    function wrappedDelta(i, current, len){
-      let d = i - current;
+    function wrappedDelta(i, currentIndex, len){
+      let d = i - currentIndex;
       if (d > len / 2) d -= len;
       if (d < -len / 2) d += len;
       return d;
@@ -465,57 +512,36 @@
     });
 
     // Optional URL params:
-    // ?start=3      -> starts on map 3
-    // ?hideui=1     -> hides controls on load
-    // ?dashboard=https://...  -> override dashboard return URL
+    // ?start=3
+    // ?hideui=1
+    // ?dashboard=https://misai-my.github.io/codm-esports/map_dashboard.html
     const params = new URLSearchParams(location.search);
+
     const start = Number(params.get("start"));
-    const dashboardOverride = params.get("dashboard");
-
-    if (dashboardOverride) {
-      // lets you reuse same page in different dashboards without editing code
-      // eslint-disable-next-line no-global-assign
-      try { new URL(dashboardOverride); } catch (_) {}
-    }
-
     if (Number.isFinite(start) && start >= 1 && start <= MAPS.length){
       current = start - 1;
     }
+
     if (params.get("hideui") === "1"){
       overlay.classList.add("hide-ui");
     }
 
-    // Override dashboard URL if provided and valid
+    const dashboardOverride = params.get("dashboard");
     if (dashboardOverride) {
       try {
-        const valid = new URL(dashboardOverride, window.location.href);
-        // reassign through window-scoped property to keep const immutable pattern simple
-        window.__dashboardUrl = valid.toString();
-      } catch (_) {
-        window.__dashboardUrl = DASHBOARD_URL;
-      }
-    } else {
-      window.__dashboardUrl = DASHBOARD_URL;
-    }
-
-    // Patch goToDashboard to use override if set
-    const originalGoToDashboard = goToDashboard;
-    window.goToDashboard = function(){
-      try {
-        window.top.location.href = window.__dashboardUrl || DASHBOARD_URL;
+        DASHBOARD_URL = new URL(dashboardOverride, window.location.href).toString();
       } catch (err) {
-        window.location.href = window.__dashboardUrl || DASHBOARD_URL;
+        console.warn("Invalid dashboard URL override:", dashboardOverride);
       }
-    };
-
-    // Re-bind button + key handler helper references to override-capable function
-    document.getElementById("dashboardBtn").removeEventListener?.("click", originalGoToDashboard);
-    document.getElementById("dashboardBtn").addEventListener("click", () => window.goToDashboard());
+    }
 
     buildCarousel();
   </script>
 </body>
 </html>
+    
+    
+
 
     
 
