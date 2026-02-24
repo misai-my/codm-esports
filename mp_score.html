@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CODM Top Logo + Score Overlay</title>
+  <title>CODM Top Logo + Score Overlay (OBS Chroma)</title>
   <style>
     :root{
       /* OBS chroma key */
       --green: #00ff00;
 
-      /* placement (adjust to match your broadcast frame) */
+      /* placement / size (editable from panel) */
       --top-y: 6px;
-      --center-gap: 400px;      /* empty space in the middle */
+      --center-gap: 400px;     /* empty space in the middle */
       --logo-size: 78px;
       --score-w: 58px;
       --chip-h: 78px;
-      --radius: 8px;
+      --overlay-scale: 1;
 
       /* colors */
       --blue1:#49bfff;
@@ -61,9 +61,18 @@
       top:0;
       left:0;
       right:0;
-      height:110px; /* overlay only lives in this strip */
+      height:170px; /* more room if scaled larger */
       pointer-events:none;
       z-index:10;
+      overflow:visible;
+    }
+
+    .top-overlay-inner{
+      position:absolute;
+      inset:0;
+      transform-origin: top center;
+      transform: scale(var(--overlay-scale));
+      pointer-events:none;
     }
 
     .team-chip{
@@ -95,7 +104,7 @@
       display:grid;
       place-items:center;
       font-weight: 1000;
-      font-size: 40px;
+      font-size: calc(var(--chip-h) * 0.52);
       line-height:1;
       color:#fff;
       border:1px solid var(--line);
@@ -123,7 +132,6 @@
     .logo-box{
       width: var(--logo-size);
       height: var(--logo-size);
-      border-radius: 0;
       overflow:hidden;
       border:1px solid var(--line);
       background:
@@ -164,7 +172,7 @@
       display:grid;
       place-items:center;
       font-weight:900;
-      font-size:18px;
+      font-size: calc(var(--logo-size) * 0.22);
       letter-spacing:.08em;
       color:rgba(255,255,255,.82);
       text-shadow:0 1px 8px rgba(0,0,0,.35);
@@ -174,7 +182,7 @@
     .edit-hint{
       position:absolute;
       left:50%;
-      top:92px;
+      top:calc(var(--top-y) + var(--chip-h) + 10px);
       transform:translateX(-50%);
       pointer-events:none;
       color:rgba(255,255,255,.85);
@@ -184,6 +192,7 @@
       text-shadow:0 1px 8px rgba(0,0,0,.3);
       opacity:0;
       transition:opacity .15s ease;
+      white-space:nowrap;
     }
     .stage.edit-mode .edit-hint{ opacity:1; }
 
@@ -192,7 +201,7 @@
       position:absolute;
       left:12px;
       bottom:12px;
-      width:min(420px, calc(100vw - 24px));
+      width:min(520px, calc(100vw - 24px));
       border-radius:14px;
       background:var(--panel-bg);
       border:1px solid var(--panel-line);
@@ -237,11 +246,26 @@
     }
 
     label{
-      display:block;
-      margin:5px 0 3px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin:6px 0 3px;
       font-size:10px;
       color:var(--muted);
       letter-spacing:.04em;
+    }
+
+    label .value-badge{
+      color:#fff;
+      font-weight:800;
+      font-size:10px;
+      letter-spacing:.03em;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:999px;
+      padding:2px 6px;
+      line-height:1.2;
     }
 
     input[type="number"], input[type="range"]{
@@ -278,7 +302,6 @@
       cursor:pointer;
     }
     button:hover{ filter:brightness(1.08); }
-    .muted{ color:var(--muted); }
 
     .help{
       margin-top:8px;
@@ -300,29 +323,9 @@
       margin:0 1px;
     }
 
-    /* Responsive */
-    @media (max-width: 1200px){
-      :root{
-        --center-gap: 320px;
-        --logo-size: 70px;
-        --chip-h: 70px;
-        --score-w: 52px;
-      }
-      .score-box{ font-size: 34px; }
-      .edit-hint{ top:84px; }
-    }
-
     @media (max-width: 900px){
-      :root{
-        --center-gap: 220px;
-        --logo-size: 58px;
-        --chip-h: 58px;
-        --score-w: 44px;
-      }
-      .score-box{ font-size: 28px; }
-      .logo-box .placeholder{ font-size:14px; }
-      .top-overlay{ height:86px; }
       .editor .grid{ grid-template-columns:1fr; }
+      .editor{ width:min(560px, calc(100vw - 20px)); left:10px; bottom:10px; }
     }
   </style>
 </head>
@@ -330,23 +333,25 @@
   <div class="stage" id="stage">
     <!-- Only this top strip is the visible overlay design -->
     <div class="top-overlay" aria-label="Top score overlay">
-      <div class="team-chip left">
-        <div class="score-box" id="leftScoreBox" title="Left score (click to +1)">0</div>
-        <div class="logo-box" id="leftLogoBox" title="Click to upload left logo">
-          <img id="leftLogoImg" alt="Left logo" />
-          <div class="placeholder" id="leftPlaceholder">L</div>
+      <div class="top-overlay-inner" id="topOverlayInner">
+        <div class="team-chip left">
+          <div class="score-box" id="leftScoreBox" title="Left score (click to +1)">0</div>
+          <div class="logo-box" id="leftLogoBox" title="Click to upload left logo">
+            <img id="leftLogoImg" alt="Left logo" />
+            <div class="placeholder" id="leftPlaceholder">L</div>
+          </div>
         </div>
-      </div>
 
-      <div class="team-chip right">
-        <div class="logo-box" id="rightLogoBox" title="Click to upload right logo">
-          <img id="rightLogoImg" alt="Right logo" />
-          <div class="placeholder" id="rightPlaceholder">R</div>
+        <div class="team-chip right">
+          <div class="logo-box" id="rightLogoBox" title="Click to upload right logo">
+            <img id="rightLogoImg" alt="Right logo" />
+            <div class="placeholder" id="rightPlaceholder">R</div>
+          </div>
+          <div class="score-box" id="rightScoreBox" title="Right score (click to +1)">0</div>
         </div>
-        <div class="score-box" id="rightScoreBox" title="Right score (click to +1)">0</div>
-      </div>
 
-     
+        <div class="edit-hint">Edit mode: click logos to upload • click score +1 • right-click score -1</div>
+      </div>
     </div>
 
     <!-- Hidden editor (toggle with E / H) -->
@@ -380,16 +385,33 @@
 
         <div class="card">
           <h3>Placement</h3>
-          <label>Top Offset (px)</label>
+          <label>Top Offset <span class="value-badge" id="topYValue">6px</span></label>
           <input id="topYRange" type="range" min="0" max="40" step="1" value="6">
-          <label>Center Gap (px)</label>
+
+          <label>Center Gap <span class="value-badge" id="centerGapValue">400px</span></label>
           <input id="centerGapRange" type="range" min="180" max="700" step="2" value="400">
+
           <div class="row">
             <button id="resetLayoutBtn">Reset Layout</button>
           </div>
         </div>
 
         <div class="card">
+          <h3>Resize</h3>
+          <label>Global Scale <span class="value-badge" id="overlayScaleValue">100%</span></label>
+          <input id="overlayScaleRange" type="range" min="60" max="180" step="1" value="100">
+
+          <label>Logo Size <span class="value-badge" id="logoSizeValue">78px</span></label>
+          <input id="logoSizeRange" type="range" min="40" max="160" step="1" value="78">
+
+          <label>Score Width <span class="value-badge" id="scoreWValue">58px</span></label>
+          <input id="scoreWRange" type="range" min="34" max="120" step="1" value="58">
+
+          <label>Chip Height <span class="value-badge" id="chipHValue">78px</span></label>
+          <input id="chipHRange" type="range" min="40" max="160" step="1" value="78">
+        </div>
+
+        <div class="card" style="grid-column:1 / -1;">
           <h3>Session</h3>
           <div class="row">
             <button id="toggleEditBtn">Hide Editor</button>
@@ -413,9 +435,9 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "codm_top_logo_score_overlay_v1";
+    const STORAGE_KEY = "codm_top_logo_score_overlay_v2";
 
-    const state = {
+    const DEFAULTS = {
       leftScore: 0,
       rightScore: 0,
       leftLogo: "",
@@ -423,9 +445,15 @@
       editMode: false,
       layout: {
         topY: 6,
-        centerGap: 400
+        centerGap: 400,
+        overlayScale: 100, // percent
+        logoSize: 78,
+        scoreW: 58,
+        chipH: 78
       }
     };
+
+    const state = JSON.parse(JSON.stringify(DEFAULTS));
 
     const $ = (id) => document.getElementById(id);
     const stage = $("stage");
@@ -460,8 +488,19 @@
 
       topYRange: $("topYRange"),
       centerGapRange: $("centerGapRange"),
-      resetLayoutBtn: $("resetLayoutBtn"),
+      overlayScaleRange: $("overlayScaleRange"),
+      logoSizeRange: $("logoSizeRange"),
+      scoreWRange: $("scoreWRange"),
+      chipHRange: $("chipHRange"),
 
+      topYValue: $("topYValue"),
+      centerGapValue: $("centerGapValue"),
+      overlayScaleValue: $("overlayScaleValue"),
+      logoSizeValue: $("logoSizeValue"),
+      scoreWValue: $("scoreWValue"),
+      chipHValue: $("chipHValue"),
+
+      resetLayoutBtn: $("resetLayoutBtn"),
       toggleEditBtn: $("toggleEditBtn")
     };
 
@@ -469,6 +508,23 @@
       v = Number(v);
       if (!Number.isFinite(v)) return 0;
       return Math.max(0, Math.floor(v));
+    }
+
+    function clampNum(v, min, max, fallback){
+      v = Number(v);
+      if (!Number.isFinite(v)) return fallback;
+      return Math.min(max, Math.max(min, v));
+    }
+
+    function normalizeLayout(layout = {}){
+      return {
+        topY:        clampNum(layout.topY, 0, 40, DEFAULTS.layout.topY),
+        centerGap:   clampNum(layout.centerGap, 180, 700, DEFAULTS.layout.centerGap),
+        overlayScale:clampNum(layout.overlayScale, 60, 180, DEFAULTS.layout.overlayScale),
+        logoSize:    clampNum(layout.logoSize, 40, 160, DEFAULTS.layout.logoSize),
+        scoreW:      clampNum(layout.scoreW, 34, 120, DEFAULTS.layout.scoreW),
+        chipH:       clampNum(layout.chipH, 40, 160, DEFAULTS.layout.chipH),
+      };
     }
 
     function saveState(){
@@ -482,13 +538,13 @@
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== "object") return;
-        Object.assign(state, parsed);
-        state.leftScore = clampScore(state.leftScore);
-        state.rightScore = clampScore(state.rightScore);
-        state.layout = {
-          topY: Number(parsed.layout?.topY ?? 6),
-          centerGap: Number(parsed.layout?.centerGap ?? 400)
-        };
+
+        state.leftScore = clampScore(parsed.leftScore ?? state.leftScore);
+        state.rightScore = clampScore(parsed.rightScore ?? state.rightScore);
+        state.leftLogo = typeof parsed.leftLogo === "string" ? parsed.leftLogo : state.leftLogo;
+        state.rightLogo = typeof parsed.rightLogo === "string" ? parsed.rightLogo : state.rightLogo;
+        state.editMode = !!parsed.editMode;
+        state.layout = normalizeLayout(parsed.layout);
       }catch(e){
         console.warn("Load failed:", e);
       }
@@ -511,11 +567,16 @@
     function applyLayoutVars(){
       document.documentElement.style.setProperty("--top-y", `${state.layout.topY}px`);
       document.documentElement.style.setProperty("--center-gap", `${state.layout.centerGap}px`);
+      document.documentElement.style.setProperty("--overlay-scale", `${state.layout.overlayScale / 100}`);
+      document.documentElement.style.setProperty("--logo-size", `${state.layout.logoSize}px`);
+      document.documentElement.style.setProperty("--score-w", `${state.layout.scoreW}px`);
+      document.documentElement.style.setProperty("--chip-h", `${state.layout.chipH}px`);
     }
 
     function render(){
       state.leftScore = clampScore(state.leftScore);
       state.rightScore = clampScore(state.rightScore);
+      state.layout = normalizeLayout(state.layout);
 
       refs.leftScoreBox.textContent = state.leftScore;
       refs.rightScoreBox.textContent = state.rightScore;
@@ -525,6 +586,17 @@
 
       refs.topYRange.value = state.layout.topY;
       refs.centerGapRange.value = state.layout.centerGap;
+      refs.overlayScaleRange.value = state.layout.overlayScale;
+      refs.logoSizeRange.value = state.layout.logoSize;
+      refs.scoreWRange.value = state.layout.scoreW;
+      refs.chipHRange.value = state.layout.chipH;
+
+      refs.topYValue.textContent = `${state.layout.topY}px`;
+      refs.centerGapValue.textContent = `${state.layout.centerGap}px`;
+      refs.overlayScaleValue.textContent = `${state.layout.overlayScale}%`;
+      refs.logoSizeValue.textContent = `${state.layout.logoSize}px`;
+      refs.scoreWValue.textContent = `${state.layout.scoreW}px`;
+      refs.chipHValue.textContent = `${state.layout.chipH}px`;
 
       renderLogo("left", state.leftLogo);
       renderLogo("right", state.rightLogo);
@@ -586,6 +658,22 @@
       }
     }
 
+    function resetLayout(){
+      state.layout = JSON.parse(JSON.stringify(DEFAULTS.layout));
+      render();
+      saveState();
+    }
+
+    function resetAll(){
+      state.leftScore = DEFAULTS.leftScore;
+      state.rightScore = DEFAULTS.rightScore;
+      state.leftLogo = DEFAULTS.leftLogo;
+      state.rightLogo = DEFAULTS.rightLogo;
+      state.layout = JSON.parse(JSON.stringify(DEFAULTS.layout));
+      render();
+      saveState();
+    }
+
     function wireUI(){
       refs.leftScoreInput.addEventListener("input", () => setScore("left", refs.leftScoreInput.value));
       refs.rightScoreInput.addEventListener("input", () => setScore("right", refs.rightScoreInput.value));
@@ -620,36 +708,39 @@
         saveState();
       });
 
-      refs.resetAllBtn.addEventListener("click", () => {
-        state.leftScore = 0;
-        state.rightScore = 0;
-        state.leftLogo = "";
-        state.rightLogo = "";
-        state.layout.topY = 6;
-        state.layout.centerGap = 400;
-        render();
-        saveState();
-      });
+      refs.resetAllBtn.addEventListener("click", resetAll);
 
       refs.topYRange.addEventListener("input", () => {
         state.layout.topY = Number(refs.topYRange.value);
-        render();
-        saveState();
+        render(); saveState();
       });
 
       refs.centerGapRange.addEventListener("input", () => {
         state.layout.centerGap = Number(refs.centerGapRange.value);
-        render();
-        saveState();
+        render(); saveState();
       });
 
-      refs.resetLayoutBtn.addEventListener("click", () => {
-        state.layout.topY = 6;
-        state.layout.centerGap = 400;
-        render();
-        saveState();
+      refs.overlayScaleRange.addEventListener("input", () => {
+        state.layout.overlayScale = Number(refs.overlayScaleRange.value);
+        render(); saveState();
       });
 
+      refs.logoSizeRange.addEventListener("input", () => {
+        state.layout.logoSize = Number(refs.logoSizeRange.value);
+        render(); saveState();
+      });
+
+      refs.scoreWRange.addEventListener("input", () => {
+        state.layout.scoreW = Number(refs.scoreWRange.value);
+        render(); saveState();
+      });
+
+      refs.chipHRange.addEventListener("input", () => {
+        state.layout.chipH = Number(refs.chipHRange.value);
+        render(); saveState();
+      });
+
+      refs.resetLayoutBtn.addEventListener("click", resetLayout);
       refs.toggleEditBtn.addEventListener("click", () => toggleEditMode());
 
       // Click overlay elements directly (useful during setup)
@@ -746,8 +837,19 @@
 
       const topY = params.get("top");
       const gap = params.get("gap");
-      if (topY !== null && Number.isFinite(Number(topY))) state.layout.topY = Number(topY);
-      if (gap !== null && Number.isFinite(Number(gap))) state.layout.centerGap = Number(gap);
+      const scale = params.get("scale");
+      const logo = params.get("logo");
+      const scorew = params.get("scorew");
+      const chiph = params.get("chiph");
+
+      if (topY !== null) state.layout.topY = Number(topY);
+      if (gap !== null) state.layout.centerGap = Number(gap);
+      if (scale !== null) state.layout.overlayScale = Number(scale);
+      if (logo !== null) state.layout.logoSize = Number(logo);
+      if (scorew !== null) state.layout.scoreW = Number(scorew);
+      if (chiph !== null) state.layout.chipH = Number(chiph);
+
+      state.layout = normalizeLayout(state.layout);
     }
 
     function init(){
