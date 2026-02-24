@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CODM Map CTRL</title>
+  <style>
+    :root{
+      --green-screen: #00ff00; /* OBS chroma key */
+      --ui-bg: rgba(12,14,18,.88);
+      --ui-line: rgba(255,255,255,.12);
+      --ui-text: #eef3ff;
+      --ui-muted: #aeb8cf;
+      --ui-accent: #ffd34d;
+
+      --card-radius: 14px;
+      --card-shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background: var(--green-screen);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ui-text);
+    }
+
+    body{
+      display:flex;
+      flex-direction:column;
+      background: var(--green-screen);
+    }
+
+    .overlay{
+      position:relative;
+      width:100vw;
+      height:100vh;
+      background: var(--green-screen);
+      overflow:hidden;
+    }
+
+    /* ===== Carousel Stage (visual only) ===== */
+    .carousel-stage{
+      position:absolute;
+      inset:0;
+      background: var(--green-screen);
+    }
+
+    .cards{
+      position:absolute;
+      inset:0;
+    }
+
+    .map-card{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:min(50vw, 920px);
+      aspect-ratio: 16 / 9;
+      transform: translate(-50%, -50%) scale(.6);
+      border-radius: var(--card-radius);
+      overflow:hidden;
+      background:#161a22;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255,255,255,.08);
+      opacity:0;
+      pointer-events:none;
+      transition:
+        transform 380ms ease,
+        opacity 280ms ease,
+        filter 280ms ease,
+        box-shadow 280ms ease;
+      z-index:1;
+      user-select:none;
+    }
+
+    .map-card img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      pointer-events:none;
+      z-index:1;
+    }
+
+    .map-card .fallback{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:20px;
+      font-weight:900;
+      font-size: clamp(24px, 4vw, 48px);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      color:rgba(255,255,255,.9);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
+        radial-gradient(circle at 75% 65%, rgba(255,220,90,.12), transparent 40%),
+        linear-gradient(135deg, #1a1f29, #0f1218);
+      z-index:2;
+    }
+
+    /* Lower-left map title overlay */
+    .map-card .map-title-overlay{
+      position:absolute;
+      left:14px;
+      bottom:12px;
+      z-index:3; /* above image + fallback */
+      max-width: calc(100% - 28px);
+
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(8,10,14,.62);
+      backdrop-filter: blur(4px);
+
+      color: #fff;
+      font-weight: 900;
+      font-size: clamp(12px, 1.2vw, 16px);
+      line-height: 1;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 10px rgba(0,0,0,.4);
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .map-card.is-prev .map-title-overlay,
+    .map-card.is-next .map-title-overlay{
+      opacity: .9;
+      transform: scale(.95);
+      transform-origin: left bottom;
+    }
+
+    /* Active / side layout */
+    .map-card.is-active{
+      opacity:1;
+      z-index:5;
+      pointer-events:auto;
+      transform: translate(-50%, -50%) translateX(0) scale(1);
+      filter: none;
+    }
+
+    .map-card.is-prev{
+      opacity:1;
+      z-index:4;
+      transform: translate(-50%, -50%) translateX(calc(-1 * min(47vw, 760px))) scale(.44);
+      filter: brightness(.95) saturate(.95);
+      pointer-events:auto;
+    }
+
+    .map-card.is-next{
+      opacity:1;
+      z-index:4;
+      transform: translate(-50%, -50%) translateX(min(47vw, 760px)) scale(.44);
+      filter: brightness(.95) saturate(.95);
+      pointer-events:auto;
+    }
+
+    .map-card.is-hidden-left{
+      opacity:0;
+      z-index:1;
+      transform: translate(-50%, -50%) translateX(calc(-1 * min(75vw, 1200px))) scale(.30);
+      filter: brightness(.85);
+    }
+
+    .map-card.is-hidden-right{
+      opacity:0;
+      z-index:1;
+      transform: translate(-50%, -50%) translateX(min(75vw, 1200px)) scale(.30);
+      filter: brightness(.85);
+    }
+
+    /* ===== Controls (optional on-screen) ===== */
+    .controls{
+      position:absolute;
+      left:50%;
+      bottom:20px;
+      transform:translateX(-50%);
+      display:grid;
+      gap:8px;
+      justify-items:center;
+      z-index:10;
+      transition: opacity .2s ease;
+    }
+
+    .control-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid var(--ui-line);
+      background: var(--ui-bg);
+      color: var(--ui-text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 40px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+    button:hover{ transform: translateY(-1px); }
+    button:active{ transform: translateY(0); }
+
+    button.active{
+      border-color: rgba(255,211,77,.55);
+      background: rgba(255,211,77,.16);
+    }
+
+    .nav-btn{
+      min-width:50px;
+      font-size:16px;
+      line-height:1;
+    }
+
+    .status-pill{
+      border:1px solid var(--ui-line);
+      background: var(--ui-bg);
+      color: var(--ui-muted);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 140px;
+      text-align:center;
+      backdrop-filter: blur(4px);
+    }
+    .status-pill strong{
+      color: var(--ui-text);
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    /* Hide UI mode for clean OBS */
+    .overlay.hide-ui .controls{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    /* Small screens */
+    @media (max-width: 900px){
+      .map-card.is-prev{
+        transform: translate(-50%, -50%) translateX(calc(-1 * min(52vw, 520px))) scale(.38);
+      }
+      .map-card.is-next{
+        transform: translate(-50%, -50%) translateX(min(52vw, 520px)) scale(.38);
+      }
+      .controls{
+        bottom:10px;
+      }
+      button{
+        min-width:36px;
+        padding: 7px 8px;
+        font-size: 12px;
+      }
+      .nav-btn{
+        min-width:44px;
+      }
+      .map-card .map-title-overlay{
+        left:10px;
+        bottom:10px;
+        padding: 7px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        max-width: calc(100% - 20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay" id="overlay">
+    <div class="carousel-stage" id="carouselStage">
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <!-- On-screen controls (can hide with H key) -->
+    <div class="controls" id="controls">
+      <div class="control-row">
+        <button class="nav-btn" id="prevBtn" title="Previous (Left Arrow)">◀</button>
+        <button class="nav-btn" id="nextBtn" title="Next (Right Arrow)">▶</button>
+        <button id="toggleUiBtn" title="Hide/Show UI (H)">H • Hide UI</button>
+        <button id="fsBtn" title="Fullscreen (F)">F • Fullscreen</button>
+        <button id="dashboardBtn" title="Return to Dashboard (D)">D • Dashboard</button>
+      </div>
+      <div class="status-pill" id="statusPill">
+        Map: <strong id="mapNameText">—</strong>
+      </div>
+      <div class="control-row" id="numberButtons"></div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      CODM Map Carousel Overlay (Coverflow Style)
+      - Pure green background for OBS chroma key
+      - Keyboard + number buttons
+      - D shortcut / button returns to dashboard
+      - Lower-left title on each image
+      - Spin-to-target animation on number selection
+      - No "1/10" on cards
+    */
+
+    let DASHBOARD_URL = "https://misai-my.github.io/codm-esports/mp_maps_selector.html";
+
+    const MAPS = [
+      // Check exact filenames and case (GitHub Pages / OBS browser source is case-sensitive)
+      { name: "Crossroad Strike", image: "maps/Crossroad strike.png" },
+      { name: "Raid",             image: "maps/Raid.png" },
+      { name: "Standoff",         image: "maps/Standoff.png" },
+    ];
+
+    const overlay = document.getElementById("overlay");
+    const cardsEl = document.getElementById("cards");
+    const numberButtonsEl = document.getElementById("numberButtons");
+    const mapNameText = document.getElementById("mapNameText");
+
+    let current = 0;
+    let cardNodes = [];
+
+    // Spin animation state
+    let spinTimer = null;
+    let isSpinning = false;
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      }[s]));
+    }
+
+    function mod(n, m){
+      return ((n % m) + m) % m;
+    }
+
+    function forwardDistance(from, to, len){
+      return mod(to - from, len);
+    }
+
+    function cancelSpin(){
+      if (spinTimer) {
+        clearTimeout(spinTimer);
+        spinTimer = null;
+      }
+      isSpinning = false;
+    }
+
+    function goToDashboard(){
+      try {
+        window.top.location.href = DASHBOARD_URL;
+      } catch (err) {
+        window.location.href = DASHBOARD_URL;
+      }
+    }
+
+    function createCard(map, index){
+      const card = document.createElement("div");
+      card.className = "map-card";
+      card.dataset.index = index;
+
+      const img = document.createElement("img");
+      img.alt = map.name;
+      img.src = map.image || "";
+      img.loading = "eager";
+      img.decoding = "async";
+
+      const fallback = document.createElement("div");
+      fallback.className = "fallback";
+      fallback.innerHTML = `<div>${escapeHtml(map.name)}</div>`;
+
+      // Lower-left title overlay
+      const titleOverlay = document.createElement("div");
+      titleOverlay.className = "map-title-overlay";
+      titleOverlay.textContent = map.name;
+
+      // Default state: show fallback until image successfully loads
+      fallback.style.display = "grid";
+      img.style.display = "none";
+
+      if (!map.image) {
+        img.style.display = "none";
+        fallback.style.display = "grid";
+      }
+
+      img.onerror = () => {
+        console.warn("Image failed to load:", map.image);
+        img.style.display = "none";
+        fallback.style.display = "grid";
+      };
+
+      img.onload = () => {
+        img.style.display = "block";
+        fallback.style.display = "none";
+      };
+
+      // Append image + fallback + title overlay
+      card.appendChild(img);
+      card.appendChild(fallback);
+      card.appendChild(titleOverlay);
+
+      // Click behavior:
+      // - clicking side previews jumps to them
+      // - clicking center advances to next
+      card.addEventListener("click", () => {
+        const idx = Number(card.dataset.index);
+        if (idx === current) next();     // manual next (cancels spin if running)
+        else goTo(idx);                  // direct jump (cancels spin if running)
+      });
+
+      return card;
+    }
+
+    function buildCarousel(){
+      cardsEl.innerHTML = "";
+      numberButtonsEl.innerHTML = "";
+
+      cardNodes = MAPS.map((map, i) => {
+        const card = createCard(map, i);
+        cardsEl.appendChild(card);
+        return card;
+      });
+
+      MAPS.forEach((map, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = (i < 9) ? String(i + 1) : "10";
+        btn.title = `Spin to ${map.name}`;
+        btn.addEventListener("click", () => spinTo(i)); // ✅ spin instead of instant jump
+        numberButtonsEl.appendChild(btn);
+      });
+
+      render();
+    }
+
+    function wrappedDelta(i, currentIndex, len){
+      let d = i - currentIndex;
+      if (d > len / 2) d -= len;
+      if (d < -len / 2) d += len;
+      return d;
+    }
+
+    function render(){
+      const len = MAPS.length;
+      if (!len) return;
+
+      cardNodes.forEach((card, i) => {
+        card.classList.remove(
+          "is-active", "is-prev", "is-next", "is-hidden-left", "is-hidden-right"
+        );
+
+        const d = wrappedDelta(i, current, len);
+
+        if (d === 0) card.classList.add("is-active");
+        else if (d === -1) card.classList.add("is-prev");
+        else if (d === 1) card.classList.add("is-next");
+        else if (d < 0) card.classList.add("is-hidden-left");
+        else card.classList.add("is-hidden-right");
+      });
+
+      mapNameText.textContent = MAPS[current].name;
+
+      [...numberButtonsEl.children].forEach((btn, i) => {
+        btn.classList.toggle("active", i === current);
+      });
+    }
+
+    function goTo(index, options = {}){
+      const len = MAPS.length;
+      if (!len) return;
+
+      // Manual calls cancel any running spin animation
+      if (!options.fromSpin) cancelSpin();
+
+      current = mod(index, len);
+      render();
+    }
+
+    function next(options = {}){
+      goTo(current + 1, options);
+    }
+
+    function prev(options = {}){
+      goTo(current - 1, options);
+    }
+
+    // ✅ Spin fast -> slow -> stop on target
+    function spinTo(targetIndex){
+      const len = MAPS.length;
+      if (!len) return;
+
+      targetIndex = mod(targetIndex, len);
+
+      // For 1 map, no spin needed
+      if (len === 1){
+        goTo(targetIndex);
+        return;
+      }
+
+      cancelSpin();
+      isSpinning = true;
+
+      // Always spin forward for a "wheel" feel
+      const dist = forwardDistance(current, targetIndex, len);
+
+      // Add extra loops so it feels dramatic even if target is adjacent/same
+      const extraLoops = (len >= 5) ? 2 : 3;
+      let totalSteps = (extraLoops * len) + dist;
+
+      // If already on target, still do one full loop
+      if (totalSteps <= 0) totalSteps = len;
+
+      let step = 0;
+
+      // Delay between steps grows over time (fast -> slow)
+      const startDelay = 70;   // fast at start
+      const endDelay   = 420;  // slow at the end (lets CSS settle)
+
+      function tick(){
+        if (!isSpinning) return; // cancelled
+
+        if (step >= totalSteps){
+          isSpinning = false;
+          spinTimer = null;
+
+          // Safety snap to exact target
+          goTo(targetIndex, { fromSpin: true });
+          return;
+        }
+
+        next({ fromSpin: true });
+        step++;
+
+        const t = step / totalSteps;         // 0..1
+        const eased = Math.pow(t, 2.35);     // ease-out feel for delay growth
+        const delay = Math.round(startDelay + (endDelay - startDelay) * eased);
+
+        spinTimer = setTimeout(tick, delay);
+      }
+
+      tick();
+    }
+
+    function toggleUI(){
+      overlay.classList.toggle("hide-ui");
+      document.getElementById("toggleUiBtn").textContent =
+        overlay.classList.contains("hide-ui") ? "Show UI" : "Hide UI";
+    }
+
+    async function toggleFullscreen(){
+      try{
+        if (!document.fullscreenElement){
+          await document.documentElement.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      }catch(err){
+        console.warn("Fullscreen unavailable:", err);
+      }
+    }
+
+    // Buttons
+    document.getElementById("prevBtn").addEventListener("click", () => prev());
+    document.getElementById("nextBtn").addEventListener("click", () => next());
+    document.getElementById("toggleUiBtn").addEventListener("click", toggleUI);
+    document.getElementById("fsBtn").addEventListener("click", toggleFullscreen);
+    document.getElementById("dashboardBtn").addEventListener("click", goToDashboard);
+
+    // Keyboard controls
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+
+      if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
+      else if (/^[1-9]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        if (idx < MAPS.length) spinTo(idx);  // ✅ spin on number key
+      }
+      else if (e.key === "0") {
+        if (MAPS.length >= 10) spinTo(9);
+      }
+      else if (e.key.toLowerCase() === "h") toggleUI();
+      else if (e.key.toLowerCase() === "f") toggleFullscreen();
+      else if (e.key.toLowerCase() === "d") goToDashboard();
+    });
+
+    // Optional URL params:
+    // ?start=3
+    // ?hideui=1
+    // ?dashboard=https://misai-my.github.io/codm-esports/map_dashboard.html
+    const params = new URLSearchParams(location.search);
+
+    const start = Number(params.get("start"));
+    if (Number.isFinite(start) && start >= 1 && start <= MAPS.length){
+      current = start - 1;
+    }
+
+    if (params.get("hideui") === "1"){
+      overlay.classList.add("hide-ui");
+    }
+
+    const dashboardOverride = params.get("dashboard");
+    if (dashboardOverride) {
+      try {
+        DASHBOARD_URL = new URL(dashboardOverride, window.location.href).toString();
+      } catch (err) {
+        console.warn("Invalid dashboard URL override:", dashboardOverride);
+      }
+    }
+
+    buildCarousel();
+  </script>
+</body>
+</html>
