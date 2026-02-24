@@ -147,7 +147,6 @@
       border-radius: 0 6px 6px 0;
       background:
         linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
-        linear-gradient(135deg, color-mix(in srgb, var(--blue1) 22%, transparent), color-mix(in srgb, var(--blue2) 10%, transparent)),
         #0c131c;
     }
 
@@ -155,7 +154,6 @@
       border-radius: 6px 0 0 6px;
       background:
         linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
-        linear-gradient(135deg, color-mix(in srgb, var(--yellow1) 24%, transparent), color-mix(in srgb, var(--yellow2) 10%, transparent)),
         #0c131c;
     }
 
@@ -183,7 +181,12 @@
       position:absolute;
       left:12px;
       bottom:12px;
-      width:min(620px, calc(100vw - 24px));
+
+      /* ✅ wider, shorter */
+      width:min(1120px, calc(100vw - 24px));
+      max-height:calc(100vh - 220px); /* keeps top overlay visible */
+      overflow:auto;
+
       border-radius:14px;
       background:var(--panel-bg);
       border:1px solid var(--panel-line);
@@ -208,8 +211,9 @@
 
     .editor .grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr)); /* ✅ wider layout */
       gap:8px;
+      align-items:start;
     }
 
     .card{
@@ -227,12 +231,16 @@
       letter-spacing:.08em;
     }
 
+    /* helper spans for desktop layout */
+    .card.span-2{ grid-column: span 2; }
+    .card.span-3{ grid-column: 1 / -1; }
+
     label{
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:8px;
-      margin:6px 0 3px;
+      margin:5px 0 3px;
       font-size:10px;
       color:var(--muted);
       letter-spacing:.04em;
@@ -273,17 +281,18 @@
       cursor:pointer;
     }
 
+    /* compact colors layout */
     .color-grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0,1fr));
       gap:8px;
     }
 
     .row{
       display:flex;
-      gap:8px;
+      gap:6px;
       flex-wrap:wrap;
-      margin-top:8px;
+      margin-top:6px;
     }
 
     button{
@@ -320,10 +329,45 @@
       margin:0 1px;
     }
 
+    @media (max-width: 1200px){
+      .editor{
+        width:min(920px, calc(100vw - 20px));
+        left:10px;
+        bottom:10px;
+        max-height:calc(100vh - 200px);
+      }
+
+      .editor .grid{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card.span-2,
+      .card.span-3{
+        grid-column: 1 / -1;
+      }
+
+      .color-grid{
+        grid-template-columns: repeat(2, minmax(0,1fr));
+      }
+    }
+
     @media (max-width: 900px){
-      .editor .grid{ grid-template-columns:1fr; }
-      .editor{ width:min(680px, calc(100vw - 20px)); left:10px; bottom:10px; }
-      .color-grid{ grid-template-columns:1fr; }
+      .editor{
+        width:min(680px, calc(100vw - 20px));
+      }
+
+      .editor .grid{
+        grid-template-columns:1fr;
+      }
+
+      .card.span-2,
+      .card.span-3{
+        grid-column: 1 / -1;
+      }
+
+      .color-grid{
+        grid-template-columns:1fr;
+      }
     }
   </style>
 </head>
@@ -407,8 +451,8 @@
           <input id="chipHRange" type="range" min="40" max="160" step="1" value="78">
         </div>
 
-        <!-- ✅ NEW: Color Controls -->
-        <div class="card" style="grid-column:1 / -1;">
+        <!-- ✅ Colors card spans 2 columns -->
+        <div class="card span-2">
           <h3>Colors</h3>
 
           <div class="color-grid">
@@ -440,7 +484,8 @@
           </div>
         </div>
 
-        <div class="card" style="grid-column:1 / -1;">
+        <!-- ✅ Session card stays single column on desktop -->
+        <div class="card">
           <h3>Session</h3>
           <div class="row">
             <button id="toggleEditBtn">Hide Editor</button>
@@ -539,7 +584,7 @@
       resetLayoutBtn: $("resetLayoutBtn"),
       toggleEditBtn: $("toggleEditBtn"),
 
-      // ✅ Color refs
+      // Color refs
       leftColor1Input: $("leftColor1Input"),
       leftColor2Input: $("leftColor2Input"),
       rightColor1Input: $("rightColor1Input"),
@@ -673,7 +718,6 @@
       refs.scoreWValue.textContent = `${state.layout.scoreW}px`;
       refs.chipHValue.textContent = `${state.layout.chipH}px`;
 
-      // ✅ Color controls
       refs.leftColor1Input.value = state.colors.left1;
       refs.leftColor2Input.value = state.colors.left2;
       refs.rightColor1Input.value = state.colors.right1;
@@ -852,7 +896,6 @@
       refs.resetLayoutBtn.addEventListener("click", resetLayout);
       refs.toggleEditBtn.addEventListener("click", () => toggleEditMode());
 
-      // ✅ Color listeners
       refs.leftColor1Input.addEventListener("input", () => setColor("left1", refs.leftColor1Input.value));
       refs.leftColor2Input.addEventListener("input", () => setColor("left2", refs.leftColor2Input.value));
       refs.rightColor1Input.addEventListener("input", () => setColor("right1", refs.rightColor1Input.value));
@@ -967,7 +1010,7 @@
       if (scorew !== null) state.layout.scoreW = Number(scorew);
       if (chiph !== null) state.layout.chipH = Number(chiph);
 
-      // ✅ Optional color URL params
+      // Optional color URL params
       const lc1 = params.get("lc1");
       const lc2 = params.get("lc2");
       const rc1 = params.get("rc1");
