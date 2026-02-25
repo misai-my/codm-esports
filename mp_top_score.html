@@ -3,43 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top Score Overlay</title>
+  <title>CODM Top Logo + Score Overlay (OBS Chroma)</title>
 
-  <!-- Optional web fonts for font changer -->
+  <!-- Optional fonts for font changer -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@400;700;900&family=Orbitron:wght@500;700;900&family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;700&family=Teko:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;700&family=Oswald:wght@500;700&family=Teko:wght@500;700&family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      /* OBS chroma key */
-      --green: #00ff00;
+      /* OBS chroma */
+      --green:#00ff00;
 
-      /* placement / size (editable from panel) */
+      /* base overlay layout */
       --top-y: 6px;
       --center-gap: 400px;
+      --overlay-scale: 1;
+
       --logo-size: 78px;
       --score-w: 58px;
       --chip-h: 78px;
-      --overlay-scale: 1;
+      --chip-gap: 2px;
 
-      /* team names */
+      /* text blocks */
       --name-w: 156px;
       --name-h: 28px;
       --name-font-size: 14px;
       --name-y-offset: 8px;
       --name-left-x: 0px;
       --name-right-x: 0px;
+      --name-font-weight: 800;
+      --name-letter: .05em;
 
-      /* middle title */
       --title-w: 320px;
       --title-h: 38px;
       --title-font-size: 16px;
       --title-x: 0px;
       --title-y: 20px;
+      --title-font-weight: 900;
+      --title-letter: .08em;
 
-      /* global font */
+      --score-font-size: 40px;
       --overlay-font: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+      /* radii */
+      --score-radius: 6px;
+      --logo-radius: 6px;
+      --name-radius: 6px;
+      --title-radius: 8px;
+
+      /* border / shadow */
+      --border-w: 1px;
+      --border-color: rgba(255,255,255,.18);
+      --shadow: 0 8px 18px rgba(0,0,0,.28);
 
       /* colors */
       --blue1:#49bfff;
@@ -47,11 +63,13 @@
       --yellow1:#ffd84d;
       --yellow2:#f2b400;
       --ink:#ffffff;
-      --line: rgba(255,255,255,.18);
-      --shadow: 0 8px 18px rgba(0,0,0,.28);
 
-      /* hidden editor */
-      --panel-bg: rgba(10,14,20,.92);
+      --left-name-chip:#11304a;
+      --right-name-chip:#5a4508;
+      --title-chip:#1a2230;
+
+      /* editor */
+      --panel-bg: rgba(10,14,20,.94);
       --panel-line: rgba(255,255,255,.12);
       --muted:#aeb8cf;
     }
@@ -63,13 +81,12 @@
       width:100%;
       height:100%;
       overflow:hidden;
-      background: var(--green);
+      background:var(--green);
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--ink);
+      color:#fff;
     }
 
     body{
-      background: var(--green);
       user-select:none;
     }
 
@@ -77,18 +94,15 @@
       position:relative;
       width:100vw;
       height:100vh;
-      background: var(--green);
+      background:var(--green);
     }
 
-    .is-hidden{ display:none !important; }
-
-    /* ===== OVERLAY VISIBLE AREA ===== */
+    /* ===== OVERLAY AREA ===== */
     .top-overlay{
       position:absolute;
-      top:0;
-      left:0;
-      right:0;
-      height:260px; /* taller because of names + title */
+      inset:0 auto auto 0;
+      width:100%;
+      height:220px;
       pointer-events:none;
       z-index:10;
       overflow:visible;
@@ -100,16 +114,18 @@
       transform-origin: top center;
       transform: scale(var(--overlay-scale));
       pointer-events:none;
+      overflow:visible;
     }
 
-    /* Left / right stacks (chip + team name) */
+    .is-hidden{ display:none !important; }
+
     .team-stack{
       position:absolute;
       top:var(--top-y);
       display:flex;
       flex-direction:column;
       pointer-events:none;
-      z-index:12;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.22));
     }
 
     .team-stack.left{
@@ -123,87 +139,75 @@
     }
 
     .team-chip{
-      position:relative;
-      height:var(--chip-h);
       display:flex;
       align-items:stretch;
       gap:0;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,.22));
       pointer-events:none;
     }
 
-    .team-chip.left{ flex-direction:row; }  /* score | logo */
-    .team-chip.right{ flex-direction:row; } /* logo | score */
+    .team-chip.left{ flex-direction:row; }      /* score | logo */
+    .team-chip.right{ flex-direction:row; }     /* logo | score */
 
     .score-box{
-      width: var(--score-w);
-      height: var(--chip-h);
+      width:var(--score-w);
+      height:var(--chip-h);
       display:grid;
       place-items:center;
       font-family: var(--overlay-font);
-      font-weight: 1000;
-      font-size: calc(var(--chip-h) * 0.52);
+      font-weight:1000;
+      font-size:var(--score-font-size);
       line-height:1;
       color:var(--ink);
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-      text-shadow: 0 2px 10px rgba(0,0,0,.35);
+      border:var(--border-w) solid var(--border-color);
+      box-shadow:var(--shadow);
+      text-shadow:0 2px 10px rgba(0,0,0,.35);
       pointer-events:auto;
       cursor:pointer;
+      background:#111;
     }
 
     .team-chip.left .score-box{
-      border-radius: 6px 0 0 6px;
+      border-radius: var(--score-radius) 0 0 var(--score-radius);
       background:
         linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
         linear-gradient(135deg, var(--blue1), var(--blue2));
-      margin-right:2px;
+      margin-right:var(--chip-gap);
     }
 
     .team-chip.right .score-box{
-      border-radius: 0 6px 6px 0;
+      border-radius: 0 var(--score-radius) var(--score-radius) 0;
       background:
         linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
         linear-gradient(135deg, var(--yellow1), var(--yellow2));
-      color:var(--ink);
-      margin-left:2px;
+      margin-left:var(--chip-gap);
     }
 
     .logo-box{
-      width: var(--logo-size);
-      height: var(--logo-size);
+      width:var(--logo-size);
+      height:var(--logo-size);
       overflow:hidden;
-      border:1px solid var(--line);
+      border:var(--border-w) solid var(--border-color);
       background:
         radial-gradient(circle at 25% 20%, rgba(255,255,255,.08), transparent 42%),
         #0c131c;
-      box-shadow: var(--shadow);
+      box-shadow:var(--shadow);
       position:relative;
       pointer-events:auto;
       cursor:pointer;
     }
 
     .team-chip.left .logo-box{
-      border-radius: 0 6px 6px 0;
+      border-radius: 0 var(--logo-radius) var(--logo-radius) 0;
       background:
         linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
         #0c131c;
     }
 
     .team-chip.right .logo-box{
-      border-radius: 6px 0 0 6px;
+      border-radius: var(--logo-radius) 0 0 var(--logo-radius);
       background:
         linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
         #0c131c;
-    }
-
-    /* Radius fixes when score/logo is hidden */
-    .team-chip.only-score .score-box{
-      margin:0 !important;
-      border-radius:6px !important;
-    }
-    .team-chip.only-logo .logo-box{
-      border-radius:6px !important;
     }
 
     .logo-box img{
@@ -211,6 +215,7 @@
       height:100%;
       object-fit:cover;
       display:none;
+      background:transparent;
     }
 
     .logo-box .placeholder{
@@ -218,34 +223,33 @@
       inset:0;
       display:grid;
       place-items:center;
+      font-family: var(--overlay-font);
       font-weight:900;
       font-size: calc(var(--logo-size) * 0.22);
       letter-spacing:.08em;
       color:rgba(255,255,255,.82);
       text-shadow:0 1px 8px rgba(0,0,0,.35);
-      font-family: var(--overlay-font);
     }
 
-    /* Team name bars */
     .team-name{
       width:var(--name-w);
       height:var(--name-h);
       margin-top:var(--name-y-offset);
       display:grid;
       place-items:center;
-      padding:0 10px;
-      border-radius:6px;
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 6px 14px rgba(0,0,0,.22);
-      text-shadow: 0 1px 8px rgba(0,0,0,.35);
+      border:var(--border-w) solid var(--border-color);
+      border-radius: var(--name-radius);
+      box-shadow:var(--shadow);
       color:var(--ink);
       font-family: var(--overlay-font);
-      font-size: var(--name-font-size);
-      font-weight:900;
-      letter-spacing:.06em;
+      font-size:var(--name-font-size);
+      font-weight:var(--name-font-weight);
+      letter-spacing:var(--name-letter);
       text-transform:uppercase;
-      overflow:hidden;
+      text-shadow:0 1px 8px rgba(0,0,0,.28);
+      padding:0 10px;
       white-space:nowrap;
+      overflow:hidden;
       text-overflow:ellipsis;
       pointer-events:none;
     }
@@ -254,7 +258,7 @@
       transform: translateX(var(--name-left-x));
       background:
         linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
-        linear-gradient(135deg, rgba(73,191,255,.32), rgba(30,140,255,.18)),
+        linear-gradient(135deg, color-mix(in srgb, var(--left-name-chip) 88%, white 12%), var(--left-name-chip)),
         rgba(8,14,24,.86);
     }
 
@@ -262,59 +266,57 @@
       transform: translateX(var(--name-right-x));
       background:
         linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)),
-        linear-gradient(135deg, rgba(255,216,77,.34), rgba(242,180,0,.18)),
+        linear-gradient(135deg, color-mix(in srgb, var(--right-name-chip) 88%, white 12%), var(--right-name-chip)),
         rgba(16,12,2,.86);
     }
 
-    /* Middle title bar */
     .mid-title{
       position:absolute;
-      left:50%;
       top: calc(var(--top-y) + var(--title-y));
-      width: var(--title-w);
-      height: var(--title-h);
-      transform: translateX(calc(-50% + var(--title-x)));
+      left: 50%;
+      transform: translateX(-50%) translateX(var(--title-x));
+      width:var(--title-w);
+      height:var(--title-h);
       display:grid;
       place-items:center;
-      padding:0 12px;
-      border-radius:8px;
-      border:1px solid rgba(255,255,255,.16);
-      box-shadow: 0 8px 20px rgba(0,0,0,.24);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03)),
-        rgba(10,14,22,.82);
+      border:var(--border-w) solid var(--border-color);
+      border-radius: var(--title-radius);
+      box-shadow:var(--shadow);
       color:var(--ink);
-      text-shadow: 0 1px 8px rgba(0,0,0,.35);
-      pointer-events:none;
-      z-index:11;
-    }
-
-    .mid-title span{
-      width:100%;
-      text-align:center;
       font-family: var(--overlay-font);
-      font-size: var(--title-font-size);
-      font-weight:900;
-      letter-spacing:.08em;
+      font-size:var(--title-font-size);
+      font-weight:var(--title-font-weight);
+      letter-spacing:var(--title-letter);
       text-transform:uppercase;
+      text-shadow:0 1px 8px rgba(0,0,0,.32);
+      padding:0 12px;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03)),
+        linear-gradient(135deg, color-mix(in srgb, var(--title-chip) 86%, white 14%), var(--title-chip)),
+        rgba(10,14,22,.82);
+      pointer-events:none;
     }
 
-    /* ===== Hidden mini editor ===== */
+    .team-chip.only-score .score-box{ border-radius: var(--score-radius) !important; margin-left:0; margin-right:0; }
+    .team-chip.only-logo .logo-box{ border-radius: var(--logo-radius) !important; }
+
+    /* ===== EDITOR ===== */
     .editor{
       position:absolute;
       left:12px;
       bottom:12px;
-      width:min(1280px, calc(100vw - 24px));
-      max-height:calc(100vh - 280px); /* keep overlay visible */
+      width:min(1240px, calc(100vw - 24px));
+      max-height:calc(100vh - 240px); /* keep top overlay visible */
       overflow:auto;
+
       border-radius:14px;
       background:var(--panel-bg);
       border:1px solid var(--panel-line);
-      box-shadow: 0 18px 40px rgba(0,0,0,.35);
-      backdrop-filter: blur(6px);
+      box-shadow: 0 18px 40px rgba(0,0,0,.38);
+      backdrop-filter: blur(8px);
       padding:10px;
       z-index:20;
       transition: opacity .18s ease, transform .18s ease;
@@ -330,11 +332,12 @@
       margin:0 0 8px;
       font-size:13px;
       letter-spacing:.04em;
+      color:#fff;
     }
 
     .editor .grid{
       display:grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0,1fr));
       gap:8px;
       align-items:start;
     }
@@ -356,7 +359,6 @@
     }
 
     .card.span-2{ grid-column: span 2; }
-    .card.span-3{ grid-column: span 3; }
     .card.span-4{ grid-column: 1 / -1; }
 
     label{
@@ -380,18 +382,19 @@
       border-radius:999px;
       padding:2px 6px;
       line-height:1.2;
+      flex:0 0 auto;
     }
 
+    input[type="text"],
     input[type="number"],
     input[type="range"],
     input[type="color"],
-    input[type="text"],
     select{
       width:100%;
     }
 
-    input[type="number"],
     input[type="text"],
+    input[type="number"],
     select{
       height:34px;
       border-radius:8px;
@@ -400,15 +403,14 @@
       color:#fff;
       padding:0 8px;
       font-weight:700;
+      outline:none;
     }
 
-    input[type="text"]{
-      font-weight:800;
-      letter-spacing:.02em;
-    }
-
-    select{
-      cursor:pointer;
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus{
+      border-color: rgba(255,255,255,.24);
+      box-shadow: 0 0 0 2px rgba(255,255,255,.06) inset;
     }
 
     input[type="color"]{
@@ -420,44 +422,26 @@
       cursor:pointer;
     }
 
-    .color-grid{
+    .range-edit-row{
       display:grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
+      grid-template-columns: 1fr 82px;
       gap:8px;
-    }
-
-    .toggle-grid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap:6px;
-      margin-top:6px;
-    }
-
-    .toggle-item{
-      display:flex;
       align-items:center;
-      gap:8px;
-      min-height:34px;
-      padding:6px 8px;
+    }
+
+    .range-edit-row .range-number{
+      height:32px;
       border-radius:8px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.02);
-      font-size:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:#0d1320;
       color:#fff;
+      padding:0 8px;
+      font-weight:800;
+      width:100%;
     }
 
-    .toggle-item input[type="checkbox"]{
-      width:16px;
-      height:16px;
-      margin:0;
-      accent-color:#4dd3ff;
-      cursor:pointer;
-      flex:0 0 auto;
-    }
-
-    .toggle-item span{
-      line-height:1.2;
-    }
+    .range-edit-row .range-number::-webkit-outer-spin-button,
+    .range-edit-row .range-number::-webkit-inner-spin-button{ margin:0; }
 
     .row{
       display:flex;
@@ -478,7 +462,39 @@
       font-weight:800;
       cursor:pointer;
     }
+
     button:hover{ filter:brightness(1.08); }
+
+    .check-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:6px 10px;
+      margin-top:4px;
+    }
+
+    .check-grid label{
+      margin:0;
+      justify-content:flex-start;
+      gap:6px;
+      font-size:11px;
+      color:#dbe5ff;
+      letter-spacing:.02em;
+      text-transform:none;
+    }
+
+    .check-grid input[type="checkbox"]{
+      width:14px;
+      height:14px;
+      accent-color:#4dd3ff;
+      margin:0;
+      flex:0 0 auto;
+    }
+
+    .color-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:8px;
+    }
 
     .help{
       margin-top:8px;
@@ -500,63 +516,46 @@
       margin:0 1px;
     }
 
+    .muted-note{
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.3;
+      margin-top:6px;
+    }
+
     @media (max-width: 1280px){
       .editor{
         width:min(1040px, calc(100vw - 20px));
         left:10px;
         bottom:10px;
-        max-height:calc(100vh - 260px);
       }
-
       .editor .grid{
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0,1fr));
       }
-
-      .card.span-4{ grid-column: 1 / -1; }
-      .color-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .card.span-2{ grid-column: span 3; }
+      .color-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
     }
 
     @media (max-width: 980px){
       .editor{
-        width:min(780px, calc(100vw - 20px));
+        width:min(760px, calc(100vw - 20px));
+        max-height:calc(100vh - 200px);
       }
-
-      .editor .grid{
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .card.span-2,
-      .card.span-3,
-      .card.span-4{
-        grid-column: 1 / -1;
-      }
-
-      .color-grid{
-        grid-template-columns: repeat(2, minmax(0,1fr));
-      }
+      .editor .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .card.span-2, .card.span-4{ grid-column: 1 / -1; }
+      .color-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
     }
 
-    @media (max-width: 700px){
-      .editor .grid{
-        grid-template-columns:1fr;
-      }
-
-      .card.span-2,
-      .card.span-3,
-      .card.span-4{
-        grid-column: 1 / -1;
-      }
-
-      .color-grid,
-      .toggle-grid{
-        grid-template-columns:1fr;
-      }
+    @media (max-width: 720px){
+      .editor .grid{ grid-template-columns: 1fr; }
+      .card.span-2, .card.span-4{ grid-column: 1 / -1; }
+      .color-grid{ grid-template-columns: 1fr; }
+      .check-grid{ grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
   <div class="stage" id="stage">
-    <!-- Only this top strip is the visible overlay design -->
     <div class="top-overlay" aria-label="Top score overlay">
       <div class="top-overlay-inner" id="topOverlayInner">
 
@@ -565,7 +564,7 @@
           <div class="team-chip left" id="leftTeamChip">
             <div class="score-box" id="leftScoreBox" title="Left score (click to +1)">0</div>
             <div class="logo-box" id="leftLogoBox" title="Click to upload left logo">
-              <img id="leftLogoImg" alt="Left logo" />
+              <img id="leftLogoImg" alt="Left logo">
               <div class="placeholder" id="leftPlaceholder">L</div>
             </div>
           </div>
@@ -574,16 +573,11 @@
           </div>
         </div>
 
-        <!-- Middle title -->
-        <div class="mid-title" id="midTitleBox">
-          <span id="midTitleText">GRAND FINALS</span>
-        </div>
-
         <!-- Right stack -->
         <div class="team-stack right" id="rightTeamStack">
           <div class="team-chip right" id="rightTeamChip">
             <div class="logo-box" id="rightLogoBox" title="Click to upload right logo">
-              <img id="rightLogoImg" alt="Right logo" />
+              <img id="rightLogoImg" alt="Right logo">
               <div class="placeholder" id="rightPlaceholder">R</div>
             </div>
             <div class="score-box" id="rightScoreBox" title="Right score (click to +1)">0</div>
@@ -593,53 +587,60 @@
           </div>
         </div>
 
+        <!-- Center title -->
+        <div class="mid-title" id="midTitleBox">
+          <span id="midTitleText">GRAND FINALS</span>
+        </div>
       </div>
     </div>
 
-    <!-- Hidden editor (toggle with E / H) -->
+    <!-- Editor -->
     <div class="editor" id="editor">
-      <h2>Overlay Editor (hidden on live by default)</h2>
+      <h2>Overlay Editor (toggle with E/H, hidden on live by default)</h2>
 
       <div class="grid">
         <!-- Left team -->
         <div class="card">
           <h3>Left Team</h3>
+
+          <label>Team Name</label>
+          <input id="leftTeamNameInput" type="text" maxlength="40" value="TEAM LEFT" placeholder="TEAM LEFT">
+
           <label>Score</label>
           <input id="leftScoreInput" type="number" min="0" step="1" value="0">
 
-          <label>Team Name</label>
-          <input id="leftTeamNameInput" type="text" maxlength="40" value="TEAM LEFT">
-
           <div class="row">
-            <button id="leftPlusBtn">Left +1</button>
-            <button id="leftMinusBtn">Left -1</button>
-            <button id="leftUploadBtn">Upload Left Logo</button>
-            <button id="leftClearBtn">Clear</button>
+            <button id="leftPlusBtn" type="button">Left +1</button>
+            <button id="leftMinusBtn" type="button">Left -1</button>
+            <button id="leftUploadBtn" type="button">Upload Logo</button>
+            <button id="leftClearBtn" type="button">Clear</button>
           </div>
         </div>
 
         <!-- Right team -->
         <div class="card">
           <h3>Right Team</h3>
+
+          <label>Team Name</label>
+          <input id="rightTeamNameInput" type="text" maxlength="40" value="TEAM RIGHT" placeholder="TEAM RIGHT">
+
           <label>Score</label>
           <input id="rightScoreInput" type="number" min="0" step="1" value="0">
 
-          <label>Team Name</label>
-          <input id="rightTeamNameInput" type="text" maxlength="40" value="TEAM RIGHT">
-
           <div class="row">
-            <button id="rightPlusBtn">Right +1</button>
-            <button id="rightMinusBtn">Right -1</button>
-            <button id="rightUploadBtn">Upload Right Logo</button>
-            <button id="rightClearBtn">Clear</button>
+            <button id="rightPlusBtn" type="button">Right +1</button>
+            <button id="rightMinusBtn" type="button">Right -1</button>
+            <button id="rightUploadBtn" type="button">Upload Logo</button>
+            <button id="rightClearBtn" type="button">Clear</button>
           </div>
         </div>
 
-        <!-- Middle title + font -->
+        <!-- Middle title -->
         <div class="card">
-          <h3>Title & Font</h3>
-          <label>Middle Title</label>
-          <input id="midTitleInput" type="text" maxlength="50" value="GRAND FINALS">
+          <h3>Middle Title</h3>
+
+          <label>Title Text</label>
+          <input id="midTitleInput" type="text" maxlength="50" value="GRAND FINALS" placeholder="GRAND FINALS">
 
           <label>Font</label>
           <select id="fontSelect">
@@ -650,43 +651,56 @@
             <option value="teko">Teko</option>
             <option value="bebas">Bebas Neue</option>
             <option value="anton">Anton</option>
-            <option value="system">System UI</option>
+            <option value="system">System</option>
+          </select>
+
+          <label>Logo Image Fit</label>
+          <select id="logoFitSelect">
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
           </select>
         </div>
 
         <!-- Visibility -->
         <div class="card">
-          <h3>Visibility</h3>
-          <div class="toggle-grid">
-            <label class="toggle-item"><input id="showLeftScoreChk" type="checkbox" checked><span>Left Score</span></label>
-            <label class="toggle-item"><input id="showRightScoreChk" type="checkbox" checked><span>Right Score</span></label>
-            <label class="toggle-item"><input id="showLeftLogoChk" type="checkbox" checked><span>Left Logo</span></label>
-            <label class="toggle-item"><input id="showRightLogoChk" type="checkbox" checked><span>Right Logo</span></label>
-            <label class="toggle-item"><input id="showLeftNameChk" type="checkbox" checked><span>Left Team Name</span></label>
-            <label class="toggle-item"><input id="showRightNameChk" type="checkbox" checked><span>Right Team Name</span></label>
-            <label class="toggle-item"><input id="showTitleChk" type="checkbox" checked><span>Middle Title</span></label>
+          <h3>Show / Hide Sections</h3>
+
+          <div class="check-grid">
+            <label><input id="showLeftScoreChk" type="checkbox" checked> Left Score</label>
+            <label><input id="showRightScoreChk" type="checkbox" checked> Right Score</label>
+            <label><input id="showLeftLogoChk" type="checkbox" checked> Left Logo</label>
+            <label><input id="showRightLogoChk" type="checkbox" checked> Right Logo</label>
+            <label><input id="showLeftNameChk" type="checkbox" checked> Left Name</label>
+            <label><input id="showRightNameChk" type="checkbox" checked> Right Name</label>
+            <label><input id="showTitleChk" type="checkbox" checked> Title</label>
+          </div>
+
+          <div class="muted-note">
+            If you hide a score/logo, the remaining side will auto-round its corners.
           </div>
         </div>
 
-        <!-- Placement -->
+        <!-- Global placement -->
         <div class="card">
           <h3>Placement</h3>
+
           <label>Top Offset <span class="value-badge" id="topYValue">6px</span></label>
           <input id="topYRange" type="range" min="0" max="80" step="1" value="6">
 
           <label>Center Gap <span class="value-badge" id="centerGapValue">400px</span></label>
           <input id="centerGapRange" type="range" min="180" max="900" step="2" value="400">
 
+          <label>Global Scale <span class="value-badge" id="overlayScaleValue">100%</span></label>
+          <input id="overlayScaleRange" type="range" min="60" max="220" step="1" value="100">
+
           <div class="row">
-            <button id="resetLayoutBtn">Reset Layout</button>
+            <button id="resetLayoutBtn" type="button">Reset Layout</button>
           </div>
         </div>
 
-        <!-- Resize -->
+        <!-- Score / logo sizing -->
         <div class="card">
-          <h3>Resize</h3>
-          <label>Global Scale <span class="value-badge" id="overlayScaleValue">100%</span></label>
-          <input id="overlayScaleRange" type="range" min="60" max="220" step="1" value="100">
+          <h3>Score + Logo Size</h3>
 
           <label>Logo Size <span class="value-badge" id="logoSizeValue">78px</span></label>
           <input id="logoSizeRange" type="range" min="40" max="200" step="1" value="78">
@@ -696,10 +710,16 @@
 
           <label>Chip Height <span class="value-badge" id="chipHValue">78px</span></label>
           <input id="chipHRange" type="range" min="40" max="200" step="1" value="78">
+
+          <label>Score Font Size <span class="value-badge" id="scoreFontSizeValue">40px</span></label>
+          <input id="scoreFontSizeRange" type="range" min="14" max="96" step="1" value="40">
+
+          <label>Score/Logo Gap <span class="value-badge" id="chipGapValue">2px</span></label>
+          <input id="chipGapRange" type="range" min="0" max="20" step="1" value="2">
         </div>
 
         <!-- Team name layout -->
-        <div class="card span-2">
+        <div class="card">
           <h3>Team Names Layout</h3>
 
           <label>Name Width <span class="value-badge" id="nameWValue">156px</span></label>
@@ -711,6 +731,9 @@
           <label>Name Font Size <span class="value-badge" id="nameFontSizeValue">14px</span></label>
           <input id="nameFontSizeRange" type="range" min="10" max="42" step="1" value="14">
 
+          <label>Name Font Weight <span class="value-badge" id="nameFontWeightValue">800</span></label>
+          <input id="nameFontWeightRange" type="range" min="400" max="1000" step="100" value="800">
+
           <label>Name Y Offset <span class="value-badge" id="nameYOffsetValue">8px</span></label>
           <input id="nameYOffsetRange" type="range" min="-10" max="80" step="1" value="8">
 
@@ -719,11 +742,14 @@
 
           <label>Right Name X Offset <span class="value-badge" id="nameRightXValue">0px</span></label>
           <input id="nameRightXRange" type="range" min="-240" max="240" step="1" value="0">
+
+          <label>Name Letter Spacing <span class="value-badge" id="nameLetterValue">0.05em</span></label>
+          <input id="nameLetterRange" type="range" min="0" max="20" step="1" value="5">
         </div>
 
-        <!-- Middle title layout -->
-        <div class="card span-2">
-          <h3>Middle Title Layout</h3>
+        <!-- Title layout -->
+        <div class="card">
+          <h3>Title Layout</h3>
 
           <label>Title Width <span class="value-badge" id="titleWValue">320px</span></label>
           <input id="titleWRange" type="range" min="100" max="900" step="1" value="320">
@@ -734,15 +760,47 @@
           <label>Title Font Size <span class="value-badge" id="titleFontSizeValue">16px</span></label>
           <input id="titleFontSizeRange" type="range" min="10" max="48" step="1" value="16">
 
-          <label>Title X Offset <span class="value-badge" id="titleXValue">0px</span></label>
-          <input id="titleXRange" type="range" min="-500" max="500" step="1" value="0">
+          <label>Title Font Weight <span class="value-badge" id="titleFontWeightValue">900</span></label>
+          <input id="titleFontWeightRange" type="range" min="400" max="1000" step="100" value="900">
 
           <label>Title Y Offset <span class="value-badge" id="titleYValue">20px</span></label>
           <input id="titleYRange" type="range" min="-20" max="160" step="1" value="20">
+
+          <label>Title X Offset <span class="value-badge" id="titleXValue">0px</span></label>
+          <input id="titleXRange" type="range" min="-500" max="500" step="1" value="0">
+
+          <label>Title Letter Spacing <span class="value-badge" id="titleLetterValue">0.08em</span></label>
+          <input id="titleLetterRange" type="range" min="0" max="30" step="1" value="8">
+        </div>
+
+        <!-- Corners & Borders -->
+        <div class="card">
+          <h3>Corners + Borders</h3>
+
+          <label>Score Radius <span class="value-badge" id="scoreRadiusValue">6px</span></label>
+          <input id="scoreRadiusRange" type="range" min="0" max="40" step="1" value="6">
+
+          <label>Logo Radius <span class="value-badge" id="logoRadiusValue">6px</span></label>
+          <input id="logoRadiusRange" type="range" min="0" max="40" step="1" value="6">
+
+          <label>Name Radius <span class="value-badge" id="nameRadiusValue">6px</span></label>
+          <input id="nameRadiusRange" type="range" min="0" max="40" step="1" value="6">
+
+          <label>Title Radius <span class="value-badge" id="titleRadiusValue">8px</span></label>
+          <input id="titleRadiusRange" type="range" min="0" max="50" step="1" value="8">
+
+          <label>Border Width <span class="value-badge" id="borderWidthValue">1px</span></label>
+          <input id="borderWidthRange" type="range" min="0" max="6" step="1" value="1">
+
+          <label>Shadow Strength <span class="value-badge" id="shadowStrengthValue">28</span></label>
+          <input id="shadowStrengthRange" type="range" min="0" max="80" step="1" value="28">
+
+          <label>Border Color</label>
+          <input id="borderColorInput" type="color" value="#ffffff">
         </div>
 
         <!-- Colors -->
-        <div class="card span-3">
+        <div class="card span-2">
           <h3>Colors</h3>
 
           <div class="color-grid">
@@ -762,26 +820,45 @@
               <label>Right Gradient 2</label>
               <input id="rightColor2Input" type="color" value="#f2b400">
             </div>
+
+            <div>
+              <label>Left Name Chip</label>
+              <input id="leftNameChipColorInput" type="color" value="#11304a">
+            </div>
+            <div>
+              <label>Right Name Chip</label>
+              <input id="rightNameChipColorInput" type="color" value="#5a4508">
+            </div>
+            <div>
+              <label>Title Chip</label>
+              <input id="titleChipColorInput" type="color" value="#1a2230">
+            </div>
             <div>
               <label>Text Color</label>
               <input id="inkColorInput" type="color" value="#ffffff">
             </div>
+
+            <div>
+              <label>Chroma Green</label>
+              <input id="greenColorInput" type="color" value="#00ff00">
+            </div>
           </div>
 
           <div class="row">
-            <button id="swapColorsBtn">Swap Team Colors</button>
-            <button id="resetColorsBtn">Reset Colors</button>
+            <button id="swapColorsBtn" type="button">Swap Team Colors</button>
+            <button id="resetColorsBtn" type="button">Reset Colors</button>
           </div>
         </div>
 
-        <!-- Session -->
-        <div class="card">
-          <h3>Session</h3>
+        <!-- Session / Utilities -->
+        <div class="card span-4">
+          <h3>Session / Utilities</h3>
           <div class="row">
-            <button id="toggleEditBtn">Hide Editor</button>
-            <button id="resetScoresBtn">Reset Scores</button>
-            <button id="swapLogosBtn">Swap Logos</button>
-            <button id="resetAllBtn">Reset All</button>
+            <button id="toggleEditBtn" type="button">Hide Editor</button>
+            <button id="resetScoresBtn" type="button">Reset Scores</button>
+            <button id="swapLogosBtn" type="button">Swap Logos</button>
+            <button id="resetAllBtn" type="button">Reset All</button>
+            <button id="copyUrlBtn" type="button">Copy Share URL</button>
           </div>
           <div class="help">
             Hotkeys:
@@ -789,6 +866,9 @@
             <span class="kbd">Q</span>/<span class="kbd">A</span> left +/−,
             <span class="kbd">P</span>/<span class="kbd">L</span> right +/−,
             <span class="kbd">R</span> reset scores.
+            <br>
+            While typing in team name/title fields, editor toggle hotkeys are disabled.
+            All sliders also have editable number boxes for exact pixel values.
           </div>
         </div>
       </div>
@@ -799,7 +879,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "codm_top_logo_score_overlay_v4";
+    const STORAGE_KEY = "codm_top_logo_score_overlay_v6";
 
     const FONT_MAP = {
       inter: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
@@ -839,28 +919,46 @@
         fontKey: "inter"
       },
 
+      appearance: {
+        logoFit: "cover"
+      },
+
       layout: {
         topY: 6,
         centerGap: 400,
-        overlayScale: 100, // percent
+        overlayScale: 100,
+
         logoSize: 78,
         scoreW: 58,
         chipH: 78,
+        chipGap: 2,
 
-        // team names
+        scoreFontSize: 40,
+
+        scoreRadius: 6,
+        logoRadius: 6,
+        nameRadius: 6,
+        titleRadius: 8,
+
+        borderWidth: 1,
+        shadowStrength: 28,
+
         nameW: 156,
         nameH: 28,
         nameFontSize: 14,
+        nameFontWeight: 800,
         nameYOffset: 8,
         nameLeftX: 0,
         nameRightX: 0,
+        nameLetter: 5, // /100 em
 
-        // middle title
         titleW: 320,
         titleH: 38,
         titleFontSize: 16,
+        titleFontWeight: 900,
         titleX: 0,
-        titleY: 20
+        titleY: 20,
+        titleLetter: 8 // /100 em
       },
 
       colors: {
@@ -868,7 +966,14 @@
         left2: "#1e8cff",
         right1: "#ffd84d",
         right2: "#f2b400",
-        ink: "#ffffff"
+        ink: "#ffffff",
+
+        leftNameChip: "#11304a",
+        rightNameChip: "#5a4508",
+        titleChip: "#1a2230",
+
+        border: "#ffffff",
+        green: "#00ff00"
       }
     };
 
@@ -878,7 +983,7 @@
     const stage = $("stage");
 
     const refs = {
-      // overlay wrappers
+      // overlay elements
       leftTeamStack: $("leftTeamStack"),
       rightTeamStack: $("rightTeamStack"),
       leftTeamChip: $("leftTeamChip"),
@@ -890,24 +995,22 @@
       midTitleBox: $("midTitleBox"),
       midTitleText: $("midTitleText"),
 
-      // scores
       leftScoreBox: $("leftScoreBox"),
       rightScoreBox: $("rightScoreBox"),
-      leftScoreInput: $("leftScoreInput"),
-      rightScoreInput: $("rightScoreInput"),
 
-      // names/title inputs
-      leftTeamNameInput: $("leftTeamNameInput"),
-      rightTeamNameInput: $("rightTeamNameInput"),
-      midTitleInput: $("midTitleInput"),
-
-      // logos
       leftLogoBox: $("leftLogoBox"),
       rightLogoBox: $("rightLogoBox"),
       leftLogoImg: $("leftLogoImg"),
       rightLogoImg: $("rightLogoImg"),
       leftPlaceholder: $("leftPlaceholder"),
       rightPlaceholder: $("rightPlaceholder"),
+
+      // inputs/buttons
+      leftScoreInput: $("leftScoreInput"),
+      rightScoreInput: $("rightScoreInput"),
+      leftTeamNameInput: $("leftTeamNameInput"),
+      rightTeamNameInput: $("rightTeamNameInput"),
+      midTitleInput: $("midTitleInput"),
 
       leftUploadBtn: $("leftUploadBtn"),
       rightUploadBtn: $("rightUploadBtn"),
@@ -916,7 +1019,6 @@
       leftFileInput: $("leftFileInput"),
       rightFileInput: $("rightFileInput"),
 
-      // score actions
       leftPlusBtn: $("leftPlusBtn"),
       leftMinusBtn: $("leftMinusBtn"),
       rightPlusBtn: $("rightPlusBtn"),
@@ -924,74 +1026,75 @@
       resetScoresBtn: $("resetScoresBtn"),
       swapLogosBtn: $("swapLogosBtn"),
       resetAllBtn: $("resetAllBtn"),
-
-      // layout ranges (existing)
-      topYRange: $("topYRange"),
-      centerGapRange: $("centerGapRange"),
-      overlayScaleRange: $("overlayScaleRange"),
-      logoSizeRange: $("logoSizeRange"),
-      scoreWRange: $("scoreWRange"),
-      chipHRange: $("chipHRange"),
-
-      topYValue: $("topYValue"),
-      centerGapValue: $("centerGapValue"),
-      overlayScaleValue: $("overlayScaleValue"),
-      logoSizeValue: $("logoSizeValue"),
-      scoreWValue: $("scoreWValue"),
-      chipHValue: $("chipHValue"),
-
-      // name layout refs
-      nameWRange: $("nameWRange"),
-      nameHRange: $("nameHRange"),
-      nameFontSizeRange: $("nameFontSizeRange"),
-      nameYOffsetRange: $("nameYOffsetRange"),
-      nameLeftXRange: $("nameLeftXRange"),
-      nameRightXRange: $("nameRightXRange"),
-
-      nameWValue: $("nameWValue"),
-      nameHValue: $("nameHValue"),
-      nameFontSizeValue: $("nameFontSizeValue"),
-      nameYOffsetValue: $("nameYOffsetValue"),
-      nameLeftXValue: $("nameLeftXValue"),
-      nameRightXValue: $("nameRightXValue"),
-
-      // title layout refs
-      titleWRange: $("titleWRange"),
-      titleHRange: $("titleHRange"),
-      titleFontSizeRange: $("titleFontSizeRange"),
-      titleXRange: $("titleXRange"),
-      titleYRange: $("titleYRange"),
-
-      titleWValue: $("titleWValue"),
-      titleHValue: $("titleHValue"),
-      titleFontSizeValue: $("titleFontSizeValue"),
-      titleXValue: $("titleXValue"),
-      titleYValue: $("titleYValue"),
-
-      resetLayoutBtn: $("resetLayoutBtn"),
+      copyUrlBtn: $("copyUrlBtn"),
       toggleEditBtn: $("toggleEditBtn"),
 
-      // Colors
-      leftColor1Input: $("leftColor1Input"),
-      leftColor2Input: $("leftColor2Input"),
-      rightColor1Input: $("rightColor1Input"),
-      rightColor2Input: $("rightColor2Input"),
-      inkColorInput: $("inkColorInput"),
-      resetColorsBtn: $("resetColorsBtn"),
-      swapColorsBtn: $("swapColorsBtn"),
-
-      // Font
+      // selects
       fontSelect: $("fontSelect"),
+      logoFitSelect: $("logoFitSelect"),
 
-      // Visibility
+      // visibility
       showLeftScoreChk: $("showLeftScoreChk"),
       showRightScoreChk: $("showRightScoreChk"),
       showLeftLogoChk: $("showLeftLogoChk"),
       showRightLogoChk: $("showRightLogoChk"),
       showLeftNameChk: $("showLeftNameChk"),
       showRightNameChk: $("showRightNameChk"),
-      showTitleChk: $("showTitleChk")
+      showTitleChk: $("showTitleChk"),
+
+      // layout ranges + badges
+      topYRange: $("topYRange"), topYValue: $("topYValue"),
+      centerGapRange: $("centerGapRange"), centerGapValue: $("centerGapValue"),
+      overlayScaleRange: $("overlayScaleRange"), overlayScaleValue: $("overlayScaleValue"),
+
+      logoSizeRange: $("logoSizeRange"), logoSizeValue: $("logoSizeValue"),
+      scoreWRange: $("scoreWRange"), scoreWValue: $("scoreWValue"),
+      chipHRange: $("chipHRange"), chipHValue: $("chipHValue"),
+      chipGapRange: $("chipGapRange"), chipGapValue: $("chipGapValue"),
+      scoreFontSizeRange: $("scoreFontSizeRange"), scoreFontSizeValue: $("scoreFontSizeValue"),
+
+      nameWRange: $("nameWRange"), nameWValue: $("nameWValue"),
+      nameHRange: $("nameHRange"), nameHValue: $("nameHValue"),
+      nameFontSizeRange: $("nameFontSizeRange"), nameFontSizeValue: $("nameFontSizeValue"),
+      nameFontWeightRange: $("nameFontWeightRange"), nameFontWeightValue: $("nameFontWeightValue"),
+      nameYOffsetRange: $("nameYOffsetRange"), nameYOffsetValue: $("nameYOffsetValue"),
+      nameLeftXRange: $("nameLeftXRange"), nameLeftXValue: $("nameLeftXValue"),
+      nameRightXRange: $("nameRightXRange"), nameRightXValue: $("nameRightXValue"),
+      nameLetterRange: $("nameLetterRange"), nameLetterValue: $("nameLetterValue"),
+
+      titleWRange: $("titleWRange"), titleWValue: $("titleWValue"),
+      titleHRange: $("titleHRange"), titleHValue: $("titleHValue"),
+      titleFontSizeRange: $("titleFontSizeRange"), titleFontSizeValue: $("titleFontSizeValue"),
+      titleFontWeightRange: $("titleFontWeightRange"), titleFontWeightValue: $("titleFontWeightValue"),
+      titleXRange: $("titleXRange"), titleXValue: $("titleXValue"),
+      titleYRange: $("titleYRange"), titleYValue: $("titleYValue"),
+      titleLetterRange: $("titleLetterRange"), titleLetterValue: $("titleLetterValue"),
+
+      scoreRadiusRange: $("scoreRadiusRange"), scoreRadiusValue: $("scoreRadiusValue"),
+      logoRadiusRange: $("logoRadiusRange"), logoRadiusValue: $("logoRadiusValue"),
+      nameRadiusRange: $("nameRadiusRange"), nameRadiusValue: $("nameRadiusValue"),
+      titleRadiusRange: $("titleRadiusRange"), titleRadiusValue: $("titleRadiusValue"),
+      borderWidthRange: $("borderWidthRange"), borderWidthValue: $("borderWidthValue"),
+      shadowStrengthRange: $("shadowStrengthRange"), shadowStrengthValue: $("shadowStrengthValue"),
+      borderColorInput: $("borderColorInput"),
+
+      // colors
+      leftColor1Input: $("leftColor1Input"),
+      leftColor2Input: $("leftColor2Input"),
+      rightColor1Input: $("rightColor1Input"),
+      rightColor2Input: $("rightColor2Input"),
+      leftNameChipColorInput: $("leftNameChipColorInput"),
+      rightNameChipColorInput: $("rightNameChipColorInput"),
+      titleChipColorInput: $("titleChipColorInput"),
+      inkColorInput: $("inkColorInput"),
+      greenColorInput: $("greenColorInput"),
+      swapColorsBtn: $("swapColorsBtn"),
+      resetColorsBtn: $("resetColorsBtn"),
+
+      resetLayoutBtn: $("resetLayoutBtn")
     };
+
+    const rangeMirrorPairs = [];
 
     function clampScore(v){
       v = Number(v);
@@ -1009,7 +1112,7 @@
       if (typeof v !== "string") return fallback;
       const s = v.trim();
       if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
-      if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+      if (/^#[0-9a-fA-F]{3}$/.test(s)){
         return "#" + s.slice(1).split("").map(c => c + c).join("").toLowerCase();
       }
       return fallback;
@@ -1024,69 +1127,95 @@
 
     function normalizeLayout(layout = {}){
       return {
-        topY:         clampNum(layout.topY, 0, 80, DEFAULTS.layout.topY),
-        centerGap:    clampNum(layout.centerGap, 180, 900, DEFAULTS.layout.centerGap),
+        topY: clampNum(layout.topY, 0, 80, DEFAULTS.layout.topY),
+        centerGap: clampNum(layout.centerGap, 180, 900, DEFAULTS.layout.centerGap),
         overlayScale: clampNum(layout.overlayScale, 60, 220, DEFAULTS.layout.overlayScale),
-        logoSize:     clampNum(layout.logoSize, 40, 200, DEFAULTS.layout.logoSize),
-        scoreW:       clampNum(layout.scoreW, 34, 160, DEFAULTS.layout.scoreW),
-        chipH:        clampNum(layout.chipH, 40, 200, DEFAULTS.layout.chipH),
 
-        nameW:        clampNum(layout.nameW, 80, 360, DEFAULTS.layout.nameW),
-        nameH:        clampNum(layout.nameH, 18, 80, DEFAULTS.layout.nameH),
+        logoSize: clampNum(layout.logoSize, 40, 200, DEFAULTS.layout.logoSize),
+        scoreW: clampNum(layout.scoreW, 34, 160, DEFAULTS.layout.scoreW),
+        chipH: clampNum(layout.chipH, 40, 200, DEFAULTS.layout.chipH),
+        chipGap: clampNum(layout.chipGap, 0, 20, DEFAULTS.layout.chipGap),
+
+        scoreFontSize: clampNum(layout.scoreFontSize, 14, 96, DEFAULTS.layout.scoreFontSize),
+
+        scoreRadius: clampNum(layout.scoreRadius, 0, 40, DEFAULTS.layout.scoreRadius),
+        logoRadius: clampNum(layout.logoRadius, 0, 40, DEFAULTS.layout.logoRadius),
+        nameRadius: clampNum(layout.nameRadius, 0, 40, DEFAULTS.layout.nameRadius),
+        titleRadius: clampNum(layout.titleRadius, 0, 50, DEFAULTS.layout.titleRadius),
+
+        borderWidth: clampNum(layout.borderWidth, 0, 6, DEFAULTS.layout.borderWidth),
+        shadowStrength: clampNum(layout.shadowStrength, 0, 80, DEFAULTS.layout.shadowStrength),
+
+        nameW: clampNum(layout.nameW, 80, 360, DEFAULTS.layout.nameW),
+        nameH: clampNum(layout.nameH, 18, 80, DEFAULTS.layout.nameH),
         nameFontSize: clampNum(layout.nameFontSize, 10, 42, DEFAULTS.layout.nameFontSize),
-        nameYOffset:  clampNum(layout.nameYOffset, -10, 80, DEFAULTS.layout.nameYOffset),
-        nameLeftX:    clampNum(layout.nameLeftX, -240, 240, DEFAULTS.layout.nameLeftX),
-        nameRightX:   clampNum(layout.nameRightX, -240, 240, DEFAULTS.layout.nameRightX),
+        nameFontWeight: clampNum(layout.nameFontWeight, 400, 1000, DEFAULTS.layout.nameFontWeight),
+        nameYOffset: clampNum(layout.nameYOffset, -10, 80, DEFAULTS.layout.nameYOffset),
+        nameLeftX: clampNum(layout.nameLeftX, -240, 240, DEFAULTS.layout.nameLeftX),
+        nameRightX: clampNum(layout.nameRightX, -240, 240, DEFAULTS.layout.nameRightX),
+        nameLetter: clampNum(layout.nameLetter, 0, 20, DEFAULTS.layout.nameLetter),
 
-        titleW:        clampNum(layout.titleW, 100, 900, DEFAULTS.layout.titleW),
-        titleH:        clampNum(layout.titleH, 20, 120, DEFAULTS.layout.titleH),
+        titleW: clampNum(layout.titleW, 100, 900, DEFAULTS.layout.titleW),
+        titleH: clampNum(layout.titleH, 20, 120, DEFAULTS.layout.titleH),
         titleFontSize: clampNum(layout.titleFontSize, 10, 48, DEFAULTS.layout.titleFontSize),
-        titleX:        clampNum(layout.titleX, -500, 500, DEFAULTS.layout.titleX),
-        titleY:        clampNum(layout.titleY, -20, 160, DEFAULTS.layout.titleY),
+        titleFontWeight: clampNum(layout.titleFontWeight, 400, 1000, DEFAULTS.layout.titleFontWeight),
+        titleX: clampNum(layout.titleX, -500, 500, DEFAULTS.layout.titleX),
+        titleY: clampNum(layout.titleY, -20, 160, DEFAULTS.layout.titleY),
+        titleLetter: clampNum(layout.titleLetter, 0, 30, DEFAULTS.layout.titleLetter)
       };
     }
 
     function normalizeColors(colors = {}){
       return {
-        left1:  normalizeHexColor(colors.left1, DEFAULTS.colors.left1),
-        left2:  normalizeHexColor(colors.left2, DEFAULTS.colors.left2),
+        left1: normalizeHexColor(colors.left1, DEFAULTS.colors.left1),
+        left2: normalizeHexColor(colors.left2, DEFAULTS.colors.left2),
         right1: normalizeHexColor(colors.right1, DEFAULTS.colors.right1),
         right2: normalizeHexColor(colors.right2, DEFAULTS.colors.right2),
-        ink:    normalizeHexColor(colors.ink, DEFAULTS.colors.ink),
+        ink: normalizeHexColor(colors.ink, DEFAULTS.colors.ink),
+
+        leftNameChip: normalizeHexColor(colors.leftNameChip, DEFAULTS.colors.leftNameChip),
+        rightNameChip: normalizeHexColor(colors.rightNameChip, DEFAULTS.colors.rightNameChip),
+        titleChip: normalizeHexColor(colors.titleChip, DEFAULTS.colors.titleChip),
+
+        border: normalizeHexColor(colors.border, DEFAULTS.colors.border),
+        green: normalizeHexColor(colors.green, DEFAULTS.colors.green)
       };
     }
 
     function normalizeSections(sections = {}){
       return {
-        leftScore:  sections.leftScore  !== false,
+        leftScore: sections.leftScore !== false,
         rightScore: sections.rightScore !== false,
-        leftLogo:   sections.leftLogo   !== false,
-        rightLogo:  sections.rightLogo  !== false,
-        leftName:   sections.leftName   !== false,
-        rightName:  sections.rightName  !== false,
-        title:      sections.title      !== false,
+        leftLogo: sections.leftLogo !== false,
+        rightLogo: sections.rightLogo !== false,
+        leftName: sections.leftName !== false,
+        rightName: sections.rightName !== false,
+        title: sections.title !== false
       };
     }
 
-    function normalizeTypography(typography = {}){
-      const key = String(typography.fontKey || DEFAULTS.typography.fontKey).toLowerCase();
-      return {
-        fontKey: FONT_MAP[key] ? key : DEFAULTS.typography.fontKey
-      };
+    function normalizeTypography(t = {}){
+      const k = String(t.fontKey || DEFAULTS.typography.fontKey).toLowerCase();
+      return { fontKey: FONT_MAP[k] ? k : DEFAULTS.typography.fontKey };
+    }
+
+    function normalizeAppearance(a = {}){
+      const fit = (a.logoFit === "contain") ? "contain" : "cover";
+      return { logoFit: fit };
     }
 
     function normalizeTextGroup(text = {}){
       return {
-        leftName:  normalizeText(text.leftName, DEFAULTS.text.leftName, 40),
+        leftName: normalizeText(text.leftName, DEFAULTS.text.leftName, 40),
         rightName: normalizeText(text.rightName, DEFAULTS.text.rightName, 40),
-        title:     normalizeText(text.title, DEFAULTS.text.title, 50)
+        title: normalizeText(text.title, DEFAULTS.text.title, 50)
       };
     }
 
     function saveState(){
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {
+      } catch (e){
         console.warn("Save failed:", e);
       }
     }
@@ -1104,12 +1233,13 @@
         state.rightLogo = typeof parsed.rightLogo === "string" ? parsed.rightLogo : state.rightLogo;
         state.editMode = !!parsed.editMode;
 
-        state.layout = normalizeLayout(parsed.layout || {});
-        state.colors = normalizeColors(parsed.colors || {});
+        state.text = normalizeTextGroup(parsed.text || {});
         state.sections = normalizeSections(parsed.sections || {});
         state.typography = normalizeTypography(parsed.typography || {});
-        state.text = normalizeTextGroup(parsed.text || {});
-      }catch(e){
+        state.appearance = normalizeAppearance(parsed.appearance || {});
+        state.layout = normalizeLayout(parsed.layout || {});
+        state.colors = normalizeColors(parsed.colors || {});
+      } catch(e){
         console.warn("Load failed:", e);
       }
     }
@@ -1134,36 +1264,80 @@
       document.documentElement.style.setProperty("--top-y", `${L.topY}px`);
       document.documentElement.style.setProperty("--center-gap", `${L.centerGap}px`);
       document.documentElement.style.setProperty("--overlay-scale", `${L.overlayScale / 100}`);
+
       document.documentElement.style.setProperty("--logo-size", `${L.logoSize}px`);
       document.documentElement.style.setProperty("--score-w", `${L.scoreW}px`);
       document.documentElement.style.setProperty("--chip-h", `${L.chipH}px`);
+      document.documentElement.style.setProperty("--chip-gap", `${L.chipGap}px`);
+      document.documentElement.style.setProperty("--score-font-size", `${L.scoreFontSize}px`);
+
+      document.documentElement.style.setProperty("--score-radius", `${L.scoreRadius}px`);
+      document.documentElement.style.setProperty("--logo-radius", `${L.logoRadius}px`);
+      document.documentElement.style.setProperty("--name-radius", `${L.nameRadius}px`);
+      document.documentElement.style.setProperty("--title-radius", `${L.titleRadius}px`);
 
       document.documentElement.style.setProperty("--name-w", `${L.nameW}px`);
       document.documentElement.style.setProperty("--name-h", `${L.nameH}px`);
       document.documentElement.style.setProperty("--name-font-size", `${L.nameFontSize}px`);
+      document.documentElement.style.setProperty("--name-font-weight", `${L.nameFontWeight}`);
       document.documentElement.style.setProperty("--name-y-offset", `${L.nameYOffset}px`);
       document.documentElement.style.setProperty("--name-left-x", `${L.nameLeftX}px`);
       document.documentElement.style.setProperty("--name-right-x", `${L.nameRightX}px`);
+      document.documentElement.style.setProperty("--name-letter", `${(L.nameLetter / 100).toFixed(2)}em`);
 
       document.documentElement.style.setProperty("--title-w", `${L.titleW}px`);
       document.documentElement.style.setProperty("--title-h", `${L.titleH}px`);
       document.documentElement.style.setProperty("--title-font-size", `${L.titleFontSize}px`);
+      document.documentElement.style.setProperty("--title-font-weight", `${L.titleFontWeight}`);
       document.documentElement.style.setProperty("--title-x", `${L.titleX}px`);
       document.documentElement.style.setProperty("--title-y", `${L.titleY}px`);
+      document.documentElement.style.setProperty("--title-letter", `${(L.titleLetter / 100).toFixed(2)}em`);
+
+      document.documentElement.style.setProperty("--border-w", `${L.borderWidth}px`);
+
+      // Build shadow based on strength
+      const blur = Math.round(6 + L.shadowStrength * 0.45);
+      const y = Math.round(2 + L.shadowStrength * 0.22);
+      const alpha = Math.min(0.55, 0.12 + (L.shadowStrength / 80) * 0.43);
+      document.documentElement.style.setProperty("--shadow", `0 ${y}px ${blur}px rgba(0,0,0,${alpha.toFixed(2)})`);
+    }
+
+    function rgbaFromHex(hex, alpha){
+      const h = normalizeHexColor(hex, "#ffffff").slice(1);
+      const r = parseInt(h.slice(0,2), 16);
+      const g = parseInt(h.slice(2,4), 16);
+      const b = parseInt(h.slice(4,6), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
     }
 
     function applyColorVars(){
-      document.documentElement.style.setProperty("--blue1", state.colors.left1);
-      document.documentElement.style.setProperty("--blue2", state.colors.left2);
-      document.documentElement.style.setProperty("--yellow1", state.colors.right1);
-      document.documentElement.style.setProperty("--yellow2", state.colors.right2);
-      document.documentElement.style.setProperty("--ink", state.colors.ink);
+      const c = state.colors;
+      document.documentElement.style.setProperty("--blue1", c.left1);
+      document.documentElement.style.setProperty("--blue2", c.left2);
+      document.documentElement.style.setProperty("--yellow1", c.right1);
+      document.documentElement.style.setProperty("--yellow2", c.right2);
+      document.documentElement.style.setProperty("--ink", c.ink);
+
+      document.documentElement.style.setProperty("--left-name-chip", c.leftNameChip);
+      document.documentElement.style.setProperty("--right-name-chip", c.rightNameChip);
+      document.documentElement.style.setProperty("--title-chip", c.titleChip);
+
+      document.documentElement.style.setProperty("--border-color", rgbaFromHex(c.border, 0.18));
+
+      document.documentElement.style.setProperty("--green", c.green);
+      document.body.style.background = c.green;
+      stage.style.background = c.green;
     }
 
     function applyFontVar(){
-      const fontKey = state.typography.fontKey;
-      const fontValue = FONT_MAP[fontKey] || FONT_MAP[DEFAULTS.typography.fontKey];
-      document.documentElement.style.setProperty("--overlay-font", fontValue);
+      const f = FONT_MAP[state.typography.fontKey] || FONT_MAP.inter;
+      document.documentElement.style.setProperty("--overlay-font", f);
+    }
+
+    function applyAppearance(){
+      const fit = state.appearance.logoFit || "cover";
+      refs.leftLogoImg.style.objectFit = fit;
+      refs.rightLogoImg.style.objectFit = fit;
     }
 
     function setChipVisibilityState(chipEl, scoreVisible, logoVisible){
@@ -1177,101 +1351,127 @@
 
       refs.leftScoreBox.classList.toggle("is-hidden", !s.leftScore);
       refs.rightScoreBox.classList.toggle("is-hidden", !s.rightScore);
+
       refs.leftLogoBox.classList.toggle("is-hidden", !s.leftLogo);
       refs.rightLogoBox.classList.toggle("is-hidden", !s.rightLogo);
+
       refs.leftTeamNameBox.classList.toggle("is-hidden", !s.leftName);
       refs.rightTeamNameBox.classList.toggle("is-hidden", !s.rightName);
+
       refs.midTitleBox.classList.toggle("is-hidden", !s.title);
 
       setChipVisibilityState(refs.leftTeamChip, s.leftScore, s.leftLogo);
       setChipVisibilityState(refs.rightTeamChip, s.rightScore, s.rightLogo);
 
-      // Hide whole stack if both chip and name are hidden
-      const leftStackVisible = (s.leftScore || s.leftLogo || s.leftName);
-      const rightStackVisible = (s.rightScore || s.rightLogo || s.rightName);
+      const leftStackVisible = s.leftScore || s.leftLogo || s.leftName;
+      const rightStackVisible = s.rightScore || s.rightLogo || s.rightName;
 
       refs.leftTeamStack.classList.toggle("is-hidden", !leftStackVisible);
       refs.rightTeamStack.classList.toggle("is-hidden", !rightStackVisible);
     }
 
+    function syncRangeMirrorPairs(){
+      for (const pair of rangeMirrorPairs){
+        if (!pair?.range || !pair?.num) continue;
+        pair.num.value = pair.range.value;
+      }
+    }
+
+    function renderBadges(){
+      const L = state.layout;
+
+      refs.topYValue.textContent = `${L.topY}px`;
+      refs.centerGapValue.textContent = `${L.centerGap}px`;
+      refs.overlayScaleValue.textContent = `${L.overlayScale}%`;
+
+      refs.logoSizeValue.textContent = `${L.logoSize}px`;
+      refs.scoreWValue.textContent = `${L.scoreW}px`;
+      refs.chipHValue.textContent = `${L.chipH}px`;
+      refs.chipGapValue.textContent = `${L.chipGap}px`;
+      refs.scoreFontSizeValue.textContent = `${L.scoreFontSize}px`;
+
+      refs.nameWValue.textContent = `${L.nameW}px`;
+      refs.nameHValue.textContent = `${L.nameH}px`;
+      refs.nameFontSizeValue.textContent = `${L.nameFontSize}px`;
+      refs.nameFontWeightValue.textContent = `${L.nameFontWeight}`;
+      refs.nameYOffsetValue.textContent = `${L.nameYOffset}px`;
+      refs.nameLeftXValue.textContent = `${L.nameLeftX}px`;
+      refs.nameRightXValue.textContent = `${L.nameRightX}px`;
+      refs.nameLetterValue.textContent = `${(L.nameLetter / 100).toFixed(2)}em`;
+
+      refs.titleWValue.textContent = `${L.titleW}px`;
+      refs.titleHValue.textContent = `${L.titleH}px`;
+      refs.titleFontSizeValue.textContent = `${L.titleFontSize}px`;
+      refs.titleFontWeightValue.textContent = `${L.titleFontWeight}`;
+      refs.titleXValue.textContent = `${L.titleX}px`;
+      refs.titleYValue.textContent = `${L.titleY}px`;
+      refs.titleLetterValue.textContent = `${(L.titleLetter / 100).toFixed(2)}em`;
+
+      refs.scoreRadiusValue.textContent = `${L.scoreRadius}px`;
+      refs.logoRadiusValue.textContent = `${L.logoRadius}px`;
+      refs.nameRadiusValue.textContent = `${L.nameRadius}px`;
+      refs.titleRadiusValue.textContent = `${L.titleRadius}px`;
+      refs.borderWidthValue.textContent = `${L.borderWidth}px`;
+      refs.shadowStrengthValue.textContent = `${L.shadowStrength}`;
+    }
+
     function render(){
       state.leftScore = clampScore(state.leftScore);
       state.rightScore = clampScore(state.rightScore);
-      state.layout = normalizeLayout(state.layout);
-      state.colors = normalizeColors(state.colors);
+      state.text = normalizeTextGroup(state.text);
       state.sections = normalizeSections(state.sections);
       state.typography = normalizeTypography(state.typography);
-      state.text = normalizeTextGroup(state.text);
+      state.appearance = normalizeAppearance(state.appearance);
+      state.layout = normalizeLayout(state.layout);
+      state.colors = normalizeColors(state.colors);
 
-      // score values
+      // overlay text/scores
       refs.leftScoreBox.textContent = state.leftScore;
       refs.rightScoreBox.textContent = state.rightScore;
-      refs.leftScoreInput.value = state.leftScore;
-      refs.rightScoreInput.value = state.rightScore;
-
-      // text values
       refs.leftTeamNameText.textContent = state.text.leftName;
       refs.rightTeamNameText.textContent = state.text.rightName;
       refs.midTitleText.textContent = state.text.title;
 
+      // editor inputs
+      refs.leftScoreInput.value = state.leftScore;
+      refs.rightScoreInput.value = state.rightScore;
       refs.leftTeamNameInput.value = state.text.leftName;
       refs.rightTeamNameInput.value = state.text.rightName;
       refs.midTitleInput.value = state.text.title;
 
-      // base layout ranges
-      refs.topYRange.value = state.layout.topY;
-      refs.centerGapRange.value = state.layout.centerGap;
-      refs.overlayScaleRange.value = state.layout.overlayScale;
-      refs.logoSizeRange.value = state.layout.logoSize;
-      refs.scoreWRange.value = state.layout.scoreW;
-      refs.chipHRange.value = state.layout.chipH;
+      // range inputs
+      const L = state.layout;
+      [
+        ["topYRange","topY"],["centerGapRange","centerGap"],["overlayScaleRange","overlayScale"],
+        ["logoSizeRange","logoSize"],["scoreWRange","scoreW"],["chipHRange","chipH"],
+        ["chipGapRange","chipGap"],["scoreFontSizeRange","scoreFontSize"],
+        ["nameWRange","nameW"],["nameHRange","nameH"],["nameFontSizeRange","nameFontSize"],
+        ["nameFontWeightRange","nameFontWeight"],["nameYOffsetRange","nameYOffset"],
+        ["nameLeftXRange","nameLeftX"],["nameRightXRange","nameRightX"],["nameLetterRange","nameLetter"],
+        ["titleWRange","titleW"],["titleHRange","titleH"],["titleFontSizeRange","titleFontSize"],
+        ["titleFontWeightRange","titleFontWeight"],["titleXRange","titleX"],["titleYRange","titleY"],
+        ["titleLetterRange","titleLetter"],
+        ["scoreRadiusRange","scoreRadius"],["logoRadiusRange","logoRadius"],["nameRadiusRange","nameRadius"],
+        ["titleRadiusRange","titleRadius"],["borderWidthRange","borderWidth"],["shadowStrengthRange","shadowStrength"]
+      ].forEach(([refName, key]) => { if (refs[refName]) refs[refName].value = L[key]; });
 
-      refs.topYValue.textContent = `${state.layout.topY}px`;
-      refs.centerGapValue.textContent = `${state.layout.centerGap}px`;
-      refs.overlayScaleValue.textContent = `${state.layout.overlayScale}%`;
-      refs.logoSizeValue.textContent = `${state.layout.logoSize}px`;
-      refs.scoreWValue.textContent = `${state.layout.scoreW}px`;
-      refs.chipHValue.textContent = `${state.layout.chipH}px`;
+      renderBadges();
 
-      // name layout ranges
-      refs.nameWRange.value = state.layout.nameW;
-      refs.nameHRange.value = state.layout.nameH;
-      refs.nameFontSizeRange.value = state.layout.nameFontSize;
-      refs.nameYOffsetRange.value = state.layout.nameYOffset;
-      refs.nameLeftXRange.value = state.layout.nameLeftX;
-      refs.nameRightXRange.value = state.layout.nameRightX;
-
-      refs.nameWValue.textContent = `${state.layout.nameW}px`;
-      refs.nameHValue.textContent = `${state.layout.nameH}px`;
-      refs.nameFontSizeValue.textContent = `${state.layout.nameFontSize}px`;
-      refs.nameYOffsetValue.textContent = `${state.layout.nameYOffset}px`;
-      refs.nameLeftXValue.textContent = `${state.layout.nameLeftX}px`;
-      refs.nameRightXValue.textContent = `${state.layout.nameRightX}px`;
-
-      // title layout ranges
-      refs.titleWRange.value = state.layout.titleW;
-      refs.titleHRange.value = state.layout.titleH;
-      refs.titleFontSizeRange.value = state.layout.titleFontSize;
-      refs.titleXRange.value = state.layout.titleX;
-      refs.titleYRange.value = state.layout.titleY;
-
-      refs.titleWValue.textContent = `${state.layout.titleW}px`;
-      refs.titleHValue.textContent = `${state.layout.titleH}px`;
-      refs.titleFontSizeValue.textContent = `${state.layout.titleFontSize}px`;
-      refs.titleXValue.textContent = `${state.layout.titleX}px`;
-      refs.titleYValue.textContent = `${state.layout.titleY}px`;
-
-      // colors
+      // colors/selects/checkboxes
       refs.leftColor1Input.value = state.colors.left1;
       refs.leftColor2Input.value = state.colors.left2;
       refs.rightColor1Input.value = state.colors.right1;
       refs.rightColor2Input.value = state.colors.right2;
+      refs.leftNameChipColorInput.value = state.colors.leftNameChip;
+      refs.rightNameChipColorInput.value = state.colors.rightNameChip;
+      refs.titleChipColorInput.value = state.colors.titleChip;
       refs.inkColorInput.value = state.colors.ink;
+      refs.borderColorInput.value = state.colors.border;
+      refs.greenColorInput.value = state.colors.green;
 
-      // font
       refs.fontSelect.value = state.typography.fontKey;
+      refs.logoFitSelect.value = state.appearance.logoFit;
 
-      // visibility checkboxes
       refs.showLeftScoreChk.checked = state.sections.leftScore;
       refs.showRightScoreChk.checked = state.sections.rightScore;
       refs.showLeftLogoChk.checked = state.sections.leftLogo;
@@ -1289,14 +1489,15 @@
       applyLayoutVars();
       applyColorVars();
       applyFontVar();
+      applyAppearance();
       applySectionVisibility();
+      syncRangeMirrorPairs();
     }
 
     function setScore(side, value){
       if (side === "left") state.leftScore = clampScore(value);
       if (side === "right") state.rightScore = clampScore(value);
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function addScore(side, delta){
@@ -1307,65 +1508,88 @@
     function resetScores(){
       state.leftScore = 0;
       state.rightScore = 0;
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function setLogo(side, dataUrl){
       if (side === "left") state.leftLogo = dataUrl || "";
       else state.rightLogo = dataUrl || "";
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function setColor(key, value){
-      if (!state.colors) state.colors = normalizeColors({});
       if (!(key in state.colors)) return;
       state.colors[key] = normalizeHexColor(value, state.colors[key]);
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function resetColors(){
       state.colors = JSON.parse(JSON.stringify(DEFAULTS.colors));
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function swapTeamColors(){
-      const a1 = state.colors.left1;
-      const a2 = state.colors.left2;
+      const l1 = state.colors.left1, l2 = state.colors.left2;
       state.colors.left1 = state.colors.right1;
       state.colors.left2 = state.colors.right2;
-      state.colors.right1 = a1;
-      state.colors.right2 = a2;
-      render();
-      saveState();
+      state.colors.right1 = l1;
+      state.colors.right2 = l2;
+
+      const ln = state.colors.leftNameChip;
+      state.colors.leftNameChip = state.colors.rightNameChip;
+      state.colors.rightNameChip = ln;
+
+      render(); saveState();
     }
 
     function setTextField(key, value){
-      state.text[key] = normalizeText(value, DEFAULTS.text[key], key === "title" ? 50 : 40);
-      render();
-      saveState();
+      if (!(key in state.text)) return;
+      const maxLen = key === "title" ? 50 : 40;
+      state.text[key] = normalizeText(value, DEFAULTS.text[key], maxLen);
+      render(); saveState();
     }
 
     function setSection(key, checked){
       if (!(key in state.sections)) return;
       state.sections[key] = !!checked;
-      render();
-      saveState();
+      render(); saveState();
     }
 
     function setFontKey(key){
       state.typography.fontKey = FONT_MAP[key] ? key : DEFAULTS.typography.fontKey;
-      render();
-      saveState();
+      render(); saveState();
+    }
+
+    function setLogoFit(value){
+      state.appearance.logoFit = (value === "contain") ? "contain" : "cover";
+      render(); saveState();
     }
 
     function toggleEditMode(force){
       state.editMode = (typeof force === "boolean") ? force : !state.editMode;
-      render();
-      saveState();
+      render(); saveState();
+    }
+
+    function resetLayout(){
+      state.layout = JSON.parse(JSON.stringify(DEFAULTS.layout));
+      render(); saveState();
+    }
+
+    function resetAll(){
+      state.leftScore = DEFAULTS.leftScore;
+      state.rightScore = DEFAULTS.rightScore;
+      state.leftLogo = DEFAULTS.leftLogo;
+      state.rightLogo = DEFAULTS.rightLogo;
+      state.editMode = false;
+
+      state.text = JSON.parse(JSON.stringify(DEFAULTS.text));
+      state.sections = JSON.parse(JSON.stringify(DEFAULTS.sections));
+      state.typography = JSON.parse(JSON.stringify(DEFAULTS.typography));
+      state.appearance = JSON.parse(JSON.stringify(DEFAULTS.appearance));
+      state.layout = JSON.parse(JSON.stringify(DEFAULTS.layout));
+      state.colors = JSON.parse(JSON.stringify(DEFAULTS.colors));
+
+      render(); saveState();
     }
 
     function readFileAsDataURL(file){
@@ -1382,139 +1606,223 @@
       try{
         const dataUrl = await readFileAsDataURL(file);
         setLogo(side, dataUrl);
-      }catch(err){
+      } catch(err){
         console.error("Image load failed:", err);
       }
     }
 
-    function resetLayout(){
-      const keep = {
-        topY: DEFAULTS.layout.topY,
-        centerGap: DEFAULTS.layout.centerGap,
-        overlayScale: DEFAULTS.layout.overlayScale,
-        logoSize: DEFAULTS.layout.logoSize,
-        scoreW: DEFAULTS.layout.scoreW,
-        chipH: DEFAULTS.layout.chipH,
-        nameW: DEFAULTS.layout.nameW,
-        nameH: DEFAULTS.layout.nameH,
-        nameFontSize: DEFAULTS.layout.nameFontSize,
-        nameYOffset: DEFAULTS.layout.nameYOffset,
-        nameLeftX: DEFAULTS.layout.nameLeftX,
-        nameRightX: DEFAULTS.layout.nameRightX,
-        titleW: DEFAULTS.layout.titleW,
-        titleH: DEFAULTS.layout.titleH,
-        titleFontSize: DEFAULTS.layout.titleFontSize,
-        titleX: DEFAULTS.layout.titleX,
-        titleY: DEFAULTS.layout.titleY
-      };
-      state.layout = JSON.parse(JSON.stringify(keep));
-      render();
-      saveState();
-    }
-
-    function resetAll(){
-      state.leftScore = DEFAULTS.leftScore;
-      state.rightScore = DEFAULTS.rightScore;
-      state.leftLogo = DEFAULTS.leftLogo;
-      state.rightLogo = DEFAULTS.rightLogo;
-      state.layout = JSON.parse(JSON.stringify(DEFAULTS.layout));
-      state.colors = JSON.parse(JSON.stringify(DEFAULTS.colors));
-      state.sections = JSON.parse(JSON.stringify(DEFAULTS.sections));
-      state.typography = JSON.parse(JSON.stringify(DEFAULTS.typography));
-      state.text = JSON.parse(JSON.stringify(DEFAULTS.text));
-      render();
-      saveState();
-    }
-
-    function bindRange(refEl, statePath, key){
+    function bindRange(refEl, path, key){
+      if (!refEl) return;
       refEl.addEventListener("input", () => {
-        state[statePath][key] = Number(refEl.value);
-        render();
-        saveState();
+        state[path][key] = Number(refEl.value);
+        render(); saveState();
       });
     }
 
-    function wireUI(){
-      // Scores / names
-      refs.leftScoreInput.addEventListener("input", () => setScore("left", refs.leftScoreInput.value));
-      refs.rightScoreInput.addEventListener("input", () => setScore("right", refs.rightScoreInput.value));
+    function enhanceRangesWithNumericInputs(){
+      const ranges = Array.from(document.querySelectorAll('.editor input[type="range"]'));
+      for (const range of ranges){
+        if (range.dataset.enhancedNumber === "1") continue;
 
+        const wrap = document.createElement("div");
+        wrap.className = "range-edit-row";
+
+        const num = document.createElement("input");
+        num.type = "number";
+        num.className = "range-number";
+        if (range.min !== "") num.min = range.min;
+        if (range.max !== "") num.max = range.max;
+        if (range.step !== "") num.step = range.step;
+        num.value = range.value;
+
+        range.parentNode.insertBefore(wrap, range);
+        wrap.appendChild(range);
+        wrap.appendChild(num);
+
+        range.addEventListener("input", () => { num.value = range.value; });
+
+        num.addEventListener("input", () => {
+          if (num.value === "") return;
+          let v = Number(num.value);
+          if (!Number.isFinite(v)) return;
+          if (range.min !== "") v = Math.max(Number(range.min), v);
+          if (range.max !== "") v = Math.min(Number(range.max), v);
+          range.value = String(v);
+          range.dispatchEvent(new Event("input", { bubbles:true }));
+        });
+
+        range.dataset.enhancedNumber = "1";
+        rangeMirrorPairs.push({ range, num });
+      }
+    }
+
+    function buildShareUrl(){
+      const p = new URLSearchParams();
+
+      p.set("ls", state.leftScore);
+      p.set("rs", state.rightScore);
+
+      p.set("edit", state.editMode ? "1" : "0");
+
+      // text
+      p.set("ltn", state.text.leftName);
+      p.set("rtn", state.text.rightName);
+      p.set("title", state.text.title);
+
+      // typography / appearance
+      p.set("font", state.typography.fontKey);
+      p.set("fit", state.appearance.logoFit);
+
+      // layout (short keys)
+      const L = state.layout;
+      const layoutMap = {
+        top:"topY", gap:"centerGap", scale:"overlayScale", logo:"logoSize", scorew:"scoreW", chiph:"chipH",
+        cgap:"chipGap", sfs:"scoreFontSize",
+        scrad:"scoreRadius", lgrad:"logoRadius", nrad:"nameRadius", trad:"titleRadius",
+        bw:"borderWidth", sh:"shadowStrength",
+        namew:"nameW", nameh:"nameH", namefs:"nameFontSize", namefw:"nameFontWeight",
+        namey:"nameYOffset", nlx:"nameLeftX", nrx:"nameRightX", nls:"nameLetter",
+        titlew:"titleW", titleh:"titleH", titlefs:"titleFontSize", titlefw:"titleFontWeight",
+        titlex:"titleX", titley:"titleY", tls:"titleLetter"
+      };
+      for (const [k, prop] of Object.entries(layoutMap)) p.set(k, L[prop]);
+
+      // colors
+      p.set("lc1", state.colors.left1);
+      p.set("lc2", state.colors.left2);
+      p.set("rc1", state.colors.right1);
+      p.set("rc2", state.colors.right2);
+      p.set("ink", state.colors.ink);
+      p.set("lnc", state.colors.leftNameChip);
+      p.set("rnc", state.colors.rightNameChip);
+      p.set("tc", state.colors.titleChip);
+      p.set("bc", state.colors.border);
+      p.set("green", state.colors.green);
+
+      // visibility
+      const visMap = {
+        vls:"leftScore", vrs:"rightScore", vll:"leftLogo", vrl:"rightLogo",
+        vln:"leftName", vrn:"rightName", vt:"title"
+      };
+      for (const [k, prop] of Object.entries(visMap)) p.set(k, state.sections[prop] ? "1" : "0");
+
+      return `${location.origin}${location.pathname}?${p.toString()}`;
+    }
+
+    async function copyShareUrl(){
+      const url = buildShareUrl();
+      try{
+        await navigator.clipboard.writeText(url);
+        refs.copyUrlBtn.textContent = "Copied!";
+        setTimeout(() => refs.copyUrlBtn.textContent = "Copy Share URL", 1200);
+      }catch{
+        prompt("Copy this URL:", url);
+      }
+    }
+
+    function applyUrlParams(){
+      const p = new URLSearchParams(location.search);
+
+      if (p.has("edit")) state.editMode = p.get("edit") === "1";
+      if (p.get("hideui") === "1") state.editMode = false;
+
+      if (p.has("ls")) state.leftScore = clampScore(p.get("ls"));
+      if (p.has("rs")) state.rightScore = clampScore(p.get("rs"));
+
+      if (p.has("ltn")) state.text.leftName = p.get("ltn");
+      if (p.has("rtn")) state.text.rightName = p.get("rtn");
+      if (p.has("title")) state.text.title = p.get("title");
+
+      if (p.has("font")) state.typography.fontKey = p.get("font");
+      if (p.has("fit")) state.appearance.logoFit = p.get("fit");
+
+      const layoutParamMap = {
+        top:"topY", gap:"centerGap", scale:"overlayScale", logo:"logoSize", scorew:"scoreW", chiph:"chipH",
+        cgap:"chipGap", sfs:"scoreFontSize",
+        scrad:"scoreRadius", lgrad:"logoRadius", nrad:"nameRadius", trad:"titleRadius",
+        bw:"borderWidth", sh:"shadowStrength",
+        namew:"nameW", nameh:"nameH", namefs:"nameFontSize", namefw:"nameFontWeight",
+        namey:"nameYOffset", nlx:"nameLeftX", nrx:"nameRightX", nls:"nameLetter",
+        titlew:"titleW", titleh:"titleH", titlefs:"titleFontSize", titlefw:"titleFontWeight",
+        titlex:"titleX", titley:"titleY", tls:"titleLetter"
+      };
+      for (const [param, prop] of Object.entries(layoutParamMap)){
+        if (p.has(param)) state.layout[prop] = Number(p.get(param));
+      }
+
+      const colorParamMap = {
+        lc1:"left1", lc2:"left2", rc1:"right1", rc2:"right2", ink:"ink",
+        lnc:"leftNameChip", rnc:"rightNameChip", tc:"titleChip",
+        bc:"border", green:"green"
+      };
+      for (const [param, prop] of Object.entries(colorParamMap)){
+        if (p.has(param)) state.colors[prop] = p.get(param);
+      }
+
+      const visMap = {
+        vls:"leftScore", vrs:"rightScore", vll:"leftLogo", vrl:"rightLogo",
+        vln:"leftName", vrn:"rightName", vt:"title"
+      };
+      for (const [param, prop] of Object.entries(visMap)){
+        if (p.has(param)) state.sections[prop] = p.get(param) !== "0";
+      }
+
+      state.text = normalizeTextGroup(state.text);
+      state.typography = normalizeTypography(state.typography);
+      state.appearance = normalizeAppearance(state.appearance);
+      state.layout = normalizeLayout(state.layout);
+      state.colors = normalizeColors(state.colors);
+      state.sections = normalizeSections(state.sections);
+    }
+
+    function wireUI(){
+      // text + scores
       refs.leftTeamNameInput.addEventListener("input", () => setTextField("leftName", refs.leftTeamNameInput.value));
       refs.rightTeamNameInput.addEventListener("input", () => setTextField("rightName", refs.rightTeamNameInput.value));
       refs.midTitleInput.addEventListener("input", () => setTextField("title", refs.midTitleInput.value));
 
-      // Buttons
+      refs.leftScoreInput.addEventListener("input", () => setScore("left", refs.leftScoreInput.value));
+      refs.rightScoreInput.addEventListener("input", () => setScore("right", refs.rightScoreInput.value));
+
+      // buttons
       refs.leftPlusBtn.addEventListener("click", () => addScore("left", +1));
       refs.leftMinusBtn.addEventListener("click", () => addScore("left", -1));
       refs.rightPlusBtn.addEventListener("click", () => addScore("right", +1));
       refs.rightMinusBtn.addEventListener("click", () => addScore("right", -1));
+
       refs.resetScoresBtn.addEventListener("click", resetScores);
-
-      refs.leftUploadBtn.addEventListener("click", () => refs.leftFileInput.click());
-      refs.rightUploadBtn.addEventListener("click", () => refs.rightFileInput.click());
-
-      refs.leftFileInput.addEventListener("change", async (e) => {
-        await onFilePick("left", e.target.files?.[0]);
-        e.target.value = "";
-      });
-
-      refs.rightFileInput.addEventListener("change", async (e) => {
-        await onFilePick("right", e.target.files?.[0]);
-        e.target.value = "";
-      });
-
-      refs.leftClearBtn.addEventListener("click", () => setLogo("left", ""));
-      refs.rightClearBtn.addEventListener("click", () => setLogo("right", ""));
+      refs.resetLayoutBtn.addEventListener("click", resetLayout);
+      refs.resetAllBtn.addEventListener("click", resetAll);
+      refs.copyUrlBtn.addEventListener("click", copyShareUrl);
+      refs.toggleEditBtn.addEventListener("click", () => toggleEditMode());
 
       refs.swapLogosBtn.addEventListener("click", () => {
         const tmp = state.leftLogo;
         state.leftLogo = state.rightLogo;
         state.rightLogo = tmp;
-        render();
-        saveState();
+        render(); saveState();
       });
 
-      refs.resetAllBtn.addEventListener("click", resetAll);
+      refs.leftUploadBtn.addEventListener("click", () => refs.leftFileInput.click());
+      refs.rightUploadBtn.addEventListener("click", () => refs.rightFileInput.click());
 
-      // Layout binds (existing)
-      bindRange(refs.topYRange, "layout", "topY");
-      bindRange(refs.centerGapRange, "layout", "centerGap");
-      bindRange(refs.overlayScaleRange, "layout", "overlayScale");
-      bindRange(refs.logoSizeRange, "layout", "logoSize");
-      bindRange(refs.scoreWRange, "layout", "scoreW");
-      bindRange(refs.chipHRange, "layout", "chipH");
+      refs.leftClearBtn.addEventListener("click", () => setLogo("left", ""));
+      refs.rightClearBtn.addEventListener("click", () => setLogo("right", ""));
 
-      // Team name layout binds
-      bindRange(refs.nameWRange, "layout", "nameW");
-      bindRange(refs.nameHRange, "layout", "nameH");
-      bindRange(refs.nameFontSizeRange, "layout", "nameFontSize");
-      bindRange(refs.nameYOffsetRange, "layout", "nameYOffset");
-      bindRange(refs.nameLeftXRange, "layout", "nameLeftX");
-      bindRange(refs.nameRightXRange, "layout", "nameRightX");
+      refs.leftFileInput.addEventListener("change", async (e) => {
+        await onFilePick("left", e.target.files?.[0]);
+        e.target.value = "";
+      });
+      refs.rightFileInput.addEventListener("change", async (e) => {
+        await onFilePick("right", e.target.files?.[0]);
+        e.target.value = "";
+      });
 
-      // Title layout binds
-      bindRange(refs.titleWRange, "layout", "titleW");
-      bindRange(refs.titleHRange, "layout", "titleH");
-      bindRange(refs.titleFontSizeRange, "layout", "titleFontSize");
-      bindRange(refs.titleXRange, "layout", "titleX");
-      bindRange(refs.titleYRange, "layout", "titleY");
-
-      refs.resetLayoutBtn.addEventListener("click", resetLayout);
-      refs.toggleEditBtn.addEventListener("click", () => toggleEditMode());
-
-      // Colors
-      refs.leftColor1Input.addEventListener("input", () => setColor("left1", refs.leftColor1Input.value));
-      refs.leftColor2Input.addEventListener("input", () => setColor("left2", refs.leftColor2Input.value));
-      refs.rightColor1Input.addEventListener("input", () => setColor("right1", refs.rightColor1Input.value));
-      refs.rightColor2Input.addEventListener("input", () => setColor("right2", refs.rightColor2Input.value));
-      refs.inkColorInput.addEventListener("input", () => setColor("ink", refs.inkColorInput.value));
-      refs.resetColorsBtn.addEventListener("click", resetColors);
-      refs.swapColorsBtn.addEventListener("click", swapTeamColors);
-
-      // Font
+      // font / fit
       refs.fontSelect.addEventListener("change", () => setFontKey(refs.fontSelect.value));
+      refs.logoFitSelect.addEventListener("change", () => setLogoFit(refs.logoFitSelect.value));
 
-      // Visibility toggles
+      // visibility
       refs.showLeftScoreChk.addEventListener("change", () => setSection("leftScore", refs.showLeftScoreChk.checked));
       refs.showRightScoreChk.addEventListener("change", () => setSection("rightScore", refs.showRightScoreChk.checked));
       refs.showLeftLogoChk.addEventListener("change", () => setSection("leftLogo", refs.showLeftLogoChk.checked));
@@ -1523,12 +1831,40 @@
       refs.showRightNameChk.addEventListener("change", () => setSection("rightName", refs.showRightNameChk.checked));
       refs.showTitleChk.addEventListener("change", () => setSection("title", refs.showTitleChk.checked));
 
-      // Direct click on overlay (edit mode only)
+      // bind ranges -> state.layout
+      [
+        ["topYRange","topY"],["centerGapRange","centerGap"],["overlayScaleRange","overlayScale"],
+        ["logoSizeRange","logoSize"],["scoreWRange","scoreW"],["chipHRange","chipH"],
+        ["chipGapRange","chipGap"],["scoreFontSizeRange","scoreFontSize"],
+        ["nameWRange","nameW"],["nameHRange","nameH"],["nameFontSizeRange","nameFontSize"],
+        ["nameFontWeightRange","nameFontWeight"],["nameYOffsetRange","nameYOffset"],
+        ["nameLeftXRange","nameLeftX"],["nameRightXRange","nameRightX"],["nameLetterRange","nameLetter"],
+        ["titleWRange","titleW"],["titleHRange","titleH"],["titleFontSizeRange","titleFontSize"],
+        ["titleFontWeightRange","titleFontWeight"],["titleXRange","titleX"],["titleYRange","titleY"],
+        ["titleLetterRange","titleLetter"],
+        ["scoreRadiusRange","scoreRadius"],["logoRadiusRange","logoRadius"],["nameRadiusRange","nameRadius"],
+        ["titleRadiusRange","titleRadius"],["borderWidthRange","borderWidth"],["shadowStrengthRange","shadowStrength"]
+      ].forEach(([refName, key]) => bindRange(refs[refName], "layout", key));
+
+      // color inputs
+      refs.leftColor1Input.addEventListener("input", () => setColor("left1", refs.leftColor1Input.value));
+      refs.leftColor2Input.addEventListener("input", () => setColor("left2", refs.leftColor2Input.value));
+      refs.rightColor1Input.addEventListener("input", () => setColor("right1", refs.rightColor1Input.value));
+      refs.rightColor2Input.addEventListener("input", () => setColor("right2", refs.rightColor2Input.value));
+      refs.leftNameChipColorInput.addEventListener("input", () => setColor("leftNameChip", refs.leftNameChipColorInput.value));
+      refs.rightNameChipColorInput.addEventListener("input", () => setColor("rightNameChip", refs.rightNameChipColorInput.value));
+      refs.titleChipColorInput.addEventListener("input", () => setColor("titleChip", refs.titleChipColorInput.value));
+      refs.inkColorInput.addEventListener("input", () => setColor("ink", refs.inkColorInput.value));
+      refs.borderColorInput.addEventListener("input", () => setColor("border", refs.borderColorInput.value));
+      refs.greenColorInput.addEventListener("input", () => setColor("green", refs.greenColorInput.value));
+      refs.swapColorsBtn.addEventListener("click", swapTeamColors);
+      refs.resetColorsBtn.addEventListener("click", resetColors);
+
+      // overlay direct clicks (edit mode only)
       refs.leftLogoBox.addEventListener("click", () => {
         if (!state.editMode || !state.sections.leftLogo) return;
         refs.leftFileInput.click();
       });
-
       refs.rightLogoBox.addEventListener("click", () => {
         if (!state.editMode || !state.sections.rightLogo) return;
         refs.rightFileInput.click();
@@ -1538,26 +1874,23 @@
         if (!state.editMode || !state.sections.leftScore) return;
         addScore("left", +1);
       });
-
       refs.rightScoreBox.addEventListener("click", () => {
         if (!state.editMode || !state.sections.rightScore) return;
         addScore("right", +1);
       });
 
-      // Right-click score to decrement (edit mode)
       refs.leftScoreBox.addEventListener("contextmenu", (e) => {
         if (!state.editMode || !state.sections.leftScore) return;
         e.preventDefault();
         addScore("left", -1);
       });
-
       refs.rightScoreBox.addEventListener("contextmenu", (e) => {
         if (!state.editMode || !state.sections.rightScore) return;
         e.preventDefault();
         addScore("right", -1);
       });
 
-      // Drag/drop logos (edit mode)
+      // drag/drop logos
       [refs.leftLogoBox, refs.rightLogoBox].forEach((box, idx) => {
         const side = idx === 0 ? "left" : "right";
 
@@ -1587,9 +1920,13 @@
 
     function wireKeyboard(){
       window.addEventListener("keydown", (e) => {
-        const target = e.target;
-        const tag = target?.tagName?.toLowerCase() || "";
-        const isTyping = ["input", "textarea", "select"].includes(tag) || target?.isContentEditable;
+        const t = e.target;
+        const tag = t?.tagName?.toLowerCase() || "";
+        const isTyping = ["input","textarea","select"].includes(tag) || t?.isContentEditable;
+
+        // ✅ requested: while editing team name/title (or any input/select), don't toggle editor with E/H
+        if (isTyping) return;
+
         const key = e.key.toLowerCase();
 
         if (key === "e" || key === "h"){
@@ -1597,8 +1934,6 @@
           toggleEditMode();
           return;
         }
-
-        if (isTyping) return;
 
         if (key === "q"){ e.preventDefault(); addScore("left", +1); }
         else if (key === "a"){ e.preventDefault(); addScore("left", -1); }
@@ -1608,108 +1943,13 @@
       });
     }
 
-    function applyUrlParams(){
-      const params = new URLSearchParams(location.search);
-
-      // show editor on load: ?edit=1
-      if (params.get("edit") === "1") state.editMode = true;
-      if (params.get("hideui") === "1") state.editMode = false;
-
-      // scores
-      const ls = params.get("ls");
-      const rs = params.get("rs");
-      if (ls !== null) state.leftScore = clampScore(ls);
-      if (rs !== null) state.rightScore = clampScore(rs);
-
-      // layout
-      const topY = params.get("top");
-      const gap = params.get("gap");
-      const scale = params.get("scale");
-      const logo = params.get("logo");
-      const scorew = params.get("scorew");
-      const chiph = params.get("chiph");
-
-      if (topY !== null) state.layout.topY = Number(topY);
-      if (gap !== null) state.layout.centerGap = Number(gap);
-      if (scale !== null) state.layout.overlayScale = Number(scale);
-      if (logo !== null) state.layout.logoSize = Number(logo);
-      if (scorew !== null) state.layout.scoreW = Number(scorew);
-      if (chiph !== null) state.layout.chipH = Number(chiph);
-
-      // name + title layout (optional)
-      const namew = params.get("namew");
-      const nameh = params.get("nameh");
-      const namefs = params.get("namefs");
-      const namey = params.get("namey");
-      const nlx = params.get("nlx");
-      const nrx = params.get("nrx");
-      const titlew = params.get("titlew");
-      const titleh = params.get("titleh");
-      const titlefs = params.get("titlefs");
-      const titlex = params.get("titlex");
-      const titley = params.get("titley");
-
-      if (namew !== null) state.layout.nameW = Number(namew);
-      if (nameh !== null) state.layout.nameH = Number(nameh);
-      if (namefs !== null) state.layout.nameFontSize = Number(namefs);
-      if (namey !== null) state.layout.nameYOffset = Number(namey);
-      if (nlx !== null) state.layout.nameLeftX = Number(nlx);
-      if (nrx !== null) state.layout.nameRightX = Number(nrx);
-      if (titlew !== null) state.layout.titleW = Number(titlew);
-      if (titleh !== null) state.layout.titleH = Number(titleh);
-      if (titlefs !== null) state.layout.titleFontSize = Number(titlefs);
-      if (titlex !== null) state.layout.titleX = Number(titlex);
-      if (titley !== null) state.layout.titleY = Number(titley);
-
-      // texts
-      const ltn = params.get("ltn");
-      const rtn = params.get("rtn");
-      const title = params.get("title");
-      if (ltn !== null) state.text.leftName = ltn;
-      if (rtn !== null) state.text.rightName = rtn;
-      if (title !== null) state.text.title = title;
-
-      // font
-      const font = params.get("font");
-      if (font !== null) state.typography.fontKey = font;
-
-      // colors
-      const lc1 = params.get("lc1");
-      const lc2 = params.get("lc2");
-      const rc1 = params.get("rc1");
-      const rc2 = params.get("rc2");
-      const ink = params.get("ink");
-
-      if (lc1 !== null) state.colors.left1 = lc1;
-      if (lc2 !== null) state.colors.left2 = lc2;
-      if (rc1 !== null) state.colors.right1 = rc1;
-      if (rc2 !== null) state.colors.right2 = rc2;
-      if (ink !== null) state.colors.ink = ink;
-
-      // visibility (1/0)
-      const visMap = {
-        vls: "leftScore",
-        vrs: "rightScore",
-        vll: "leftLogo",
-        vrl: "rightLogo",
-        vln: "leftName",
-        vrn: "rightName",
-        vt: "title"
-      };
-      for (const [param, key] of Object.entries(visMap)){
-        if (params.has(param)) state.sections[key] = params.get(param) !== "0";
-      }
-
-      state.layout = normalizeLayout(state.layout);
-      state.colors = normalizeColors(state.colors);
-      state.sections = normalizeSections(state.sections);
-      state.typography = normalizeTypography(state.typography);
-      state.text = normalizeTextGroup(state.text);
-    }
-
     function init(){
       loadState();
       applyUrlParams();
+
+      // make slider numbers editable
+      enhanceRangesWithNumericInputs();
+
       wireUI();
       wireKeyboard();
       render();
