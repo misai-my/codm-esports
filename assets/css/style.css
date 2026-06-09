@@ -885,3 +885,70 @@ tr:hover td {
     width: 100%;
   }
 }
+
+/* Bracket + Match Scoring additions */
+.match-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.match-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.045);
+}
+
+.match-team.winner {
+  border-color: rgba(50,230,143,0.44);
+  background: rgba(50,230,143,0.08);
+}
+
+.match-team.empty {
+  color: var(--muted);
+  border-style: dashed;
+}
+
+.match-admin-line {
+  justify-content: space-between;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,0.045);
+}
+
+.match-admin-line > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-scheduled {
+  color: var(--neon-blue);
+  background: rgba(40,217,255,0.11);
+}
+
+.badge-completed {
+  color: var(--success);
+  background: rgba(50,230,143,0.11);
+}
+
+.badge-pending_report,
+.badge-under_review {
+  color: var(--warning);
+  background: rgba(255,209,102,0.11);
+}
+
+.badge-disputed,
+.badge-cancelled {
+  color: var(--danger);
+  background: rgba(255,70,103,0.11);
+}

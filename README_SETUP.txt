@@ -60,3 +60,29 @@ Notes:
 - V1 uses logo_url for team logos instead of Supabase Storage upload.
 - Discord validation is format-only. OAuth ownership verification comes later.
 - Google/iOS calendar integration, brackets, scoring, and map veto are next modules.
+
+
+NEXT STEP MODULE: BRACKET + MATCH SCORING
+
+New files:
+- supabase_bracket_scoring.sql
+- bracket.html
+- admin_bracket.html
+- matches.html
+
+Setup:
+1. Run supabase_bracket_scoring.sql in Supabase SQL Editor.
+2. Confirm your admin account has role = 'admin'.
+3. Open admin_bracket.html.
+4. Login as admin.
+5. Confirm approved teams are listed in the seeding panel.
+6. Click Generate Bracket.
+7. Open bracket.html to view the public bracket.
+8. Open matches.html as a team captain to submit a captain score report.
+9. Use admin_bracket.html to apply official per-game scores and advance winners.
+
+Current limitations:
+- Supports single elimination only.
+- Captain reports are quick score reports; official results are still applied by admin.
+- Per-game official score entry is in admin_bracket.html.
+- Map veto, double elimination, Swiss, and calendar export come next.
