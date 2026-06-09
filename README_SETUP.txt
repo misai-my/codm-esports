@@ -1,88 +1,62 @@
-CODM Tournament OS V1 Modern Starter
+CODM Tournament OS - Advanced Brackets Package
 Project: codm-esports
 
-Included:
+This package adds:
+- Public pages with NO admin button/access in the general/public navigation
+- Direct admin pages only: admin.html and admin_bracket.html
+- Single elimination
+- Dynamic double elimination
+- Swiss pairing logic
+- Swiss standings and Buchholz field
+- Captain match reports
+- Admin official score entry
+
+Files:
 - index.html
 - register.html
+- bracket.html
+- matches.html
 - admin.html
+- admin_bracket.html
 - assets/css/style.css
 - assets/js/config.js
 - assets/js/main.js
-- assets/img/README_ASSETS.txt
-
-What this V1 does:
-- Stylish public landing page
-- Approved team list
-- Captain sign-up / login
-- Team registration
-- Email format validation
-- Captain email must match logged-in Supabase account
-- Discord User ID format validation
-- 5 required CODM players + 2 optional substitutes
-- Duplicate team name / tag check
-- Duplicate CODM UID check
-- Admin approve / reject / waitlist dashboard
-
-Required Supabase tables:
-- profiles
-- tournaments
-- teams
-- team_players
-- registrations
+- assets/js/bracket-engine.js
+- supabase_advanced_brackets.sql
 
 Setup:
-1. Run your Supabase table scripts.
-2. Create your first account from register.html.
-3. Make yourself admin:
+1. Run your original V1 table scripts first if not done yet:
+   profiles, tournaments, teams, team_players, registrations.
+2. Run supabase_advanced_brackets.sql in Supabase SQL Editor.
+3. Update assets/js/config.js with your Supabase URL and anon key.
+4. Upload/deploy the files.
+5. Public users should use:
+   - index.html
+   - register.html
+   - bracket.html
+   - matches.html
+6. Admins should open these URLs directly:
+   - admin.html
+   - admin_bracket.html
 
-update public.profiles
-set role = 'admin'
-where email = 'your-email@example.com';
+Admin flow:
+1. Approve teams in admin.html.
+2. Open admin_bracket.html directly.
+3. Choose bracket type: single_elimination, double_elimination, or swiss.
+4. Set seeds.
+5. Generate Initial Round.
+6. Enter official scores.
+7. Generate Next Round.
 
-4. Open assets/js/config.js.
-5. Replace:
+Double elimination notes:
+This is a dynamic double-elimination engine. It tracks losses and generates winners, losers, and grand-final rounds after each scored round. A team is eliminated after 2 losses. If the undefeated team loses in the Grand Final, the system can generate a Final Reset because both teams still have fewer than 2 losses.
 
-const SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+Swiss notes:
+Swiss standings use points, wins, map differential, seed, and Buchholz. Pairing avoids rematches where possible and assigns byes to the lowest-ranked team without a previous bye when the team count is odd.
 
-6. Put your Google Drive assets into assets/img/.
-
-Recommended asset filenames:
-- codm-logo.png
-- kv-bg.jpg
-- kv-character-left.png
-- kv-character-right.png
-- pattern.png
-
-If your files have different names, update the ASSETS block in assets/js/config.js.
-
-Notes:
-- V1 uses logo_url for team logos instead of Supabase Storage upload.
-- Discord validation is format-only. OAuth ownership verification comes later.
-- Google/iOS calendar integration, brackets, scoring, and map veto are next modules.
-
-
-NEXT STEP MODULE: BRACKET + MATCH SCORING
-
-New files:
-- supabase_bracket_scoring.sql
-- bracket.html
-- admin_bracket.html
-- matches.html
-
-Setup:
-1. Run supabase_bracket_scoring.sql in Supabase SQL Editor.
-2. Confirm your admin account has role = 'admin'.
-3. Open admin_bracket.html.
-4. Login as admin.
-5. Confirm approved teams are listed in the seeding panel.
-6. Click Generate Bracket.
-7. Open bracket.html to view the public bracket.
-8. Open matches.html as a team captain to submit a captain score report.
-9. Use admin_bracket.html to apply official per-game scores and advance winners.
-
-Current limitations:
-- Supports single elimination only.
-- Captain reports are quick score reports; official results are still applied by admin.
-- Per-game official score entry is in admin_bracket.html.
-- Map veto, double elimination, Swiss, and calendar export come next.
+Next optional modules:
+- Map veto per match
+- Google/iOS calendar export
+- Discord OAuth verification
+- Supabase Storage logo upload
+- OBS bracket overlay
