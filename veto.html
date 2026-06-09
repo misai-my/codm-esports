@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Map Veto Room · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-emblem">M</span>
+        <span class="brand-title">
+          CODM Tournament OS
+          <small>Map Veto Room</small>
+        </span>
+      </a>
+      <nav class="nav-links">
+        <a class="nav-link" href="bracket.html">Bracket</a>
+        <a class="nav-link" href="matches.html">My Matches</a>
+        <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero" data-hero-bg>
+      <div class="container">
+        <div class="eyebrow">Captain Map Veto</div>
+        <h1 class="h1"><span class="gradient-text">Ban. Pick.</span><br/>Choose your side.</h1>
+        <p class="lead" id="tournamentMeta">Loading tournament...</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container grid grid-two">
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Captain Login</div>
+              <h2>Access</h2>
+            </div>
+          </div>
+
+          <div id="authStatus" class="auth-status">Checking session...</div>
+
+          <form id="authForm" class="form">
+            <div class="field">
+              <label for="authEmail">Captain Email</label>
+              <input id="authEmail" type="email" />
+            </div>
+            <div class="field">
+              <label for="authPassword">Password</label>
+              <input id="authPassword" type="password" />
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" type="button" id="loginBtn">Login</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Rule Reminder</div>
+              <h2>60 seconds per action</h2>
+            </div>
+          </div>
+          <p>When your team is called, make the map ban, map pick, or side pick. If unresponsive, admin may randomize the current action.</p>
+          <div class="notice">First call is final.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div id="vetoRoom"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/veto-engine.js"></script>
+  <script>
+    let tournament = null;
+    let userProfile = null;
+    let activeVeto = null;
+    let activeSteps = [];
+    let teamsById = {};
+    let mapPools = [];
+    let matchId = new URLSearchParams(window.location.search).get("match_id");
+
+    async function login() {
+      const email = normalizeText(qs("#authEmail").value);
+      const password = qs("#authPassword").value;
+
+      if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
+
+      const { error } = await window.sb.auth.signInWithPassword({ email, password });
+      if (error) return showToast(error.message, "error");
+
+      showToast("Logged in.", "success");
+      await refreshAuth();
+      await loadVeto();
+    }
+
+    async function refreshAuth() {
+      const session = await getSession();
+      const authStatus = qs("#authStatus");
+
+      if (!session) {
+        userProfile = null;
+        authStatus.textContent = "Not logged in. You can watch, but captains must login to act.";
+        authStatus.classList.remove("online");
+        qs("#authForm").classList.remove("hidden");
+        qs("#signOutBtn").classList.add("hidden");
+        return;
+      }
+
+      userProfile = await getCurrentProfile();
+      authStatus.textContent = `Logged in as ${userProfile.email} · Role: ${userProfile.role}`;
+      authStatus.classList.add("online");
+      qs("#authForm").classList.add("hidden");
+      qs("#signOutBtn").classList.remove("hidden");
+    }
+
+    async function loadMapPools() {
+      const { data, error } = await window.sb
+        .from("codm_map_pools")
+        .select("*")
+        .eq("tournament_id", tournament.id)
+        .eq("is_active", true)
+        .order("mode", { ascending: true })
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      mapPools = data || [];
+    }
+
+    async function loadVeto() {
+      if (!matchId) {
+        qs("#vetoRoom").innerHTML = `<div class="danger-note">No match_id provided. Open this page from the admin veto room.</div>`;
+        return;
+      }
+
+      const { data: veto, error } = await window.sb
+        .from("match_vetos")
+        .select("*")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      activeVeto = veto;
+
+      if (!activeVeto) {
+        qs("#vetoRoom").innerHTML = `<div class="notice">No veto has been activated for this match yet.</div>`;
+        return;
+      }
+
+      const teamIds = [activeVeto.team1_id, activeVeto.team2_id];
+
+      const { data: teams, error: teamsError } = await window.sb
+        .from("teams")
+        .select("id, team_name, team_tag, logo_url, captain_name, captain_user_id")
+        .in("id", teamIds);
+
+      if (teamsError) throw teamsError;
+      teamsById = Object.fromEntries((teams || []).map(t => [t.id, t]));
+
+      const { data: steps, error: stepsError } = await window.sb
+        .from("match_veto_steps")
+        .select("*")
+        .eq("veto_id", activeVeto.id)
+        .order("step_no", { ascending: true });
+
+      if (stepsError) throw stepsError;
+      activeSteps = steps || [];
+
+      await loadMapPools();
+      renderVetoRoom();
+    }
+
+    function teamLabel(id) {
+      const t = teamsById[id];
+      return t ? `${t.team_name} (${t.team_tag || ""})` : "TBD";
+    }
+
+    function renderVetoRoom() {
+      const team1 = teamsById[activeVeto.team1_id];
+      const team2 = teamsById[activeVeto.team2_id];
+      const current = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+
+      qs("#vetoRoom").innerHTML = `
+        <div class="card">
+          <div class="veto-matchup">
+            <div class="card card-flat">${teamLogoHtml(team1, "sm")} <strong>${escapeHtml(teamLabel(team1.id))}</strong><div class="small">Team 1</div></div>
+            <div class="versus">VS</div>
+            <div class="card card-flat">${teamLogoHtml(team2, "sm")} <strong>${escapeHtml(teamLabel(team2.id))}</strong><div class="small">Team 2</div></div>
+          </div>
+
+          <div class="section-tight"></div>
+          <p>${statusBadge(activeVeto.status)} <span class="small">Format: ${escapeHtml(activeVeto.format_type)} · ${activeVeto.timer_seconds}s per action</span></p>
+
+          <div class="veto-timeline">
+            ${activeSteps.map(s => `
+              <div class="veto-dot ${s.step_no === activeVeto.current_step_no && s.status === "pending" ? "is-current" : ""} ${["completed","randomized"].includes(s.status) ? "is-done" : ""}">
+                ${s.step_no}
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="section-tight"></div>
+          ${current ? renderCurrentStep(current, team1, team2) : `<div class="success-note">Veto completed. Good luck, soldiers.</div>`}
+        </div>
+
+        <div class="section-tight"></div>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">History</div>
+              <h2>Pick / Ban Timeline</h2>
+            </div>
+            <button class="btn btn-ghost" onclick="loadVeto()">Refresh</button>
+          </div>
+          <div class="veto-step-grid">
+            ${activeSteps.map(step => renderStepCard(step, { team1, team2 })).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCurrentStep(step, team1, team2) {
+      const canAct = CODMVeto.isStepActionableByUser(step, activeVeto, userProfile, { team1, team2 });
+
+      if (step.acting_slot === "admin") {
+        return `<div class="notice"><strong>Admin Action:</strong> ${escapeHtml(CODMVeto.stepDescription(step, { team1, team2 }))}</div>`;
+      }
+
+      if (step.action_type === "side") {
+        return `
+          <div class="card card-flat veto-current">
+            <div class="eyebrow">Current Action</div>
+            <h2>${escapeHtml(CODMVeto.stepDescription(step, { team1, team2 }))}</h2>
+            ${canAct ? `
+              <div class="side-buttons">
+                <button class="btn btn-primary" onclick="completeStep('${step.id}', null, 'blue')">Blue Side</button>
+                <button class="btn btn-primary" onclick="completeStep('${step.id}', null, 'red')">Red Side</button>
+              </div>
+            ` : `<div class="notice">Waiting for ${escapeHtml(step.acting_slot === "team1" ? team1.team_name : team2.team_name)}.</div>`}
+          </div>
+        `;
+      }
+
+      const available = CODMVeto.availableMapsForStep(step, activeSteps, mapPools);
+
+      return `
+        <div class="card card-flat veto-current">
+          <div class="eyebrow">Current Action</div>
+          <h2>${escapeHtml(CODMVeto.stepDescription(step, { team1, team2 }))}</h2>
+          ${canAct ? `
+            <div class="map-grid">
+              ${available.map(m => `<button class="map-button" onclick="completeStep('${step.id}', '${escapeHtml(m.map_name)}', null)">${escapeHtml(m.map_name)}</button>`).join("")}
+            </div>
+          ` : `<div class="notice">Waiting for ${escapeHtml(step.acting_slot === "team1" ? team1.team_name : team2.team_name)}.</div>`}
+        </div>
+      `;
+    }
+
+    function renderStepCard(step, teams) {
+      const isCurrent = step.step_no === activeVeto.current_step_no && step.status === "pending";
+      const isDone = ["completed", "randomized"].includes(step.status);
+
+      return `
+        <div class="veto-step-card ${isCurrent ? "is-current" : ""} ${isDone ? "is-done" : ""}">
+          <span class="badge badge-${escapeHtml(step.status)}">Step ${step.step_no} · ${escapeHtml(step.status)}</span>
+          <h3>${escapeHtml(CODMVeto.actionLabel(step.action_type))}</h3>
+          <p class="small">${escapeHtml(CODMVeto.stepDescription(step, teams))}</p>
+          <strong>${escapeHtml(CODMVeto.formatActionResult(step))}</strong>
+          ${step.is_random ? `<div class="small">Randomized by admin/system</div>` : ""}
+        </div>
+      `;
+    }
+
+    async function completeStep(stepId, mapName, side) {
+      try {
+        const step = activeSteps.find(s => s.id === stepId);
+        const team1 = teamsById[activeVeto.team1_id];
+        const team2 = teamsById[activeVeto.team2_id];
+
+        if (!CODMVeto.isStepActionableByUser(step, activeVeto, userProfile, { team1, team2 })) {
+          return showToast("It is not your team's turn.", "error");
+        }
+
+        const update = {
+          status: "completed",
+          completed_by: userProfile.id,
+          completed_at: new Date().toISOString()
+        };
+
+        if (step.action_type === "side") update.selected_side = side;
+        else update.selected_map_name = mapName;
+
+        const { error } = await window.sb
+          .from("match_veto_steps")
+          .update(update)
+          .eq("id", stepId);
+
+        if (error) throw error;
+
+        showToast("Selection locked.", "success");
+        await loadVeto();
+
+        if (activeVeto.status === "completed") {
+          await window.sb.rpc("apply_completed_veto", { p_veto_id: activeVeto.id });
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to lock selection.", "error");
+      }
+    }
+
+    async function init() {
+      try {
+        tournament = await loadDefaultTournament();
+        setText("#tournamentMeta", `${tournament.title} · Map veto room`);
+
+        qs("#loginBtn").addEventListener("click", login);
+
+        await refreshAuth();
+        await loadVeto();
+
+        window.sb.auth.onAuthStateChange(async () => {
+          await refreshAuth();
+          await loadVeto();
+        });
+
+        setInterval(loadVeto, 10000);
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to initialize veto room.", "error");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

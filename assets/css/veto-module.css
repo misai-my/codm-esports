@@ -1,0 +1,148 @@
+/* ============================================================
+   CODM Match Veto Module Styles
+   Add or merge into assets/css/style.css
+   ============================================================ */
+
+.veto-room {
+  display: grid;
+  gap: 18px;
+}
+
+.veto-current {
+  border: 1px solid rgba(255, 206, 46, 0.42);
+  background:
+    linear-gradient(145deg, rgba(255, 206, 46, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(10, 18, 32, 0.75);
+}
+
+.veto-step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.veto-step-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,0.045);
+}
+
+.veto-step-card.is-current {
+  border-color: rgba(255, 206, 46, 0.65);
+  background: rgba(255, 206, 46, 0.10);
+}
+
+.veto-step-card.is-done {
+  border-color: rgba(50,230,143,0.35);
+  background: rgba(50,230,143,0.07);
+}
+
+.veto-step-card.is-reverted {
+  border-color: rgba(255,70,103,0.35);
+  background: rgba(255,70,103,0.07);
+  opacity: 0.72;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.map-button {
+  min-height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025)),
+    rgba(255,255,255,0.05);
+  color: var(--text);
+  padding: 12px;
+  text-align: left;
+  font-weight: 1000;
+}
+
+.map-button:hover {
+  border-color: rgba(255,206,46,0.55);
+}
+
+.map-button:disabled,
+.map-button.used {
+  opacity: 0.38;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.side-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.veto-timeline {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.veto-dot {
+  min-width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color: var(--muted);
+  font-weight: 1000;
+}
+
+.veto-dot.is-current {
+  color: #111318;
+  background: linear-gradient(135deg, var(--cod-yellow), var(--cod-orange));
+}
+
+.veto-dot.is-done {
+  color: var(--success);
+  border-color: rgba(50,230,143,0.40);
+}
+
+.veto-admin-editor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  min-height: 320px;
+  white-space: pre;
+}
+
+.veto-matchup {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.veto-matchup .versus {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--cod-yellow), var(--cod-orange));
+  color: #111318;
+  font-weight: 1000;
+}
+
+@media (max-width: 720px) {
+  .veto-matchup {
+    grid-template-columns: 1fr;
+  }
+
+  .veto-matchup .versus {
+    margin-inline: auto;
+  }
+
+  .side-buttons {
+    grid-template-columns: 1fr;
+  }
+}

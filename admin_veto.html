@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Map Veto Admin · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-emblem">M</span>
+        <span class="brand-title">
+          CODM Tournament OS
+          <small>Map Veto Admin</small>
+        </span>
+      </a>
+      <nav class="nav-links">
+        <a class="nav-link" href="bracket.html">Public Bracket</a>
+        <a class="nav-link" href="admin_bracket.html">Bracket Admin</a>
+        <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero" data-hero-bg>
+      <div class="container">
+        <div class="eyebrow">Admin Veto Room</div>
+        <h1 class="h1"><span class="gradient-text">Trigger map veto.</span><br/>Control every step.</h1>
+        <p class="lead" id="tournamentMeta">Loading tournament...</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container grid grid-two">
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Access</div>
+              <h2>Admin Login</h2>
+            </div>
+          </div>
+
+          <div id="authStatus" class="auth-status">Checking session...</div>
+
+          <form id="authForm" class="form">
+            <div class="field">
+              <label for="authEmail">Admin Email</label>
+              <input id="authEmail" type="email" required />
+            </div>
+            <div class="field">
+              <label for="authPassword">Password</label>
+              <input id="authPassword" type="password" required />
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" type="button" id="loginBtn">Login</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Veto Rules</div>
+              <h2>Action Timer</h2>
+            </div>
+          </div>
+          <p>Each map ban, map pick, or side pick should be done in 60 seconds. If a team is unresponsive, admin may randomize the current action.</p>
+          <div class="notice">First call on picks and bans is final. Use Step Back only for admin correction/testing.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="adminPanel">
+      <div class="container grid grid-two">
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Match Selection</div>
+              <h2>Activate Veto</h2>
+            </div>
+          </div>
+
+          <form id="startVetoForm" class="form">
+            <div class="field">
+              <label for="matchSelect">Match</label>
+              <select id="matchSelect" required></select>
+            </div>
+
+            <div class="grid grid-two">
+              <div class="field">
+                <label for="formatType">Veto Format</label>
+                <select id="formatType">
+                  <option value="BO3">Best of Three</option>
+                  <option value="BO5" selected>Best of Five</option>
+                  <option value="GF_BO7_ADV">Grand Finals BO7 with Map Advantage</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="timerSeconds">Seconds per Action</label>
+                <input id="timerSeconds" type="number" value="60" min="15" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="team1Select">Team 1</label>
+              <select id="team1Select" required></select>
+              <div class="help-text">Use this after coin toss. Winner decides which team becomes Team 1.</div>
+            </div>
+
+            <div class="field">
+              <label for="templateEditor">Step Order / Dynamic Template</label>
+              <textarea id="templateEditor" class="veto-admin-editor"></textarea>
+              <div class="help-text">Admin can edit this JSON before starting. Use team1, team2, or admin as acting_slot.</div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-ghost" type="button" id="loadTemplateBtn">Load Default Steps</button>
+              <button class="btn btn-primary" type="submit">Start / Replace Veto</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Current Veto</div>
+              <h2>Admin Controls</h2>
+            </div>
+          </div>
+
+          <div id="currentVetoPanel" class="veto-room">
+            <div class="notice">Select a match with active veto to control it.</div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-warning" id="stepBackBtn" type="button">Step Back</button>
+            <button class="btn btn-danger" id="resetVetoBtn" type="button">Reset Veto</button>
+            <button class="btn btn-ghost" id="refreshVetoBtn" type="button">Refresh</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="vetoRoomSection">
+      <div class="container">
+        <div id="vetoRoom"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/veto-engine.js"></script>
+  <script>
+    let tournament = null;
+    let profile = null;
+    let allMatches = [];
+    let teamsById = {};
+    let mapPools = [];
+    let activeVeto = null;
+    let activeSteps = [];
+
+    async function login() {
+      const email = normalizeText(qs("#authEmail").value);
+      const password = qs("#authPassword").value;
+
+      if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
+
+      const { error } = await window.sb.auth.signInWithPassword({ email, password });
+      if (error) return showToast(error.message, "error");
+
+      showToast("Logged in.", "success");
+      await refreshAuth();
+    }
+
+    async function refreshAuth() {
+      const session = await getSession();
+      const authStatus = qs("#authStatus");
+
+      if (!session) {
+        authStatus.textContent = "Not logged in.";
+        authStatus.classList.remove("online");
+        qs("#authForm").classList.remove("hidden");
+        qs("#signOutBtn").classList.add("hidden");
+        qs("#adminPanel").classList.add("hidden");
+        return;
+      }
+
+      profile = await getCurrentProfile();
+      authStatus.textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
+      authStatus.classList.add("online");
+      qs("#authForm").classList.add("hidden");
+      qs("#signOutBtn").classList.remove("hidden");
+
+      if (profile.role !== "admin") {
+        showToast("This account is not an admin.", "error");
+        qs("#adminPanel").classList.add("hidden");
+        return;
+      }
+
+      qs("#adminPanel").classList.remove("hidden");
+      await loadAdminData();
+    }
+
+    async function loadAdminData() {
+      await Promise.all([loadMatches(), loadMapPools()]);
+      loadDefaultTemplate();
+    }
+
+    async function loadMapPools() {
+      const { data, error } = await window.sb
+        .from("codm_map_pools")
+        .select("*")
+        .eq("tournament_id", tournament.id)
+        .eq("is_active", true)
+        .order("mode", { ascending: true })
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      mapPools = data || [];
+    }
+
+    async function loadMatches() {
+      const { data, error } = await window.sb
+        .from("matches")
+        .select("*")
+        .eq("tournament_id", tournament.id)
+        .order("round_no", { ascending: true })
+        .order("match_no", { ascending: true });
+
+      if (error) throw error;
+
+      allMatches = (data || []).filter(m => m.team_a_id && m.team_b_id);
+
+      const teamIds = [...new Set(allMatches.flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean))];
+
+      if (teamIds.length) {
+        const { data: teams, error: teamsError } = await window.sb
+          .from("teams")
+          .select("id, team_name, team_tag, logo_url, captain_name, captain_user_id")
+          .in("id", teamIds);
+
+        if (teamsError) throw teamsError;
+        teamsById = Object.fromEntries((teams || []).map(t => [t.id, t]));
+      }
+
+      qs("#matchSelect").innerHTML = allMatches.length
+        ? allMatches.map(m => `<option value="${m.id}">R${m.round_no} M${m.match_no}: ${teamLabel(m.team_a_id)} vs ${teamLabel(m.team_b_id)}</option>`).join("")
+        : `<option value="">No matches with two teams found</option>`;
+
+      updateTeam1Options();
+    }
+
+    function teamLabel(id) {
+      const t = teamsById[id];
+      return t ? `${t.team_name} (${t.team_tag || ""})` : "TBD";
+    }
+
+    function selectedMatch() {
+      return allMatches.find(m => m.id === qs("#matchSelect").value);
+    }
+
+    function updateTeam1Options() {
+      const match = selectedMatch();
+      if (!match) {
+        qs("#team1Select").innerHTML = `<option value="">No match selected</option>`;
+        return;
+      }
+
+      qs("#team1Select").innerHTML = `
+        <option value="${match.team_a_id}">${escapeHtml(teamLabel(match.team_a_id))}</option>
+        <option value="${match.team_b_id}">${escapeHtml(teamLabel(match.team_b_id))}</option>
+      `;
+    }
+
+    function getTeam2Id(match, team1Id) {
+      return match.team_a_id === team1Id ? match.team_b_id : match.team_a_id;
+    }
+
+    function loadDefaultTemplate() {
+      const steps = CODMVeto.buildDefaultVetoTemplate(qs("#formatType").value);
+      qs("#templateEditor").value = JSON.stringify(steps, null, 2);
+    }
+
+    function convertTemplateForInsert(vetoId, steps, team1Id, team2Id) {
+      return steps.map((s, idx) => {
+        const actingTeamId = s.acting_slot === "team1"
+          ? team1Id
+          : s.acting_slot === "team2"
+            ? team2Id
+            : null;
+
+        return {
+          veto_id: vetoId,
+          step_no: Number(s.step_no || idx + 1),
+          phase_mode: s.phase_mode,
+          action_type: s.action_type,
+          acting_slot: s.acting_slot,
+          acting_team_id: actingTeamId,
+          target_game_no: s.target_game_no || null,
+          status: "pending"
+        };
+      });
+    }
+
+    async function startVeto(event) {
+      event.preventDefault();
+
+      try {
+        const match = selectedMatch();
+        if (!match) return showToast("Select a match.", "error");
+
+        const formatType = qs("#formatType").value;
+        const timerSeconds = Number(qs("#timerSeconds").value || 60);
+        const team1Id = qs("#team1Select").value;
+        const team2Id = getTeam2Id(match, team1Id);
+
+        let template;
+        try {
+          template = JSON.parse(qs("#templateEditor").value);
+        } catch (err) {
+          return showToast("Step template is not valid JSON.", "error");
+        }
+
+        if (!Array.isArray(template) || !template.length) {
+          return showToast("Template must be a non-empty JSON array.", "error");
+        }
+
+        if (!confirm("Start or replace map veto for this match? Existing veto data for this match will be deleted.")) return;
+
+        // Delete existing veto for match. Cascade removes steps/actions.
+        const { data: oldVetos } = await window.sb
+          .from("match_vetos")
+          .select("id")
+          .eq("match_id", match.id);
+
+        if (oldVetos?.length) {
+          const { error: deleteError } = await window.sb
+            .from("match_vetos")
+            .delete()
+            .eq("match_id", match.id);
+          if (deleteError) throw deleteError;
+        }
+
+        const { data: veto, error: vetoError } = await window.sb
+          .from("match_vetos")
+          .insert({
+            tournament_id: tournament.id,
+            match_id: match.id,
+            format_type: formatType,
+            team1_id: team1Id,
+            team2_id: team2Id,
+            status: "active",
+            current_step_no: 1,
+            timer_seconds: timerSeconds,
+            started_by: profile.id,
+            config: { template }
+          })
+          .select("*")
+          .single();
+
+        if (vetoError) throw vetoError;
+
+        const rows = convertTemplateForInsert(veto.id, template, team1Id, team2Id);
+
+        const { error: stepsError } = await window.sb
+          .from("match_veto_steps")
+          .insert(rows);
+
+        if (stepsError) throw stepsError;
+
+        showToast("Map veto activated.", "success");
+        await loadActiveVetoForMatch(match.id);
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to start veto.", "error");
+      }
+    }
+
+    async function loadActiveVetoForMatch(matchId = qs("#matchSelect").value) {
+      if (!matchId) return;
+
+      const { data: veto, error } = await window.sb
+        .from("match_vetos")
+        .select("*")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      activeVeto = veto;
+
+      if (!activeVeto) {
+        activeSteps = [];
+        qs("#currentVetoPanel").innerHTML = `<div class="notice">No active veto for this match.</div>`;
+        qs("#vetoRoomSection").classList.add("hidden");
+        return;
+      }
+
+      const { data: steps, error: stepsError } = await window.sb
+        .from("match_veto_steps")
+        .select("*")
+        .eq("veto_id", activeVeto.id)
+        .order("step_no", { ascending: true });
+
+      if (stepsError) throw stepsError;
+
+      activeSteps = steps || [];
+      renderAdminVeto();
+    }
+
+    function renderAdminVeto() {
+      const team1 = teamsById[activeVeto.team1_id];
+      const team2 = teamsById[activeVeto.team2_id];
+      const current = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+
+      qs("#currentVetoPanel").innerHTML = `
+        <div class="veto-matchup">
+          <div class="card card-flat">${teamLogoHtml(team1, "sm")} <strong>${escapeHtml(teamLabel(team1.id))}</strong><div class="small">Team 1</div></div>
+          <div class="versus">VS</div>
+          <div class="card card-flat">${teamLogoHtml(team2, "sm")} <strong>${escapeHtml(teamLabel(team2.id))}</strong><div class="small">Team 2</div></div>
+        </div>
+        <p>${statusBadge(activeVeto.status)} <span class="small">Format: ${escapeHtml(activeVeto.format_type)} · Timer: ${activeVeto.timer_seconds}s</span></p>
+        ${current ? `<div class="notice"><strong>Current:</strong> ${escapeHtml(CODMVeto.stepDescription(current, { team1, team2 }))}</div>` : `<div class="success-note">Veto completed.</div>`}
+        <div class="actions">
+          ${current ? `<button class="btn btn-primary" onclick="randomizeCurrentStep()">Randomize Current Action</button>` : `<button class="btn btn-primary" onclick="applyVeto()">Apply Veto to Match Games</button>`}
+          <a class="btn btn-ghost" href="veto.html?match_id=${activeVeto.match_id}" target="_blank" rel="noopener">Open Captain/Public Room</a>
+        </div>
+      `;
+
+      qs("#vetoRoomSection").classList.remove("hidden");
+      renderVetoRoom();
+    }
+
+    function renderVetoRoom() {
+      const team1 = teamsById[activeVeto.team1_id];
+      const team2 = teamsById[activeVeto.team2_id];
+      const current = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+
+      qs("#vetoRoom").innerHTML = `
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Veto Timeline</div>
+              <h2>${escapeHtml(teamLabel(team1.id))} vs ${escapeHtml(teamLabel(team2.id))}</h2>
+            </div>
+          </div>
+          <div class="veto-timeline">
+            ${activeSteps.map(s => `
+              <div class="veto-dot ${s.step_no === activeVeto.current_step_no && s.status === "pending" ? "is-current" : ""} ${["completed","randomized"].includes(s.status) ? "is-done" : ""}">
+                ${s.step_no}
+              </div>
+            `).join("")}
+          </div>
+          ${current ? renderCurrentStepControls(current) : `<div class="success-note">Veto completed. Apply selections to match games.</div>`}
+        </div>
+
+        <div class="section-tight"></div>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">All Steps</div>
+              <h2>Pick / Ban History</h2>
+            </div>
+          </div>
+          <div class="veto-step-grid">
+            ${activeSteps.map(step => renderStepCard(step, { team1, team2 })).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCurrentStepControls(step) {
+      if (step.action_type === "side") {
+        return `
+          <div class="card card-flat veto-current">
+            <h3>${escapeHtml(CODMVeto.stepDescription(step, { team1: teamsById[activeVeto.team1_id], team2: teamsById[activeVeto.team2_id] }))}</h3>
+            <div class="side-buttons">
+              <button class="btn btn-primary" onclick="completeStep('${step.id}', null, 'blue', false)">Blue Side</button>
+              <button class="btn btn-primary" onclick="completeStep('${step.id}', null, 'red', false)">Red Side</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (step.action_type === "auto_remaining") {
+        const map = CODMVeto.remainingMapName(step, activeSteps, mapPools);
+        return `
+          <div class="card card-flat veto-current">
+            <h3>${escapeHtml(CODMVeto.stepDescription(step, { team1: teamsById[activeVeto.team1_id], team2: teamsById[activeVeto.team2_id] }))}</h3>
+            <p>Remaining map: <strong>${escapeHtml(map || "No available map")}</strong></p>
+            <button class="btn btn-primary" ${map ? "" : "disabled"} onclick="completeStep('${step.id}', '${escapeHtml(map || "")}', null, false)">Assign Remaining Map</button>
+          </div>
+        `;
+      }
+
+      const available = CODMVeto.availableMapsForStep(step, activeSteps, mapPools);
+
+      return `
+        <div class="card card-flat veto-current">
+          <h3>${escapeHtml(CODMVeto.stepDescription(step, { team1: teamsById[activeVeto.team1_id], team2: teamsById[activeVeto.team2_id] }))}</h3>
+          <div class="map-grid">
+            ${available.map(m => `<button class="map-button" onclick="completeStep('${step.id}', '${escapeHtml(m.map_name)}', null, false)">${escapeHtml(m.map_name)}</button>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStepCard(step, teams) {
+      const isCurrent = step.step_no === activeVeto.current_step_no && step.status === "pending";
+      const isDone = ["completed", "randomized"].includes(step.status);
+      const isReverted = step.status === "reverted";
+      return `
+        <div class="veto-step-card ${isCurrent ? "is-current" : ""} ${isDone ? "is-done" : ""} ${isReverted ? "is-reverted" : ""}">
+          <span class="badge badge-${escapeHtml(step.status)}">Step ${step.step_no} · ${escapeHtml(step.status)}</span>
+          <h3>${escapeHtml(CODMVeto.actionLabel(step.action_type))}</h3>
+          <p class="small">${escapeHtml(CODMVeto.stepDescription(step, teams))}</p>
+          <strong>${escapeHtml(CODMVeto.formatActionResult(step))}</strong>
+          ${step.is_random ? `<div class="small">Randomized by admin/system</div>` : ""}
+        </div>
+      `;
+    }
+
+    async function completeStep(stepId, mapName, side, isRandom) {
+      try {
+        const step = activeSteps.find(s => s.id === stepId);
+        if (!step) return;
+
+        const update = {
+          status: isRandom ? "randomized" : "completed",
+          is_random: !!isRandom,
+          completed_by: profile.id,
+          completed_at: new Date().toISOString()
+        };
+
+        if (step.action_type === "side") update.selected_side = side;
+        else update.selected_map_name = mapName;
+
+        const { error } = await window.sb
+          .from("match_veto_steps")
+          .update(update)
+          .eq("id", stepId);
+
+        if (error) throw error;
+
+        showToast("Step completed.", "success");
+        await loadActiveVetoForMatch(activeVeto.match_id);
+
+        if (activeVeto.status === "completed") {
+          await applyVeto();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to complete step.", "error");
+      }
+    }
+
+    async function randomizeCurrentStep() {
+      const step = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+      if (!step) return showToast("No current step to randomize.", "error");
+
+      if (!confirm("Randomize current action?")) return;
+
+      if (step.action_type === "side") {
+        await completeStep(step.id, null, CODMVeto.randomSide(), true);
+        return;
+      }
+
+      if (step.action_type === "auto_remaining") {
+        const map = CODMVeto.remainingMapName(step, activeSteps, mapPools);
+        if (!map) return showToast("No remaining map available.", "error");
+        await completeStep(step.id, map, null, true);
+        return;
+      }
+
+      const map = CODMVeto.randomMapName(step, activeSteps, mapPools);
+      if (!map) return showToast("No available map to randomize.", "error");
+      await completeStep(step.id, map, null, true);
+    }
+
+    async function stepBack() {
+      if (!activeVeto) return;
+
+      const completed = activeSteps
+        .filter(s => ["completed", "randomized", "skipped"].includes(s.status))
+        .sort((a, b) => b.step_no - a.step_no)[0];
+
+      if (!completed) return showToast("No completed step to revert.", "error");
+      if (!confirm(`Step back from Step ${completed.step_no}?`)) return;
+
+      const { error } = await window.sb
+        .from("match_veto_steps")
+        .update({
+          status: "pending",
+          selected_map_name: null,
+          selected_side: null,
+          completed_by: null,
+          completed_at: null,
+          is_random: false,
+          notes: "Reverted by admin"
+        })
+        .eq("id", completed.id);
+
+      if (error) throw error;
+
+      const { error: vetoError } = await window.sb
+        .from("match_vetos")
+        .update({
+          status: "active",
+          current_step_no: completed.step_no,
+          completed_at: null
+        })
+        .eq("id", activeVeto.id);
+
+      if (vetoError) throw vetoError;
+
+      showToast("Step reverted.", "success");
+      await loadActiveVetoForMatch(activeVeto.match_id);
+    }
+
+    async function resetVeto() {
+      if (!activeVeto) return;
+      if (!confirm("Reset the entire veto? All selections will be cleared.")) return;
+
+      const { error } = await window.sb
+        .from("match_veto_steps")
+        .update({
+          status: "pending",
+          selected_map_name: null,
+          selected_side: null,
+          completed_by: null,
+          completed_at: null,
+          is_random: false,
+          notes: "Reset by admin"
+        })
+        .eq("veto_id", activeVeto.id);
+
+      if (error) throw error;
+
+      const { error: vetoError } = await window.sb
+        .from("match_vetos")
+        .update({
+          status: "active",
+          current_step_no: 1,
+          completed_at: null,
+          reset_at: new Date().toISOString()
+        })
+        .eq("id", activeVeto.id);
+
+      if (vetoError) throw vetoError;
+
+      showToast("Veto reset.", "success");
+      await loadActiveVetoForMatch(activeVeto.match_id);
+    }
+
+    async function applyVeto() {
+      if (!activeVeto) return;
+
+      const { error } = await window.sb.rpc("apply_completed_veto", {
+        p_veto_id: activeVeto.id
+      });
+
+      if (error) throw error;
+
+      showToast("Veto applied to match games.", "success");
+      await loadActiveVetoForMatch(activeVeto.match_id);
+    }
+
+    async function init() {
+      try {
+        tournament = await loadDefaultTournament();
+        setText("#tournamentMeta", `${tournament.title} · CODM map veto module`);
+
+        qs("#loginBtn").addEventListener("click", login);
+        qs("#matchSelect").addEventListener("change", () => {
+          updateTeam1Options();
+          loadActiveVetoForMatch();
+        });
+        qs("#formatType").addEventListener("change", loadDefaultTemplate);
+        qs("#loadTemplateBtn").addEventListener("click", loadDefaultTemplate);
+        qs("#startVetoForm").addEventListener("submit", startVeto);
+        qs("#stepBackBtn").addEventListener("click", stepBack);
+        qs("#resetVetoBtn").addEventListener("click", resetVeto);
+        qs("#refreshVetoBtn").addEventListener("click", () => loadActiveVetoForMatch());
+
+        await refreshAuth();
+        window.sb.auth.onAuthStateChange(() => refreshAuth());
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to initialize veto admin.", "error");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
