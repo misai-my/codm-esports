@@ -86,6 +86,7 @@
   <script src="assets/js/config.js"></script>
   <script src="assets/js/main.js"></script>
   <script src="assets/js/veto-engine.js"></script>
+  <script src="assets/js/veto-realtime.js"></script>
   <script>
     let tournament = null;
     let userProfile = null;
@@ -340,8 +341,7 @@
           await refreshAuth();
           await loadVeto();
         });
-
-        setInterval(loadVeto, 10000);
+        
       } catch (err) {
         console.error(err);
         showToast(err.message || "Failed to initialize veto room.", "error");
