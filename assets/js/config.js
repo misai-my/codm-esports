@@ -6,8 +6,8 @@
 // Never use the service_role key in frontend code.
 // ============================================================
 
-const SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://dznlooryvfudljyxjhbu.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6bmxvb3J5dmZ1ZGxqeXhqaGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDc4NDQsImV4cCI6MjA5NjU4Mzg0NH0.Q4iLAWXo-EEL-g4s1sz9sQiGJn4gsrl5PVEs7hy5R1E";
 
 const DEFAULT_TOURNAMENT_SLUG = "codm-v1";
 
