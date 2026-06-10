@@ -21,3 +21,10 @@ input,select,textarea{border-color:rgba(255,255,255,.13)!important;background:li
 .premium-hero-strip{display:inline-flex;align-items:center;gap:10px;margin-top:18px;padding:10px 14px;border:1px solid rgba(248,209,92,.24);border-radius:999px;background:rgba(248,209,92,.075);color:rgba(255,255,255,.76);font-size:13px;font-weight:900;letter-spacing:.02em}.premium-hero-strip:before{content:"";width:8px;height:8px;border-radius:999px;background:var(--premium-gold);box-shadow:0 0 18px rgba(248,209,92,.9)}
 .premium-section-kicker{display:inline-flex;align-items:center;gap:8px;color:var(--premium-gold);font-weight:1000;letter-spacing:.12em;text-transform:uppercase;font-size:11px}.premium-section-kicker:after{content:"";width:36px;height:2px;background:linear-gradient(90deg,var(--premium-gold),transparent)}.premium-status-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;border:1px solid rgba(248,209,92,.24);background:rgba(248,209,92,.07);color:rgba(255,255,255,.82);font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
 @media (prefers-reduced-motion:reduce){.premium-fade-in,.premium-reveal{animation:none!important;transition:none!important;opacity:1!important;transform:none!important}}
+
+/* Forgot password update */
+
+.btn-ghost{background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.14)!important;color:var(--text)!important}
+.btn-ghost:hover{border-color:rgba(248,209,92,.46)!important;background:rgba(248,209,92,.10)!important}
+
+.auth-recovery-link{font-size:13px;color:rgba(255,255,255,.72);text-decoration:underline;text-underline-offset:4px}
