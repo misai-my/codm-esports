@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Map Veto Admin · CODM Tournament OS</title>
+  <title>Map Veto Command · CODM Tournament OS</title>
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/premium-polish.css" />
+  <link rel="stylesheet" href="assets/css/veto-module.css" />
 </head>
 <body>
   <header class="nav">
     <div class="container nav-inner">
       <a class="brand" href="index.html">
-        <span class="brand-emblem">M</span>
+        <span class="brand-emblem"><img data-asset="logo" alt="CODM Tournament OS" /></span>
         <span class="brand-title">
           CODM Tournament OS
-          <small>Map Veto Admin</small>
+          <small>Map Veto Command</small>
         </span>
       </a>
       <nav class="nav-links">
-        <a class="nav-link" href="bracket.html">Public Bracket</a>
-        <a class="nav-link" href="admin_bracket.html">Bracket Admin</a>
+        <a class="nav-link" href="bracket.html">Championship Bracket</a>
+        <a class="nav-link" href="admin_bracket.html">Bracket Command</a>
         <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
       </nav>
     </div>
@@ -27,8 +29,8 @@
   <main>
     <section class="page-hero" data-hero-bg>
       <div class="container">
-        <div class="eyebrow">Admin Veto Room</div>
-        <h1 class="h1"><span class="gradient-text">Trigger map veto.</span><br/>Control every step.</h1>
+        <div class="eyebrow">Map Veto Command</div>
+        <h1 class="h1"><span class="gradient-text">Control the veto.</span><br/>Lock the series.</h1>
         <p class="lead" id="tournamentMeta">Loading tournament...</p>
       </div>
     </section>
@@ -38,8 +40,8 @@
         <div class="card">
           <div class="section-heading">
             <div>
-              <div class="eyebrow">Access</div>
-              <h2>Admin Login</h2>
+              <div class="eyebrow">Command Access</div>
+              <h2>Organizer Access</h2>
             </div>
           </div>
 
@@ -63,12 +65,12 @@
         <div class="card">
           <div class="section-heading">
             <div>
-              <div class="eyebrow">Veto Rules</div>
-              <h2>Action Timer</h2>
+              <div class="eyebrow">Veto Protocol</div>
+              <h2>Decision Clock</h2>
             </div>
           </div>
-          <p>Each map ban, map pick, or side pick should be done in 60 seconds. If a team is unresponsive, admin may randomize the current action.</p>
-          <div class="notice">First call on picks and bans is final. Use Step Back only for admin correction/testing.</div>
+          <p>Every map ban, map pick, and side choice is handled through a timed official sequence. If a team misses its window, the organizer can randomize the action and keep the series moving.</p>
+          <div class="notice">Once a choice is locked, it becomes part of the official match record.</div>
         </div>
       </div>
     </section>
@@ -78,8 +80,8 @@
         <div class="card">
           <div class="section-heading">
             <div>
-              <div class="eyebrow">Match Selection</div>
-              <h2>Activate Veto</h2>
+              <div class="eyebrow">Series Selection</div>
+              <h2>Launch Veto Session</h2>
             </div>
           </div>
 
@@ -91,7 +93,7 @@
 
             <div class="grid grid-two">
               <div class="field">
-                <label for="formatType">Veto Format</label>
+                <label for="formatType">Series Format</label>
                 <select id="formatType">
                   <option value="BO3">Best of Three</option>
                   <option value="BO5" selected>Best of Five</option>
@@ -99,7 +101,7 @@
                 </select>
               </div>
               <div class="field">
-                <label for="timerSeconds">Seconds per Action</label>
+                <label for="timerSeconds">Decision Timer</label>
                 <input id="timerSeconds" type="number" value="60" min="15" />
               </div>
             </div>
@@ -107,18 +109,18 @@
             <div class="field">
               <label for="team1Select">Team 1</label>
               <select id="team1Select" required></select>
-              <div class="help-text">Use this after coin toss. Winner decides which team becomes Team 1.</div>
+              
             </div>
 
             <div class="field">
-              <label for="templateEditor">Step Order / Dynamic Template</label>
+              <label for="templateEditor">Veto Step Order</label>
               <textarea id="templateEditor" class="veto-admin-editor"></textarea>
-              <div class="help-text">Admin can edit this JSON before starting. Use team1, team2, or admin as acting_slot.</div>
+              
             </div>
 
             <div class="actions">
-              <button class="btn btn-ghost" type="button" id="loadTemplateBtn">Load Default Steps</button>
-              <button class="btn btn-primary" type="submit">Start / Replace Veto</button>
+              <button class="btn btn-ghost" type="button" id="loadTemplateBtn">Load Official Sequence</button>
+              <button class="btn btn-primary" type="submit">Launch Veto</button>
             </div>
           </form>
         </div>
@@ -126,13 +128,13 @@
         <div class="card">
           <div class="section-heading">
             <div>
-              <div class="eyebrow">Current Veto</div>
-              <h2>Admin Controls</h2>
+              <div class="eyebrow">Active Veto</div>
+              <h2>Command Controls</h2>
             </div>
           </div>
 
           <div id="currentVetoPanel" class="veto-room">
-            <div class="notice">Select a match with active veto to control it.</div>
+            <div class="notice">Select a series to launch or control its official veto room.</div>
           </div>
 
           <div class="actions">
@@ -702,5 +704,7 @@
 
     init();
   </script>
+  <script src="assets/js/admin-veto-nav.js"></script>
+  <script src="assets/js/premium-copy.js"></script>
 </body>
 </html>

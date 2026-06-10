@@ -60,3 +60,15 @@ function applyAssetBackgrounds() {
 }
 function scrollToId(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior:"smooth", block:"start" }); }
 document.addEventListener("DOMContentLoaded", applyAssetBackgrounds);
+
+
+function applyBrandLogo() {
+  const cfgAssets = window.TOURNAMENT_OS_CONFIG?.ASSETS || {};
+  const logo = cfgAssets.logo || "assets/img/codm-logo.png";
+  document.querySelectorAll(".brand-emblem").forEach(el => {
+    if (el.querySelector("img")) return;
+    el.innerHTML = `<img src="${logo}" alt="CODM Tournament OS logo" onerror="this.remove();this.parentElement.textContent='M';" />`;
+  });
+}
+
+document.addEventListener("DOMContentLoaded", applyBrandLogo);
