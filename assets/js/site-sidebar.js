@@ -3,16 +3,16 @@
   "use strict";
 
   const PUBLIC_LINKS = [
-    ["index.html", "⌂", "Home"],
-    ["index.html#tournaments", "T", "Tournament"],
-    ["rules.html", "R", "Rulebook"]
+    ["index.html", "Home"],
+    ["index.html#tournaments", "Tournament"],
+    ["rules.html", "Rulebook"]
   ];
 
   const CAPTAIN_LINKS = [
-    ["register.html", "G", "Register"],
-    ["bracket.html", "B", "Bracket"],
-    ["matches.html", "M", "My Matches"],
-    ["support.html", "?", "FAQ & Support"]
+    ["register.html", "Register"],
+    ["bracket.html", "Bracket"],
+    ["matches.html", "My Matches"],
+    ["support.html", "FAQ & Support"]
   ];
 
   function currentPage() {
@@ -36,15 +36,17 @@
     return null;
   }
 
+  function closeSidebar() {
+    document.body.classList.remove("site-sidebar-open");
+  }
+
   function createToggleButton() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "sidebar-toggle-btn";
     btn.setAttribute("aria-label", "Open menu");
-    btn.innerHTML = '<span></span><span></span><span></span>';
-    btn.addEventListener("click", () => {
-      document.body.classList.add("site-sidebar-open");
-    });
+    btn.innerHTML = "<span></span><span></span><span></span>";
+    btn.addEventListener("click", () => document.body.classList.add("site-sidebar-open"));
     return btn;
   }
 
@@ -55,23 +57,19 @@
     return backdrop;
   }
 
-  function closeSidebar() {
-    document.body.classList.remove("site-sidebar-open");
-  }
-
-  function makeLink(href, icon, label) {
+  function makeLink(href, label) {
     const a = document.createElement("a");
     a.className = "site-sidebar-link";
+
     const page = currentPage();
     const hrefPage = String(href).split("#")[0];
+
     if (page === hrefPage || (page === "index.html" && href.startsWith("index.html"))) {
       a.classList.add("active");
     }
+
     a.href = href;
-    a.innerHTML = `
-      <span class="simple-icon">${icon}</span>
-      <span class="simple-label">${label}</span>
-    `;
+    a.textContent = label;
     return a;
   }
 
@@ -106,13 +104,13 @@
       aside.className = "site-sidebar simple-drawer";
       aside.innerHTML = `
         <div class="simple-sidebar-top">
-          <div class="simple-sidebar-brand">
-            <div class="simple-brand-mark">M</div>
-            <div>
+          <a class="simple-sidebar-brand" href="index.html">
+            <img class="simple-sidebar-logo" src="assets/img/codm-logo.png" alt="CODM Tournament OS" />
+            <div class="simple-brand-text">
               <strong>CODM Tournament OS</strong>
               <small data-site-subtitle>Tournament Portal</small>
             </div>
-          </div>
+          </a>
           <button class="simple-close-btn" type="button" aria-label="Close menu">×</button>
         </div>
         <nav class="simple-sidebar-nav"></nav>
@@ -128,26 +126,20 @@
     const nav = aside.querySelector(".simple-sidebar-nav");
     nav.innerHTML = "";
 
-    PUBLIC_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
+    PUBLIC_LINKS.forEach(([href, label]) => nav.appendChild(makeLink(href, label)));
 
     if (session) {
       const divider = document.createElement("div");
       divider.className = "simple-side-divider";
       divider.textContent = "Captain";
       nav.appendChild(divider);
-      CAPTAIN_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
+      CAPTAIN_LINKS.forEach(([href, label]) => nav.appendChild(makeLink(href, label)));
     }
 
     const footer = aside.querySelector(".simple-sidebar-footer");
     footer.innerHTML = session
-      ? `<button class="simple-side-action" type="button" data-site-signout>
-           <span class="simple-icon">↦</span>
-           <span class="simple-label">Sign Out</span>
-         </button>`
-      : `<a class="simple-side-action" href="register.html">
-           <span class="simple-icon">↣</span>
-           <span class="simple-label">Captain Login</span>
-         </a>`;
+      ? `<button class="simple-side-action" type="button" data-site-signout>Sign Out</button>`
+      : `<a class="simple-side-action" href="register.html">Captain Login</a>`;
 
     footer.querySelector("[data-site-signout]")?.addEventListener("click", () => {
       if (typeof window.signOut === "function") window.signOut();

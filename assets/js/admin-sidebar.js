@@ -3,11 +3,11 @@
   "use strict";
 
   const ADMIN_LINKS = [
-    ["admin.html", "⌂", "Admin Hub"],
-    ["admin_teams.html", "T", "Registration Admin"],
-    ["admin_bracket.html", "B", "Bracket Admin"],
-    ["admin_veto.html", "V", "Map Veto Admin"],
-    ["admin_tickets.html", "Q", "Ticket Admin"]
+    ["admin.html", "Admin Hub"],
+    ["admin_teams.html", "Registration Admin"],
+    ["admin_bracket.html", "Bracket Admin"],
+    ["admin_veto.html", "Map Veto Admin"],
+    ["admin_tickets.html", "Ticket Admin"]
   ];
 
   function currentPage() {
@@ -18,15 +18,17 @@
     return currentPage().startsWith("admin");
   }
 
+  function closeSidebar() {
+    document.body.classList.remove("admin-sidebar-open");
+  }
+
   function createToggleButton() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "sidebar-toggle-btn";
     btn.setAttribute("aria-label", "Open menu");
-    btn.innerHTML = '<span></span><span></span><span></span>';
-    btn.addEventListener("click", () => {
-      document.body.classList.add("admin-sidebar-open");
-    });
+    btn.innerHTML = "<span></span><span></span><span></span>";
+    btn.addEventListener("click", () => document.body.classList.add("admin-sidebar-open"));
     return btn;
   }
 
@@ -37,19 +39,12 @@
     return backdrop;
   }
 
-  function closeSidebar() {
-    document.body.classList.remove("admin-sidebar-open");
-  }
-
-  function makeLink(href, icon, label) {
+  function makeLink(href, label) {
     const a = document.createElement("a");
     a.className = "admin-sidebar-link";
     if (currentPage() === href) a.classList.add("active");
     a.href = href;
-    a.innerHTML = `
-      <span class="simple-icon">${icon}</span>
-      <span class="simple-label">${label}</span>
-    `;
+    a.textContent = label;
     return a;
   }
 
@@ -81,30 +76,24 @@
       aside.className = "admin-sidebar simple-drawer";
       aside.innerHTML = `
         <div class="simple-sidebar-top">
-          <div class="simple-sidebar-brand">
-            <div class="simple-brand-mark">M</div>
-            <div>
+          <a class="simple-sidebar-brand" href="admin.html">
+            <img class="simple-sidebar-logo" src="assets/img/codm-logo.png" alt="CODM Tournament OS" />
+            <div class="simple-brand-text">
               <strong>CODM Tournament OS</strong>
               <small>Admin Console</small>
             </div>
-          </div>
+          </a>
           <button class="simple-close-btn" type="button" aria-label="Close menu">×</button>
         </div>
         <nav class="simple-sidebar-nav"></nav>
         <div class="simple-sidebar-footer">
-          <a class="simple-side-action" href="index.html">
-            <span class="simple-icon">⌂</span>
-            <span class="simple-label">Public Site</span>
-          </a>
-          <button class="simple-side-action" type="button" data-admin-signout>
-            <span class="simple-icon">↦</span>
-            <span class="simple-label">Sign Out</span>
-          </button>
+          <a class="simple-side-action" href="index.html">View Public Site</a>
+          <button class="simple-side-action" type="button" data-admin-signout>Sign Out</button>
         </div>
       `;
 
       const nav = aside.querySelector(".simple-sidebar-nav");
-      ADMIN_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
+      ADMIN_LINKS.forEach(([href, label]) => nav.appendChild(makeLink(href, label)));
 
       aside.querySelector(".simple-close-btn")?.addEventListener("click", closeSidebar);
       aside.querySelector("[data-admin-signout]")?.addEventListener("click", () => {
