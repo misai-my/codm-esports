@@ -207,10 +207,12 @@
     }
 
     function isVetoInteractive(veto = activeVeto) {
+      const phase = flowPhase(veto);
       return !!veto &&
         String(veto.status || "").toLowerCase() === "active" &&
         !isVetoPaused(veto) &&
-        !isVetoStopped(veto);
+        !isVetoStopped(veto) &&
+        phase === "selection";
     }
 
     function getCurrentPendingStep() {
@@ -250,75 +252,255 @@
     function renderVetoSummary(team1, team2) {
       if (!activeVeto || !isVetoConcluded()) return "";
 
-      const cfg = vetoConfig();
-      const mapSteps = activeSteps
-        .filter(s => ["pick", "auto_remaining"].includes(s.action_type) && s.selected_map_name)
-        .sort((a, b) => Number(a.target_game_no || 999) - Number(b.target_game_no || 999) || Number(a.step_no) - Number(b.step_no));
+      const modes = ["Hardpoint", "Search and Destroy", "Control"];
+      const teamNames = {
+        team1: team1?.team_name || "Team 1",
+        team2: team2?.team_name || "Team 2"
+      };
 
-      const banSteps = activeSteps
-        .filter(s => s.action_type === "ban" && s.selected_map_name)
-        .sort((a, b) => Number(a.step_no) - Number(b.step_no));
+      function sideFor(slot, sideStep) {
+        if (!sideStep || !sideStep.selected_side) return "TBD";
+        if (sideStep.acting_slot === slot) return CODMVeto.formatSide(sideStep.selected_side).replace(" Side", "").toUpperCase();
+        return CODMVeto.formatSide(CODMVeto.oppositeSide(sideStep.selected_side)).replace(" Side", "").toUpperCase();
+      }
 
-      const sideSteps = activeSteps
-        .filter(s => s.action_type === "side" && s.selected_side)
-        .sort((a, b) => Number(a.target_game_no || 999) - Number(b.target_game_no || 999) || Number(a.step_no) - Number(b.step_no));
+      function sideClass(value) {
+        const v = String(value || "").toLowerCase();
+        if (v === "red") return "is-red";
+        if (v === "blue") return "is-blue";
+        return "";
+      }
 
-      const sideByGame = Object.fromEntries(sideSteps.map(s => [Number(s.target_game_no), s]));
+      function mapRowsForMode(mode) {
+        const modeSteps = activeSteps
+          .filter(s => s.phase_mode === mode)
+          .sort((a, b) => Number(a.step_no) - Number(b.step_no));
 
-      const mapCards = mapSteps.length
-        ? mapSteps.map(step => {
-            const sideStep = sideByGame[Number(step.target_game_no)];
-            return `
-              <div class="veto-summary-item">
-                <div class="veto-summary-meta">Map ${escapeHtml(step.target_game_no || "-")} · ${escapeHtml(step.phase_mode || "")}</div>
-                <strong>${escapeHtml(step.selected_map_name)}</strong>
-                <div class="veto-summary-meta">
-                  ${sideStep ? `${escapeHtml(CODMVeto.formatSide(sideStep.selected_side))} · ${escapeHtml(resultSourceLabel(sideStep, team1, team2))}` : "Starting side TBD"}
-                </div>
-                <div class="veto-summary-meta">Map source: ${escapeHtml(resultSourceLabel(step, team1, team2))}</div>
-              </div>
-            `;
-          }).join("")
-        : `<div class="notice">No final map selections recorded yet.</div>`;
+        const bans = modeSteps.filter(s => s.action_type === "ban");
+        const maps = modeSteps
+          .filter(s => ["pick", "auto_remaining"].includes(s.action_type))
+          .sort((a, b) => Number(a.target_game_no || 999) - Number(b.target_game_no || 999) || Number(a.step_no) - Number(b.step_no));
+        const sides = modeSteps.filter(s => s.action_type === "side");
 
-      const bans = banSteps.length
-        ? `<ul class="veto-summary-list">${banSteps.map(step => `
-            <li>
-              <span>Step ${escapeHtml(step.step_no)} · ${escapeHtml(step.phase_mode)} · ${escapeHtml(resultSourceLabel(step, team1, team2))}</span>
-              <strong>${escapeHtml(step.selected_map_name)}</strong>
-            </li>
-          `).join("")}</ul>`
-        : `<div class="notice">No bans recorded.</div>`;
+        const rows = [];
+        const banByTeam = { team1: 0, team2: 0 };
 
-      const statusText = isVetoStopped()
-        ? "Stopped by admin"
-        : String(activeVeto.status || "").toLowerCase() === "completed"
-          ? "Completed"
-          : "Concluded";
+        bans.forEach(step => {
+          if (step.acting_slot === "team1") banByTeam.team1 += 1;
+          if (step.acting_slot === "team2") banByTeam.team2 += 1;
+          rows.push(`
+            <div class="veto-sheet-row">
+              <div class="veto-sheet-label">${step.acting_slot === "team1" ? `BAN ${banByTeam.team1} (TEAM 1)` : ""}</div>
+              <div class="veto-sheet-value">${step.acting_slot === "team1" ? escapeHtml(step.selected_map_name || "Pending") : ""}</div>
+              <div class="veto-sheet-label">${step.acting_slot === "team2" ? `BAN ${banByTeam.team2} (TEAM 2)` : ""}</div>
+              <div class="veto-sheet-value">${step.acting_slot === "team2" ? escapeHtml(step.selected_map_name || "Pending") : ""}</div>
+            </div>
+          `);
+        });
+
+        maps.forEach(step => {
+          const gameNo = Number(step.target_game_no || 0);
+          const sideStep = sides.find(s => Number(s.target_game_no) === gameNo);
+          const t1Side = sideFor("team1", sideStep);
+          const t2Side = sideFor("team2", sideStep);
+          const actor = step.acting_slot === "team1" ? "TEAM 1" : step.acting_slot === "team2" ? "TEAM 2" : "AUTO";
+
+          rows.push(`
+            <div class="veto-sheet-row is-map">
+              <div class="veto-sheet-label">MAP GAME ${gameNo || "-"} (${actor})</div>
+              <div class="veto-sheet-value is-map-name">${escapeHtml(step.selected_map_name || "Pending")}</div>
+            </div>
+            <div class="veto-sheet-row">
+              <div class="veto-sheet-label">MAP ${gameNo || "-"} SIDE (TEAM 1)</div>
+              <div class="veto-sheet-side ${sideClass(t1Side)}">${escapeHtml(t1Side)}</div>
+              <div class="veto-sheet-label">MAP ${gameNo || "-"} SIDE (TEAM 2)</div>
+              <div class="veto-sheet-side ${sideClass(t2Side)}">${escapeHtml(t2Side)}</div>
+            </div>
+          `);
+        });
+
+        return rows.join("") || `<div class="veto-sheet-row"><div class="veto-sheet-value is-map-name">No ${escapeHtml(mode)} selections recorded.</div></div>`;
+      }
 
       return `
-        <div class="card veto-summary">
+        <div class="card veto-summary veto-sheet-card">
           <div class="section-heading">
             <div>
               <div class="eyebrow">Final Veto Summary</div>
-              <h2>Series Battlegrounds</h2>
-              <p>${escapeHtml(teamLabel(team1?.id))} vs ${escapeHtml(teamLabel(team2?.id))} · ${escapeHtml(activeVeto.format_type || "")} · ${escapeHtml(statusText)}</p>
+              <h2>Series Battleground Sheet</h2>
+              <p>${escapeHtml(teamLabel(team1?.id))} vs ${escapeHtml(teamLabel(team2?.id))} · ${escapeHtml(activeVeto.format_type || "")}</p>
             </div>
           </div>
 
-          ${cfg.is_stopped ? `<div class="veto-state-banner is-stopped"><strong>Stopped:</strong> This veto was stopped by the organizer. Wait for the final official ruling before playing.</div>` : ""}
-
-          <div class="veto-summary-grid">
-            ${mapCards}
-          </div>
-
-          <div class="card card-flat">
-            <div class="eyebrow">Ban Timeline</div>
-            <h3>Removed Maps</h3>
-            ${bans}
+          <div class="veto-sheet">
+            ${modes.map(mode => `
+              <section class="veto-sheet-section">
+                <div class="veto-sheet-mode">${escapeHtml(mode).toUpperCase()}</div>
+                <div class="veto-sheet-row is-teams">
+                  <div class="veto-sheet-label">TEAM 1</div>
+                  <div class="veto-sheet-team">${escapeHtml(teamNames.team1)}</div>
+                  <div class="veto-sheet-label">TEAM 2</div>
+                  <div class="veto-sheet-team">${escapeHtml(teamNames.team2)}</div>
+                </div>
+                ${mapRowsForMode(mode)}
+              </section>
+            `).join("")}
           </div>
         </div>
       `;
+    }
+
+
+    function flowPhase(veto = activeVeto) {
+      return vetoConfig(veto).flow_phase || "selection";
+    }
+
+    function isSelectionStarted(veto = activeVeto) {
+      return flowPhase(veto) === "selection";
+    }
+
+    function myTeamId(team1, team2) {
+      if (!userProfile) return null;
+      if (team1?.captain_user_id === userProfile.id) return team1.id;
+      if (team2?.captain_user_id === userProfile.id) return team2.id;
+      return null;
+    }
+
+    function attendanceInfo(teamId) {
+      const cfg = vetoConfig();
+      return cfg.attendance?.[teamId] || {};
+    }
+
+    function attendanceConfirmed(teamId) {
+      return !!attendanceInfo(teamId).confirmed;
+    }
+
+    function flowTeamLabel(teamId) {
+      return escapeHtml(teamLabel(teamId));
+    }
+
+    function renderAttendancePill(team) {
+      const ok = attendanceConfirmed(team?.id);
+      return `<span class="attendance-pill ${ok ? "is-ready" : ""}">${ok ? "Confirmed" : "Waiting"}</span>`;
+    }
+
+    function renderCoinAnimation() {
+      const cfg = vetoConfig();
+      if (!cfg.coin_result) return "";
+      return `
+        <div class="coin-toss-wrap">
+          <div class="coin-toss-coin is-flipping ${cfg.coin_result === "tails" ? "is-tails" : "is-heads"}">
+            <span class="coin-face coin-heads">H</span>
+            <span class="coin-face coin-tails">T</span>
+          </div>
+          <div>
+            <div class="eyebrow">Coin Result</div>
+            <h3>${escapeHtml(String(cfg.coin_result || "TBD").toUpperCase())}</h3>
+            <p class="small">Call: ${escapeHtml(String(cfg.coin_call || "TBD").toUpperCase())} · Winner: ${flowTeamLabel(cfg.coin_winner_team_id)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVetoPreLobbyCaptain(team1, team2) {
+      const phase = flowPhase();
+      if (phase === "selection") return "";
+
+      const cfg = vetoConfig();
+      const mine = myTeamId(team1, team2);
+      const canAttend = !!mine && !attendanceConfirmed(mine);
+      const isCoinPicker = !!mine && cfg.coin_picker_team_id === mine;
+      const isCoinWinner = !!mine && cfg.coin_winner_team_id === mine;
+
+      return `
+        <div class="card veto-prelobby-card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Pre-Veto Lobby</div>
+              <h2>Attendance & Coin Toss</h2>
+              <p>Confirm attendance, complete the coin toss, then wait for admin to begin map selection.</p>
+            </div>
+            <span class="badge badge-${escapeHtml(phase)}">${escapeHtml(String(phase).replaceAll("_", " "))}</span>
+          </div>
+
+          <div class="attendance-grid">
+            <div class="attendance-card">
+              ${teamLogoHtml(team1, "sm")}
+              <strong>${escapeHtml(teamLabel(team1?.id))}</strong>
+              ${renderAttendancePill(team1)}
+            </div>
+            <div class="attendance-card">
+              ${teamLogoHtml(team2, "sm")}
+              <strong>${escapeHtml(teamLabel(team2?.id))}</strong>
+              ${renderAttendancePill(team2)}
+            </div>
+          </div>
+
+          ${phase === "attendance" ? `
+            ${!userProfile ? `<div class="notice">Login as captain to confirm attendance.</div>` : ""}
+            ${canAttend ? `<button class="btn btn-primary" onclick="confirmAttendance()">Confirm Attendance</button>` : ""}
+            ${mine && attendanceConfirmed(mine) ? `<div class="success-note">Your attendance is confirmed. Waiting for the other captain or admin.</div>` : ""}
+          ` : ""}
+
+          ${phase === "coin_pick" ? `
+            ${isCoinPicker ? `
+              <div class="notice"><strong>Your call.</strong> Choose heads or tails. The coin result will be displayed to both teams.</div>
+              <div class="coin-call-buttons">
+                <button class="btn btn-primary" onclick="callCoin('heads')">Heads</button>
+                <button class="btn btn-primary" onclick="callCoin('tails')">Tails</button>
+              </div>
+            ` : `<div class="notice">Waiting for ${flowTeamLabel(cfg.coin_picker_team_id)} to call heads or tails.</div>`}
+          ` : ""}
+
+          ${phase === "slot_choice" ? `
+            ${renderCoinAnimation()}
+            ${isCoinWinner ? `
+              <div class="notice"><strong>You won the coin toss.</strong> Choose your veto slot.</div>
+              <div class="coin-call-buttons">
+                <button class="btn btn-primary" onclick="chooseVetoSlot('team1')">Choose Team 1 — Start Veto</button>
+                <button class="btn" onclick="chooseVetoSlot('team2')">Choose Team 2</button>
+              </div>
+            ` : `<div class="notice">Waiting for ${flowTeamLabel(cfg.coin_winner_team_id)} to choose Team 1 or Team 2.</div>`}
+          ` : ""}
+
+          ${phase === "ready_to_start" ? `
+            ${renderCoinAnimation()}
+            <div class="success-note"><strong>Ready for admin start.</strong> Team 1: ${flowTeamLabel(cfg.final_team1_id)} · Team 2: ${flowTeamLabel(cfg.final_team2_id)}</div>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    async function confirmAttendance() {
+      if (!activeVeto) return;
+      const { error } = await window.sb.rpc("confirm_veto_attendance", {
+        p_veto_id: activeVeto.id
+      });
+      if (error) return showToast(error.message, "error");
+      showToast("Attendance confirmed.", "success");
+      await loadVeto();
+    }
+
+    async function callCoin(call) {
+      if (!activeVeto) return;
+      const { error } = await window.sb.rpc("captain_call_veto_coin", {
+        p_veto_id: activeVeto.id,
+        p_call: call
+      });
+      if (error) return showToast(error.message, "error");
+      showToast("Coin toss complete.", "success");
+      await loadVeto();
+    }
+
+    async function chooseVetoSlot(slot) {
+      if (!activeVeto) return;
+      const { error } = await window.sb.rpc("captain_choose_veto_slot", {
+        p_veto_id: activeVeto.id,
+        p_slot: slot
+      });
+      if (error) return showToast(error.message, "error");
+      showToast("Veto slot selected. Waiting for admin to begin.", "success");
+      await loadVeto();
     }
 
     function teamLabel(id) {
