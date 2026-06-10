@@ -49,10 +49,46 @@ async function fetchSeeds(tournamentId) {
 }
 
 async function upsertSeeds(tournamentId, seededTeams) {
-  const rows = seededTeams.map((team, idx) => ({ tournament_id: tournamentId, team_id: team.id, seed: Number(team.seed || idx + 1) }));
+  const rows = seededTeams.map((team, idx) => ({
+    tournament_id: tournamentId,
+    team_id: team.id,
+    seed: Number(team.seed || idx + 1)
+  }));
+
   if (!rows.length) return;
-  const { error } = await window.sb.from("tournament_seeds").upsert(rows, { onConflict: "tournament_id,team_id" });
-  if (error) throw error;
+
+  // Guard against two teams being assigned the same seed in the UI.
+  const seenSeeds = new Set();
+  for (const row of rows) {
+    if (!Number.isInteger(row.seed) || row.seed < 1) {
+      throw new Error("Seeds must be whole numbers starting from 1.");
+    }
+
+    if (seenSeeds.has(row.seed)) {
+      throw new Error(`Duplicate seed number detected: ${row.seed}. Each team must have a unique seed.`);
+    }
+
+    seenSeeds.add(row.seed);
+  }
+
+  // Important:
+  // tournament_seeds has a unique constraint on (tournament_id, seed).
+  // Updating seed 1 -> 2 while seed 2 still exists causes Postgres to throw:
+  // duplicate key value violates unique constraint "tournament_seeds_tournament_id_seed_key".
+  // The safest client-side fix is to replace the tournament seed set atomically by flow:
+  // delete current seeds for this tournament, then insert the new clean seed order.
+  const { error: deleteError } = await window.sb
+    .from("tournament_seeds")
+    .delete()
+    .eq("tournament_id", tournamentId);
+
+  if (deleteError) throw deleteError;
+
+  const { error: insertError } = await window.sb
+    .from("tournament_seeds")
+    .insert(rows);
+
+  if (insertError) throw insertError;
 }
 
 async function initializeStandings(tournamentId, seededTeams) {
