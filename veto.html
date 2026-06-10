@@ -88,6 +88,7 @@
   <script src="assets/js/config.js"></script>
   <script src="assets/js/main.js"></script>
   <script src="assets/js/veto-engine.js"></script>
+  <script src="assets/js/veto-timer.js"></script>
   <script src="assets/js/veto-realtime.js"></script>
   <script src="assets/js/veto-rpc-lock-fix.js"></script>
   <script>
@@ -210,7 +211,7 @@
 
           <div class="section-tight"></div>
           <p>${statusBadge(activeVeto.status)} <span class="small">Format: ${escapeHtml(activeVeto.format_type)} · ${activeVeto.timer_seconds}s per action</span></p>
-          ${current ? CODMVetoTimer.render(activeVeto, activeSteps, { title: "Decision Timer" }) : ""}
+          ${current && window.CODMVetoTimer ? window.CODMVetoTimer.render(activeVeto, activeSteps, { title: "Decision Timer" }) : ""}
 
           <div class="veto-timeline">
             ${activeSteps.map(s => `
@@ -240,7 +241,7 @@
         </div>
       `;
 
-      if (window.CODMVetoTimer) CODMVetoTimer.start();
+      if (window.CODMVetoTimer) window.CODMVetoTimer.start();
     }
 
     function renderCurrentStep(step, team1, team2) {

@@ -159,6 +159,7 @@
   <script src="assets/js/config.js"></script>
   <script src="assets/js/main.js"></script>
   <script src="assets/js/veto-engine.js"></script>
+  <script src="assets/js/veto-timer.js"></script>
   <script src="assets/js/veto-realtime.js"></script>
   <script src="assets/js/veto-rpc-lock-fix.js"></script>
   <script>
@@ -431,7 +432,7 @@
           <div class="card card-flat">${teamLogoHtml(team2, "sm")} <strong>${escapeHtml(teamLabel(team2.id))}</strong><div class="small">Team 2</div></div>
         </div>
         <p>${statusBadge(activeVeto.status)} <span class="small">Format: ${escapeHtml(activeVeto.format_type)} · Timer: ${activeVeto.timer_seconds}s</span></p>
-        ${current ? CODMVetoTimer.render(activeVeto, activeSteps, { title: "Admin Decision Timer" }) : ""}
+        ${current && window.CODMVetoTimer ? window.CODMVetoTimer.render(activeVeto, activeSteps, { title: "Admin Decision Timer" }) : ""}
         ${current ? `<div class="notice"><strong>Current:</strong> ${escapeHtml(CODMVeto.stepDescription(current, { team1, team2 }))}</div>` : `<div class="success-note">Veto completed.</div>`}
         <div class="actions">
           ${current ? `<button class="btn btn-primary" onclick="randomizeCurrentStep()">Randomize Current Action</button>` : `<button class="btn btn-primary" onclick="applyVeto()">Apply Veto to Match Games</button>`}
@@ -441,7 +442,7 @@
 
       qs("#vetoRoomSection").classList.remove("hidden");
       renderVetoRoom();
-      if (window.CODMVetoTimer) CODMVetoTimer.start();
+      if (window.CODMVetoTimer) window.CODMVetoTimer.start();
     }
 
     function renderVetoRoom() {
@@ -464,7 +465,7 @@
               </div>
             `).join("")}
           </div>
-          ${current ? CODMVetoTimer.render(activeVeto, activeSteps, { title: "Live Step Timer" }) : ""}
+          ${current && window.CODMVetoTimer ? window.CODMVetoTimer.render(activeVeto, activeSteps, { title: "Live Step Timer" }) : ""}
           ${current ? renderCurrentStepControls(current) : `<div class="success-note">Veto completed. Apply selections to match games.</div>`}
         </div>
 
