@@ -146,3 +146,118 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Visible Map Veto Countdown Timer
+   ============================================================ */
+.veto-countdown-panel {
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid rgba(255, 206, 46, 0.38);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 206, 46, 0.18), transparent 18rem),
+    linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.025)),
+    rgba(8, 14, 28, 0.88);
+  box-shadow: 0 22px 64px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.veto-countdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.veto-countdown-step {
+  display: block;
+  margin-top: 6px;
+  color: #f7fbff;
+  font-size: clamp(16px, 2vw, 22px);
+  letter-spacing: -0.02em;
+}
+
+.veto-countdown-clock {
+  min-width: 112px;
+  text-align: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.28);
+  color: #ffce2e;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.veto-countdown-bar {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.veto-countdown-bar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #32e68f, #ffce2e);
+  transition: width 0.35s ease;
+}
+
+.veto-countdown-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: rgba(230,239,255,0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.veto-countdown-panel.is-warning {
+  border-color: rgba(255, 209, 102, 0.70);
+}
+
+.veto-countdown-panel.is-warning .veto-countdown-clock {
+  color: #ffd166;
+}
+
+.veto-countdown-panel.is-warning .veto-countdown-bar span {
+  background: linear-gradient(90deg, #ffd166, #ff7a1a);
+}
+
+.veto-countdown-panel.is-overtime {
+  border-color: rgba(255, 70, 103, 0.72);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255,70,103,0.22), transparent 18rem),
+    linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.025)),
+    rgba(18, 8, 18, 0.90);
+}
+
+.veto-countdown-panel.is-overtime .veto-countdown-clock {
+  color: #ff4667;
+}
+
+.veto-countdown-panel.is-overtime .veto-countdown-bar span {
+  width: 0% !important;
+}
+
+@media (max-width: 640px) {
+  .veto-countdown-head,
+  .veto-countdown-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .veto-countdown-clock {
+    width: 100%;
+  }
+}
