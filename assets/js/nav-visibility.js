@@ -1,4 +1,6 @@
-// CODM Tournament OS - smart public/user/admin navigation
+// CODM Tournament OS - smart navigation
+// Public/captain pages stay as user-facing views even when an admin is logged in.
+// Admin links are only shown on admin pages.
 (function () {
   "use strict";
 
@@ -16,11 +18,20 @@
   ];
 
   const ADMIN_LINKS = [
-    ["admin.html", "Team Admin"],
+    ["admin.html", "Admin Hub"],
+    ["admin_teams.html", "Registration Admin"],
     ["admin_bracket.html", "Bracket Admin"],
     ["admin_veto.html", "Map Veto Admin"],
     ["admin_tickets.html", "Ticket Admin"]
   ];
+
+  function currentPage() {
+    return String(window.location.pathname || "").split("/").pop() || "index.html";
+  }
+
+  function isAdminPage() {
+    return currentPage().startsWith("admin");
+  }
 
   function makeLink(href, text) {
     const a = document.createElement("a");
@@ -69,20 +80,28 @@
     if (!nav) return;
 
     const session = await getSessionSafe();
+    const adminPage = isAdminPage();
     let profile = null;
 
     if (session) profile = await getProfileSafe();
 
     nav.innerHTML = "";
-    PUBLIC_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
+
+    if (adminPage) {
+      if (session && profile?.role === "admin") {
+        ADMIN_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
+      } else {
+        nav.appendChild(makeLink("admin.html", "Admin Login"));
+      }
+    } else {
+      PUBLIC_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
+
+      if (session) {
+        USER_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
+      }
+    }
 
     if (session) {
-      USER_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
-
-      if (profile?.role === "admin") {
-        ADMIN_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
-      }
-
       const signOut = makeSignOutButton();
       signOut.classList.remove("hidden");
       nav.appendChild(signOut);

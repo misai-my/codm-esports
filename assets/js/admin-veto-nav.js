@@ -4,10 +4,10 @@
    Purpose:
    - Adds a "Map Veto Admin" link only on admin pages.
    - Keeps public pages clean.
-   - Drop into admin.html and admin_bracket.html only.
+   - Drop into admin_teams.html and admin_bracket.html only.
 
    Setup:
-   Add before </body> on admin.html and admin_bracket.html:
+   Add before </body> on admin_teams.html and admin_bracket.html:
 
    <script src="assets/js/admin-veto-nav.js"></script>
    ============================================================ */
@@ -16,7 +16,7 @@
   "use strict";
 
   const allowedAdminPages = [
-    "admin.html",
+    "admin_teams.html",
     "admin_bracket.html",
     "admin_veto.html"
   ];
@@ -46,7 +46,7 @@
 
 (function () {
   "use strict";
-  const allowedAdminPages = ["admin.html","admin_bracket.html","admin_veto.html","admin_tickets.html"];
+  const allowedAdminPages = ["admin_teams.html","admin_bracket.html","admin_veto.html","admin_tickets.html"];
   const currentPage = window.location.pathname.split("/").pop() || "index.html";
   if (!allowedAdminPages.includes(currentPage)) return;
   const nav = document.querySelector(".nav-links");
