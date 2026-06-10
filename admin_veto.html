@@ -142,6 +142,13 @@
             <button class="btn btn-danger" id="resetVetoBtn" type="button">Reset Veto</button>
             <button class="btn btn-ghost" id="refreshVetoBtn" type="button">Refresh</button>
           </div>
+
+          <div class="veto-command-grid">
+            <button class="btn btn-warning" id="pauseVetoBtn" type="button" disabled>Pause Veto</button>
+            <button class="btn btn-success hidden" id="resumeVetoBtn" type="button" disabled>Resume Veto</button>
+            <button class="btn btn-danger" id="stopVetoBtn" type="button" disabled>Stop Veto</button>
+            <button class="btn btn-danger" id="cancelVetoBtn" type="button" disabled>Cancel & Delete Veto</button>
+          </div>
         </div>
       </div>
     </section>
@@ -405,6 +412,7 @@
         activeSteps = [];
         qs("#currentVetoPanel").innerHTML = `<div class="notice">No active veto for this match.</div>`;
         qs("#vetoRoomSection").classList.add("hidden");
+        updateAdminControlButtons();
         return;
       }
 
@@ -420,10 +428,260 @@
       renderAdminVeto();
     }
 
+
+    function vetoConfig(veto = activeVeto) {
+      const cfg = veto?.config;
+      return cfg && typeof cfg === "object" && !Array.isArray(cfg) ? cfg : {};
+    }
+
+    function isVetoPaused(veto = activeVeto) {
+      const cfg = vetoConfig(veto);
+      return String(veto?.status || "").toLowerCase() === "active" && !!cfg.is_paused && !cfg.is_stopped;
+    }
+
+    function isVetoStopped(veto = activeVeto) {
+      return !!vetoConfig(veto).is_stopped;
+    }
+
+    function isVetoInteractive(veto = activeVeto) {
+      return !!veto &&
+        String(veto.status || "").toLowerCase() === "active" &&
+        !isVetoPaused(veto) &&
+        !isVetoStopped(veto);
+    }
+
+    function getCurrentPendingStep() {
+      if (!isVetoInteractive()) return null;
+      return activeSteps.find(s => Number(s.step_no) === Number(activeVeto.current_step_no) && s.status === "pending") || null;
+    }
+
+    function isVetoConcluded() {
+      if (!activeVeto) return false;
+      if (isVetoStopped()) return true;
+      if (String(activeVeto.status || "").toLowerCase() === "completed") return true;
+      return activeSteps.length > 0 && !activeSteps.some(s => s.status === "pending");
+    }
+
+    function actingTeamName(step, team1, team2) {
+      if (step.acting_slot === "team1") return team1?.team_name || "Team 1";
+      if (step.acting_slot === "team2") return team2?.team_name || "Team 2";
+      return "Admin";
+    }
+
+    function resultSourceLabel(step, team1, team2) {
+      const actor = actingTeamName(step, team1, team2);
+      return `${actor}${step.is_random ? " · randomized" : ""}`;
+    }
+
+    function renderVetoStateBanner() {
+      if (!activeVeto) return "";
+      if (isVetoPaused()) {
+        return `<div class="veto-state-banner is-paused"><strong>Veto Paused.</strong> Captain actions and the visible countdown are temporarily locked. Resume when both teams are ready.</div>`;
+      }
+      if (isVetoStopped()) {
+        return `<div class="veto-state-banner is-stopped"><strong>Veto Stopped.</strong> The current veto record is retained for review. Start or replace the veto if the series needs to be run again.</div>`;
+      }
+      return "";
+    }
+
+    function renderVetoSummary(team1, team2) {
+      if (!activeVeto || !isVetoConcluded()) return "";
+
+      const cfg = vetoConfig();
+      const mapSteps = activeSteps
+        .filter(s => ["pick", "auto_remaining"].includes(s.action_type) && s.selected_map_name)
+        .sort((a, b) => Number(a.target_game_no || 999) - Number(b.target_game_no || 999) || Number(a.step_no) - Number(b.step_no));
+
+      const banSteps = activeSteps
+        .filter(s => s.action_type === "ban" && s.selected_map_name)
+        .sort((a, b) => Number(a.step_no) - Number(b.step_no));
+
+      const sideSteps = activeSteps
+        .filter(s => s.action_type === "side" && s.selected_side)
+        .sort((a, b) => Number(a.target_game_no || 999) - Number(b.target_game_no || 999) || Number(a.step_no) - Number(b.step_no));
+
+      const sideByGame = Object.fromEntries(sideSteps.map(s => [Number(s.target_game_no), s]));
+
+      const mapCards = mapSteps.length
+        ? mapSteps.map(step => {
+            const sideStep = sideByGame[Number(step.target_game_no)];
+            return `
+              <div class="veto-summary-item">
+                <div class="veto-summary-meta">Map ${escapeHtml(step.target_game_no || "-")} · ${escapeHtml(step.phase_mode || "")}</div>
+                <strong>${escapeHtml(step.selected_map_name)}</strong>
+                <div class="veto-summary-meta">
+                  ${sideStep ? `${escapeHtml(CODMVeto.formatSide(sideStep.selected_side))} · ${escapeHtml(resultSourceLabel(sideStep, team1, team2))}` : "Starting side TBD"}
+                </div>
+                <div class="veto-summary-meta">Map source: ${escapeHtml(resultSourceLabel(step, team1, team2))}</div>
+              </div>
+            `;
+          }).join("")
+        : `<div class="notice">No final map selections recorded yet.</div>`;
+
+      const bans = banSteps.length
+        ? `<ul class="veto-summary-list">${banSteps.map(step => `
+            <li>
+              <span>Step ${escapeHtml(step.step_no)} · ${escapeHtml(step.phase_mode)} · ${escapeHtml(resultSourceLabel(step, team1, team2))}</span>
+              <strong>${escapeHtml(step.selected_map_name)}</strong>
+            </li>
+          `).join("")}</ul>`
+        : `<div class="notice">No bans recorded.</div>`;
+
+      const statusText = isVetoStopped()
+        ? "Stopped by admin"
+        : String(activeVeto.status || "").toLowerCase() === "completed"
+          ? "Completed"
+          : "Concluded";
+
+      return `
+        <div class="card veto-summary">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Final Veto Summary</div>
+              <h2>Series Battlegrounds</h2>
+              <p>${escapeHtml(teamLabel(team1?.id))} vs ${escapeHtml(teamLabel(team2?.id))} · ${escapeHtml(activeVeto.format_type || "")} · ${escapeHtml(statusText)}</p>
+            </div>
+          </div>
+
+          ${cfg.is_stopped ? `<div class="veto-state-banner is-stopped"><strong>Stopped:</strong> This veto was stopped by admin and kept as a record. It was not automatically applied to match games.</div>` : ""}
+
+          <div class="veto-summary-grid">
+            ${mapCards}
+          </div>
+
+          <div class="card card-flat">
+            <div class="eyebrow">Ban Timeline</div>
+            <h3>Removed Maps</h3>
+            ${bans}
+          </div>
+        </div>
+      `;
+    }
+
+    function updateAdminControlButtons() {
+      const hasVeto = !!activeVeto;
+      const paused = isVetoPaused();
+      const stopped = isVetoStopped();
+      const completed = String(activeVeto?.status || "").toLowerCase() === "completed";
+
+      const pauseBtn = qs("#pauseVetoBtn");
+      const resumeBtn = qs("#resumeVetoBtn");
+      const stopBtn = qs("#stopVetoBtn");
+      const cancelBtn = qs("#cancelVetoBtn");
+
+      if (pauseBtn) {
+        pauseBtn.disabled = !hasVeto || paused || stopped || completed;
+        pauseBtn.classList.toggle("hidden", paused);
+      }
+      if (resumeBtn) {
+        resumeBtn.disabled = !hasVeto || !paused || stopped || completed;
+        resumeBtn.classList.toggle("hidden", !paused);
+      }
+      if (stopBtn) stopBtn.disabled = !hasVeto || stopped || completed;
+      if (cancelBtn) cancelBtn.disabled = !hasVeto;
+    }
+
+    async function updateVetoConfig(patch, extra = {}) {
+      if (!activeVeto) return;
+
+      const nextConfig = {
+        ...vetoConfig(),
+        ...patch
+      };
+
+      const payload = {
+        config: nextConfig,
+        ...extra
+      };
+
+      const { error } = await window.sb
+        .from("match_vetos")
+        .update(payload)
+        .eq("id", activeVeto.id);
+
+      if (error) throw error;
+      await loadActiveVetoForMatch(activeVeto.match_id);
+    }
+
+    async function pauseVeto() {
+      if (!activeVeto) return showToast("No veto selected.", "error");
+      if (!isVetoInteractive()) return showToast("Only an active live veto can be paused.", "error");
+      if (!confirm("Pause the current map veto? Captains will not be able to lock actions until resumed.")) return;
+
+      await updateVetoConfig({
+        is_paused: true,
+        paused_at: new Date().toISOString(),
+        paused_by: profile.id
+      });
+
+      showToast("Map veto paused.", "success");
+    }
+
+    async function resumeVeto() {
+      if (!activeVeto) return showToast("No veto selected.", "error");
+      if (!isVetoPaused()) return showToast("This veto is not paused.", "error");
+      if (!confirm("Resume the current map veto and restart the visible timer for this step?")) return;
+
+      await updateVetoConfig({
+        is_paused: false,
+        resumed_at: new Date().toISOString(),
+        resumed_by: profile.id
+      }, {
+        status: "active",
+        reset_at: new Date().toISOString()
+      });
+
+      showToast("Map veto resumed.", "success");
+    }
+
+    async function stopVeto() {
+      if (!activeVeto) return showToast("No veto selected.", "error");
+      if (isVetoStopped()) return showToast("This veto is already stopped.", "error");
+      if (!confirm("Stop this veto and keep the current veto record? This will prevent further captain actions but will NOT delete the record.")) return;
+
+      await updateVetoConfig({
+        is_paused: false,
+        is_stopped: true,
+        stopped_at: new Date().toISOString(),
+        stopped_by: profile.id
+      }, {
+        status: "completed",
+        completed_at: new Date().toISOString()
+      });
+
+      showToast("Map veto stopped and retained as a record.", "success");
+    }
+
+    async function cancelVeto() {
+      if (!activeVeto) return showToast("No veto selected.", "error");
+      const first = confirm("Cancel this map veto and delete its veto record?");
+      if (!first) return;
+      const second = confirm("Final confirmation: this removes the veto session, steps, and action history. Continue?");
+      if (!second) return;
+
+      const matchId = activeVeto.match_id;
+
+      const { error } = await window.sb
+        .from("match_vetos")
+        .delete()
+        .eq("id", activeVeto.id);
+
+      if (error) throw error;
+
+      activeVeto = null;
+      activeSteps = [];
+      qs("#currentVetoPanel").innerHTML = `<div class="notice">Veto cancelled. No active veto for this match.</div>`;
+      qs("#vetoRoomSection").classList.add("hidden");
+      updateAdminControlButtons();
+      showToast("Map veto cancelled and deleted.", "success");
+
+      await loadActiveVetoForMatch(matchId);
+    }
+
     function renderAdminVeto() {
       const team1 = teamsById[activeVeto.team1_id];
       const team2 = teamsById[activeVeto.team2_id];
-      const current = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+      const current = getCurrentPendingStep();
 
       qs("#currentVetoPanel").innerHTML = `
         <div class="veto-matchup">
@@ -432,15 +690,18 @@
           <div class="card card-flat">${teamLogoHtml(team2, "sm")} <strong>${escapeHtml(teamLabel(team2.id))}</strong><div class="small">Team 2</div></div>
         </div>
         <p>${statusBadge(activeVeto.status)} <span class="small">Format: ${escapeHtml(activeVeto.format_type)} · Timer: ${activeVeto.timer_seconds}s</span></p>
+        ${renderVetoStateBanner()}
         ${current && window.CODMVetoTimer ? window.CODMVetoTimer.render(activeVeto, activeSteps, { title: "Admin Decision Timer" }) : ""}
-        ${current ? `<div class="notice"><strong>Current:</strong> ${escapeHtml(CODMVeto.stepDescription(current, { team1, team2 }))}</div>` : `<div class="success-note">Veto completed.</div>`}
+        ${current ? `<div class="notice"><strong>Current:</strong> ${escapeHtml(CODMVeto.stepDescription(current, { team1, team2 }))}</div>` : isVetoStopped() ? `<div class="veto-state-banner is-stopped"><strong>Stopped:</strong> Further captain actions are locked.</div>` : `<div class="success-note">Veto completed.</div>`}
         <div class="actions">
-          ${current ? `<button class="btn btn-primary" onclick="randomizeCurrentStep()">Randomize Current Action</button>` : `<button class="btn btn-primary" onclick="applyVeto()">Apply Veto to Match Games</button>`}
+          ${current ? `<button class="btn btn-primary" onclick="randomizeCurrentStep()">Randomize Current Action</button>` : (!isVetoStopped() && isVetoConcluded() ? `<button class="btn btn-primary" onclick="applyVeto()">Apply Veto to Match Games</button>` : "")}
           <a class="btn btn-ghost" href="veto.html?match_id=${activeVeto.match_id}" target="_blank" rel="noopener">Open Captain/Public Room</a>
         </div>
+        ${renderVetoSummary(team1, team2)}
       `;
 
       qs("#vetoRoomSection").classList.remove("hidden");
+      updateAdminControlButtons();
       renderVetoRoom();
       if (window.CODMVetoTimer) window.CODMVetoTimer.start();
     }
@@ -448,7 +709,7 @@
     function renderVetoRoom() {
       const team1 = teamsById[activeVeto.team1_id];
       const team2 = teamsById[activeVeto.team2_id];
-      const current = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+      const current = getCurrentPendingStep();
 
       qs("#vetoRoom").innerHTML = `
         <div class="card">
@@ -465,9 +726,12 @@
               </div>
             `).join("")}
           </div>
+          ${renderVetoStateBanner()}
           ${current && window.CODMVetoTimer ? window.CODMVetoTimer.render(activeVeto, activeSteps, { title: "Live Step Timer" }) : ""}
-          ${current ? renderCurrentStepControls(current) : `<div class="success-note">Veto completed. Apply selections to match games.</div>`}
+          ${current ? renderCurrentStepControls(current) : (isVetoStopped() ? `<div class="veto-state-banner is-stopped"><strong>Veto stopped.</strong> No further actions can be locked.</div>` : `<div class="success-note">Veto completed. Apply selections to match games.</div>`)}
         </div>
+
+        ${renderVetoSummary(team1, team2)}
 
         <div class="section-tight"></div>
 
@@ -538,6 +802,7 @@
 
     async function completeStep(stepId, mapName, side, isRandom) {
       try {
+        if (!isVetoInteractive()) return showToast("Veto is paused, stopped, or no longer active.", "error");
         const step = activeSteps.find(s => s.id === stepId);
         if (!step) return;
 
@@ -571,7 +836,7 @@
     }
 
     async function randomizeCurrentStep() {
-      const step = activeSteps.find(s => s.step_no === activeVeto.current_step_no && s.status === "pending");
+      const step = getCurrentPendingStep();
       if (!step) return showToast("No current step to randomize.", "error");
 
       if (!confirm("Randomize current action?")) return;
@@ -658,7 +923,14 @@
           status: "active",
           current_step_no: 1,
           completed_at: null,
-          reset_at: new Date().toISOString()
+          reset_at: new Date().toISOString(),
+          config: {
+            ...vetoConfig(),
+            is_paused: false,
+            is_stopped: false,
+            reset_by: profile.id,
+            reset_at: new Date().toISOString()
+          }
         })
         .eq("id", activeVeto.id);
 
@@ -697,6 +969,10 @@
         qs("#stepBackBtn").addEventListener("click", stepBack);
         qs("#resetVetoBtn").addEventListener("click", resetVeto);
         qs("#refreshVetoBtn").addEventListener("click", () => loadActiveVetoForMatch());
+        qs("#pauseVetoBtn").addEventListener("click", pauseVeto);
+        qs("#resumeVetoBtn").addEventListener("click", resumeVeto);
+        qs("#stopVetoBtn").addEventListener("click", stopVeto);
+        qs("#cancelVetoBtn").addEventListener("click", cancelVeto);
 
         await refreshAuth();
         window.sb.auth.onAuthStateChange(() => refreshAuth());
