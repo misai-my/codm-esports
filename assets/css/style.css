@@ -259,3 +259,14 @@ select option, select optgroup { background-color:#0b121f; color:#f7fbff; }
     flex-wrap: wrap;
   }
 }
+
+
+/* ============================================================
+   Hide approved team rosters for logged-out users
+   ============================================================ */
+.compact-notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+}

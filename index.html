@@ -166,9 +166,16 @@ async function loadSelectedOverview() {
   setText("#bracketType", bracketTypeLabel(selectedTournament.bracket_type).replace(" Elimination", ""));
   setText("#registrationStatus", tournamentStatusText(selectedTournament));
 
+  const session = await getSession();
+  const canShowPlayers = !!session;
+
+  const selectFields = canShowPlayers
+    ? `id,team_name,team_tag,logo_url,captain_name,team_players(ign,uid,role,is_substitute,player_order)`
+    : `id,team_name,team_tag,logo_url,captain_name`;
+
   const { data, error } = await window.sb
     .from("teams")
-    .select(`id,team_name,team_tag,logo_url,captain_name,team_players(ign,uid,role,is_substitute,player_order)`)
+    .select(selectFields)
     .eq("tournament_id", selectedTournament.id)
     .eq("status", "approved")
     .order("team_name", { ascending: true });
@@ -184,10 +191,12 @@ async function loadSelectedOverview() {
   }
 
   wrap.innerHTML = data.map(team => {
-    const players = [...(team.team_players || [])]
-      .sort((a, b) => Number(a.player_order) - Number(b.player_order))
-      .map(p => `<li><strong>${escapeHtml(p.ign)}</strong> <span class="small">UID: ${escapeHtml(p.uid)}${p.is_substitute ? " · Sub" : ""}${p.role ? ` · ${escapeHtml(p.role)}` : ""}</span></li>`)
-      .join("");
+    const players = canShowPlayers
+      ? [...(team.team_players || [])]
+          .sort((a, b) => Number(a.player_order) - Number(b.player_order))
+          .map(p => `<li><strong>${escapeHtml(p.ign)}</strong> <span class="small">UID: ${escapeHtml(p.uid)}${p.is_substitute ? " · Sub" : ""}${p.role ? ` · ${escapeHtml(p.role)}` : ""}</span></li>`)
+          .join("")
+      : "";
 
     return `
       <article class="card card-flat">
@@ -199,7 +208,7 @@ async function loadSelectedOverview() {
             <div class="small">Captain: ${escapeHtml(team.captain_name)}</div>
           </div>
         </div>
-        <ol class="players-list">${players}</ol>
+        ${canShowPlayers ? `<ol class="players-list">${players}</ol>` : `<div class="notice compact-notice">Login as a captain to view approved team rosters.</div>`}
       </article>
     `;
   }).join("");
