@@ -8,7 +8,8 @@
     </nav></div></header>
 <main><section class="page-hero" data-hero-bg><div class="container"><div class="eyebrow">Championship Bracket</div><h1 class="h1"><span class="gradient-text">The road is set.</span><br/>Every match matters.</h1><p class="lead" id="tournamentMeta">Loading tournament...</p></div></section><section class="section"><div class="container"><div class="section-heading"><div><div class="eyebrow" id="formatLabel">Official Bracket</div><h2>Competition View</h2></div><button class="btn" id="refreshBtn">Refresh View</button></div><div id="standingsWrap" class="section-tight"></div><div id="bracketWrap" class="grid"></div></div></section></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/main.js"></script>
-<script src="assets/js/nav-visibility.js"></script><script>
+<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/site-sidebar.js"></script><script>
 let tournament=null,teamMap={};function teamName(id){const t=teamMap[id];return t?`${t.team_name} (${t.team_tag||''})`:'TBD'}function teamLine(id,score,winner){const t=teamMap[id];if(!t)return `<div class="match-team empty"><span>TBD</span><strong>-</strong></div>`;return `<div class="match-team ${winner?'winner':''}"><div class="team-card">${teamLogoHtml(t,'sm')}<div><strong>${escapeHtml(t.team_name)}</strong><div class="small">${escapeHtml(t.team_tag||'')}</div></div></div><strong>${score??0}</strong></div>`}async function loadTeams(ids){teamMap={};if(!ids.length)return;const {data,error}=await window.sb.from('teams').select('id,team_name,team_tag,logo_url').in('id',ids);if(error)throw error;teamMap=Object.fromEntries((data||[]).map(t=>[t.id,t]))}
 function scheduleDateTimeValue(match) {
   if (!match?.match_start_at) return "";

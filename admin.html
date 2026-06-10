@@ -27,7 +27,7 @@
   <section class="page-hero" data-hero-bg>
     <div class="container">
       <div class="eyebrow">Admin Control Center</div>
-      <h1 class="h1"><span class="gradient-text">Choose an admin tool.</span><br/>Manage the tournament.</h1>
+      <h1 class="h1"><span class="gradient-text">Admin tools are now in the sidebar.</span><br/>Manage the tournament from one console.</h1>
       <p class="lead" id="tournamentMeta">Loading tournament...</p>
     </div>
   </section>
@@ -55,10 +55,10 @@
       </div>
 
       <div class="card">
-        <div class="eyebrow">Admin Notes</div>
-        <h2>Clean Admin View</h2>
-        <p>This page is now only an admin hub. Public and captain pages keep their normal user navigation even if an admin account is logged in.</p>
-        <p class="small">Use the admin buttons below to open a specific control panel.</p>
+        <div class="eyebrow">Navigation Update</div>
+        <h2>Sidebar Admin Console</h2>
+        <p>The large admin buttons were replaced with a fixed sidebar so the admin pages are cleaner and easier to navigate.</p>
+        <p class="small">Public and captain pages are unchanged. The sidebar only appears on admin pages.</p>
       </div>
     </div>
   </section>
@@ -68,31 +68,16 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Admin Tools</div>
-          <h2>Control Panels</h2>
-          <p>Select the area you want to manage.</p>
+          <h2>Use the sidebar to continue</h2>
+          <p>Select Registration Admin, Bracket Admin, Map Veto Admin, or Ticket Admin from the left side.</p>
         </div>
       </div>
 
-      <div class="admin-button-grid">
-        <a class="admin-tool-button" href="admin_teams.html">
-          <span>Registration Admin</span>
-          <small>Review teams, approve/reject/waitlist, open or close registration, view registration change logs.</small>
-        </a>
-
-        <a class="admin-tool-button" href="admin_bracket.html">
-          <span>Bracket Admin</span>
-          <small>Seed teams, generate rounds, schedule matches, score results, and advance the bracket.</small>
-        </a>
-
-        <a class="admin-tool-button" href="admin_veto.html">
-          <span>Map Veto Admin</span>
-          <small>Launch veto rooms, monitor attendance, coin toss, pause/resume/stop veto, and apply veto results.</small>
-        </a>
-
-        <a class="admin-tool-button" href="admin_tickets.html">
-          <span>Ticket Admin</span>
-          <small>View support tickets, reply to captains, update status, and resolve issues.</small>
-        </a>
+      <div class="grid grid-four admin-summary-grid">
+        <div class="card card-flat kpi"><div class="kpi-value">01</div><div class="kpi-label">Registration Admin</div></div>
+        <div class="card card-flat kpi"><div class="kpi-value">02</div><div class="kpi-label">Bracket Admin</div></div>
+        <div class="card card-flat kpi"><div class="kpi-value">03</div><div class="kpi-label">Map Veto Admin</div></div>
+        <div class="card card-flat kpi"><div class="kpi-value">04</div><div class="kpi-label">Ticket Admin</div></div>
       </div>
     </div>
   </section>
@@ -104,6 +89,7 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/admin-sidebar.js"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;

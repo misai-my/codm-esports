@@ -1,66 +1,6 @@
-/* ============================================================
-   CODM Tournament OS - admin-veto-nav.js
-
-   Purpose:
-   - Adds a "Map Veto Admin" link only on admin pages.
-   - Keeps public pages clean.
-   - Drop into admin_teams.html and admin_bracket.html only.
-
-   Setup:
-   Add before </body> on admin_teams.html and admin_bracket.html:
-
-   <script src="assets/js/admin-veto-nav.js"></script>
-   ============================================================ */
-
+// CODM Tournament OS
+// Admin navigation is now handled by assets/js/admin-sidebar.js.
+// This file is kept for backwards compatibility with pages that still load it.
 (function () {
   "use strict";
-
-  const allowedAdminPages = [
-    "admin_teams.html",
-    "admin_bracket.html",
-    "admin_veto.html"
-  ];
-
-  const currentPage = window.location.pathname.split("/").pop() || "index.html";
-
-  if (!allowedAdminPages.includes(currentPage)) return;
-
-  const nav = document.querySelector(".nav-links");
-  if (!nav) return;
-
-  if (nav.querySelector('[href="admin_veto.html"]')) return;
-
-  const link = document.createElement("a");
-  link.className = "nav-link";
-  link.href = "admin_veto.html";
-  link.textContent = "Map Veto Admin";
-
-  // Place before sign-out button if available.
-  const signOut = nav.querySelector("#signOutBtn");
-  if (signOut) {
-    nav.insertBefore(link, signOut);
-  } else {
-    nav.appendChild(link);
-  }
-})();
-
-(function () {
-  "use strict";
-  const allowedAdminPages = ["admin_teams.html","admin_bracket.html","admin_veto.html","admin_tickets.html"];
-  const currentPage = window.location.pathname.split("/").pop() || "index.html";
-  if (!allowedAdminPages.includes(currentPage)) return;
-  const nav = document.querySelector(".nav-links");
-  if (!nav) return;
-  function addLink(href, text) {
-    if (nav.querySelector(`[href="${href}"]`)) return;
-    const link = document.createElement("a");
-    link.className = "nav-link";
-    link.href = href;
-    link.textContent = text;
-    const signOut = nav.querySelector("#signOutBtn");
-    if (signOut) nav.insertBefore(link, signOut);
-    else nav.appendChild(link);
-  }
-  addLink("admin_tickets.html", "Support Admin");
-  addLink("rules.html", "Rulebook");
 })();
