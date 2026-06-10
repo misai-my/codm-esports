@@ -28,3 +28,47 @@ input,select,textarea{border-color:rgba(255,255,255,.13)!important;background:li
 .btn-ghost:hover{border-color:rgba(248,209,92,.46)!important;background:rgba(248,209,92,.10)!important}
 
 .auth-recovery-link{font-size:13px;color:rgba(255,255,255,.72);text-decoration:underline;text-underline-offset:4px}
+
+
+/* ============================================================
+   Dropdown visibility fix
+   Prevents white text on white dropdown/menu backgrounds.
+   ============================================================ */
+select,
+.field select,
+.form select {
+  color: #f7fbff !important;
+  background-color: rgba(8, 14, 28, 0.96) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+select:focus,
+.field select:focus,
+.form select:focus {
+  color: #ffffff !important;
+  background-color: rgba(8, 14, 28, 1) !important;
+  border-color: rgba(248, 209, 92, 0.55) !important;
+  outline: none !important;
+}
+
+select option,
+select optgroup {
+  color: #f7fbff !important;
+  background-color: #0b121f !important;
+}
+
+select option:checked {
+  color: #10131a !important;
+  background-color: #ffce2e !important;
+}
+
+select option:hover {
+  color: #10131a !important;
+  background-color: #ffce2e !important;
+}
+
+/* Keeps disabled placeholder options readable too. */
+select option:disabled {
+  color: rgba(247, 251, 255, 0.48) !important;
+  background-color: #0b121f !important;
+}
