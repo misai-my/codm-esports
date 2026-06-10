@@ -1,16 +1,13 @@
-// CODM Tournament OS - Admin Sidebar
-// Clean collapsible sidebar for admin pages only.
+// CODM Tournament OS - Admin Hamburger Sidebar
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "codm:admin_sidebar_collapsed";
-
   const ADMIN_LINKS = [
-    ["admin.html", "Hub", "Admin Hub", "Overview"],
-    ["admin_teams.html", "Teams", "Registration Admin", "Teams, approvals, stages"],
-    ["admin_bracket.html", "Bracket", "Bracket Admin", "Seeds, schedules, scores"],
-    ["admin_veto.html", "Veto", "Map Veto Admin", "Veto rooms and control"],
-    ["admin_tickets.html", "Tickets", "Ticket Admin", "Support queue"]
+    ["admin.html", "⌂", "Admin Hub"],
+    ["admin_teams.html", "T", "Registration Admin"],
+    ["admin_bracket.html", "B", "Bracket Admin"],
+    ["admin_veto.html", "V", "Map Veto Admin"],
+    ["admin_tickets.html", "Q", "Ticket Admin"]
   ];
 
   function currentPage() {
@@ -21,78 +18,105 @@
     return currentPage().startsWith("admin");
   }
 
-  function isCollapsed() {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+  function createToggleButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sidebar-toggle-btn";
+    btn.setAttribute("aria-label", "Open menu");
+    btn.innerHTML = '<span></span><span></span><span></span>';
+    btn.addEventListener("click", () => {
+      document.body.classList.add("admin-sidebar-open");
+    });
+    return btn;
   }
 
-  function applyCollapsedState(collapsed) {
-    document.body.classList.toggle("admin-sidebar-collapsed", collapsed);
-    localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-
-    const btn = document.querySelector("[data-admin-sidebar-toggle]");
-    if (btn) {
-      btn.setAttribute("aria-label", collapsed ? "Expand admin sidebar" : "Collapse admin sidebar");
-      btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
-      btn.textContent = collapsed ? "›" : "‹";
-    }
+  function createBackdrop() {
+    const backdrop = document.createElement("div");
+    backdrop.className = "sidebar-backdrop admin-sidebar-backdrop";
+    backdrop.addEventListener("click", closeSidebar);
+    return backdrop;
   }
 
-  function makeButton(href, shortLabel, label, desc) {
+  function closeSidebar() {
+    document.body.classList.remove("admin-sidebar-open");
+  }
+
+  function makeLink(href, icon, label) {
     const a = document.createElement("a");
     a.className = "admin-sidebar-link";
     if (currentPage() === href) a.classList.add("active");
     a.href = href;
     a.innerHTML = `
-      <span class="side-icon">${shortLabel.slice(0, 1)}</span>
-      <span class="side-text">
-        <strong>${label}</strong>
-        <small>${desc}</small>
-      </span>
+      <span class="simple-icon">${icon}</span>
+      <span class="simple-label">${label}</span>
     `;
     return a;
+  }
+
+  function ensureHeaderToggle() {
+    const navInner = document.querySelector(".nav .nav-inner");
+    if (!navInner) return;
+
+    navInner.classList.add("drawer-nav-ready");
+
+    if (!navInner.querySelector(".sidebar-toggle-btn")) {
+      navInner.insertBefore(createToggleButton(), navInner.firstChild);
+    }
+
+    const navLinks = navInner.querySelector(".nav-links");
+    if (navLinks) navLinks.classList.add("drawer-nav-hidden");
   }
 
   function renderAdminSidebar() {
     if (!isAdminPage()) return;
 
-    document.body.classList.add("admin-sidebar-enabled");
+    ensureHeaderToggle();
 
-    let aside = document.querySelector(".admin-sidebar");
-    if (!aside) {
-      aside = document.createElement("aside");
-      aside.className = "admin-sidebar";
+    if (!document.querySelector(".admin-sidebar-backdrop")) {
+      document.body.appendChild(createBackdrop());
+    }
+
+    if (!document.querySelector(".admin-sidebar")) {
+      const aside = document.createElement("aside");
+      aside.className = "admin-sidebar simple-drawer";
       aside.innerHTML = `
-        <div class="admin-sidebar-head">
-          <div class="admin-sidebar-brand">
-            <div class="admin-sidebar-mark">M</div>
-            <div class="side-text">
-              <strong>CODM OS</strong>
+        <div class="simple-sidebar-top">
+          <div class="simple-sidebar-brand">
+            <div class="simple-brand-mark">M</div>
+            <div>
+              <strong>CODM Tournament OS</strong>
               <small>Admin Console</small>
             </div>
           </div>
-          <button class="sidebar-toggle" type="button" data-admin-sidebar-toggle aria-label="Collapse admin sidebar">‹</button>
+          <button class="simple-close-btn" type="button" aria-label="Close menu">×</button>
         </div>
-        <nav class="admin-sidebar-nav"></nav>
-        <div class="admin-sidebar-footer">
-          <a class="admin-sidebar-mini" href="index.html"><span class="side-icon">P</span><span class="side-text">Public Site</span></a>
-          <button class="admin-sidebar-mini" type="button" data-admin-sidebar-signout><span class="side-icon">S</span><span class="side-text">Sign Out</span></button>
+        <nav class="simple-sidebar-nav"></nav>
+        <div class="simple-sidebar-footer">
+          <a class="simple-side-action" href="index.html">
+            <span class="simple-icon">⌂</span>
+            <span class="simple-label">Public Site</span>
+          </a>
+          <button class="simple-side-action" type="button" data-admin-signout>
+            <span class="simple-icon">↦</span>
+            <span class="simple-label">Sign Out</span>
+          </button>
         </div>
       `;
 
-      const nav = aside.querySelector(".admin-sidebar-nav");
-      ADMIN_LINKS.forEach(([href, shortLabel, label, desc]) => nav.appendChild(makeButton(href, shortLabel, label, desc)));
-      document.body.prepend(aside);
+      const nav = aside.querySelector(".simple-sidebar-nav");
+      ADMIN_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
 
-      aside.querySelector("[data-admin-sidebar-toggle]")?.addEventListener("click", () => {
-        applyCollapsedState(!document.body.classList.contains("admin-sidebar-collapsed"));
-      });
-
-      aside.querySelector("[data-admin-sidebar-signout]")?.addEventListener("click", () => {
+      aside.querySelector(".simple-close-btn")?.addEventListener("click", closeSidebar);
+      aside.querySelector("[data-admin-signout]")?.addEventListener("click", () => {
         if (typeof window.signOut === "function") window.signOut();
       });
+
+      document.body.appendChild(aside);
     }
 
-    applyCollapsedState(isCollapsed());
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeSidebar();
+    });
   }
 
   window.renderAdminSidebar = renderAdminSidebar;

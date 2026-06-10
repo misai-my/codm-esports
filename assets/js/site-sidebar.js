@@ -1,21 +1,18 @@
-// CODM Tournament OS - Public/Captain Sidebar
-// Clean collapsible sidebar for public and captain pages.
+// CODM Tournament OS - Public/Captain Hamburger Sidebar
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "codm:site_sidebar_collapsed";
-
   const PUBLIC_LINKS = [
-    ["index.html", "H", "Home", "Landing page"],
-    ["index.html#tournaments", "T", "Tournament", "Event selection"],
-    ["rules.html", "R", "Rulebook", "Rules and formats"]
+    ["index.html", "⌂", "Home"],
+    ["index.html#tournaments", "T", "Tournament"],
+    ["rules.html", "R", "Rulebook"]
   ];
 
   const CAPTAIN_LINKS = [
-    ["register.html", "G", "Register", "Team registration"],
-    ["bracket.html", "B", "Bracket", "Tournament bracket"],
-    ["matches.html", "M", "My Matches", "Match center"],
-    ["support.html", "S", "FAQ & Support", "Tickets and Discord"]
+    ["register.html", "G", "Register"],
+    ["bracket.html", "B", "Bracket"],
+    ["matches.html", "M", "My Matches"],
+    ["support.html", "?", "FAQ & Support"]
   ];
 
   function currentPage() {
@@ -24,44 +21,6 @@
 
   function isAdminPage() {
     return currentPage().startsWith("admin");
-  }
-
-  function isCollapsed() {
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  }
-
-  function applyCollapsedState(collapsed) {
-    document.body.classList.toggle("site-sidebar-collapsed", collapsed);
-    localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-
-    const btn = document.querySelector("[data-site-sidebar-toggle]");
-    if (btn) {
-      btn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
-      btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
-      btn.textContent = collapsed ? "›" : "‹";
-    }
-  }
-
-  function makeLink(href, icon, label, desc) {
-    const a = document.createElement("a");
-    a.className = "site-sidebar-link";
-
-    const page = currentPage();
-    const hrefPage = String(href).split("#")[0];
-
-    if (page === hrefPage || (page === "index.html" && href.startsWith("index.html"))) {
-      a.classList.add("active");
-    }
-
-    a.href = href;
-    a.innerHTML = `
-      <span class="side-icon">${icon}</span>
-      <span class="side-text">
-        <strong>${label}</strong>
-        <small>${desc}</small>
-      </span>
-    `;
-    return a;
   }
 
   async function getSessionSafe() {
@@ -77,67 +36,126 @@
     return null;
   }
 
+  function createToggleButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sidebar-toggle-btn";
+    btn.setAttribute("aria-label", "Open menu");
+    btn.innerHTML = '<span></span><span></span><span></span>';
+    btn.addEventListener("click", () => {
+      document.body.classList.add("site-sidebar-open");
+    });
+    return btn;
+  }
+
+  function createBackdrop() {
+    const backdrop = document.createElement("div");
+    backdrop.className = "sidebar-backdrop site-sidebar-backdrop";
+    backdrop.addEventListener("click", closeSidebar);
+    return backdrop;
+  }
+
+  function closeSidebar() {
+    document.body.classList.remove("site-sidebar-open");
+  }
+
+  function makeLink(href, icon, label) {
+    const a = document.createElement("a");
+    a.className = "site-sidebar-link";
+    const page = currentPage();
+    const hrefPage = String(href).split("#")[0];
+    if (page === hrefPage || (page === "index.html" && href.startsWith("index.html"))) {
+      a.classList.add("active");
+    }
+    a.href = href;
+    a.innerHTML = `
+      <span class="simple-icon">${icon}</span>
+      <span class="simple-label">${label}</span>
+    `;
+    return a;
+  }
+
+  function ensureHeaderToggle() {
+    const navInner = document.querySelector(".nav .nav-inner");
+    if (!navInner) return;
+
+    navInner.classList.add("drawer-nav-ready");
+
+    if (!navInner.querySelector(".sidebar-toggle-btn")) {
+      navInner.insertBefore(createToggleButton(), navInner.firstChild);
+    }
+
+    const navLinks = navInner.querySelector(".nav-links");
+    if (navLinks) navLinks.classList.add("drawer-nav-hidden");
+  }
+
   async function renderSiteSidebar() {
     if (isAdminPage()) return;
 
-    const session = await getSessionSafe();
+    ensureHeaderToggle();
 
-    document.body.classList.add("site-sidebar-enabled");
-
-    let sidebar = document.querySelector(".site-sidebar");
-    if (!sidebar) {
-      sidebar = document.createElement("aside");
-      sidebar.className = "site-sidebar";
-      sidebar.innerHTML = `
-        <div class="site-sidebar-head">
-          <div class="site-sidebar-brand">
-            <div class="site-sidebar-mark">M</div>
-            <div class="side-text">
-              <strong>CODM OS</strong>
-              <small data-site-sidebar-subtitle>Tournament Portal</small>
-            </div>
-          </div>
-          <button class="sidebar-toggle" type="button" data-site-sidebar-toggle aria-label="Collapse sidebar">‹</button>
-        </div>
-        <nav class="site-sidebar-nav"></nav>
-        <div class="site-sidebar-footer"></div>
-      `;
-      document.body.prepend(sidebar);
-
-      sidebar.querySelector("[data-site-sidebar-toggle]")?.addEventListener("click", () => {
-        applyCollapsedState(!document.body.classList.contains("site-sidebar-collapsed"));
-      });
+    if (!document.querySelector(".site-sidebar-backdrop")) {
+      document.body.appendChild(createBackdrop());
     }
 
-    const nav = sidebar.querySelector(".site-sidebar-nav");
-    const footer = sidebar.querySelector(".site-sidebar-footer");
-    const subtitle = sidebar.querySelector("[data-site-sidebar-subtitle]");
+    const session = await getSessionSafe();
 
+    let aside = document.querySelector(".site-sidebar");
+    if (!aside) {
+      aside = document.createElement("aside");
+      aside.className = "site-sidebar simple-drawer";
+      aside.innerHTML = `
+        <div class="simple-sidebar-top">
+          <div class="simple-sidebar-brand">
+            <div class="simple-brand-mark">M</div>
+            <div>
+              <strong>CODM Tournament OS</strong>
+              <small data-site-subtitle>Tournament Portal</small>
+            </div>
+          </div>
+          <button class="simple-close-btn" type="button" aria-label="Close menu">×</button>
+        </div>
+        <nav class="simple-sidebar-nav"></nav>
+        <div class="simple-sidebar-footer"></div>
+      `;
+      aside.querySelector(".simple-close-btn")?.addEventListener("click", closeSidebar);
+      document.body.appendChild(aside);
+    }
+
+    const subtitle = aside.querySelector("[data-site-subtitle]");
     if (subtitle) subtitle.textContent = session ? "Captain Console" : "Tournament Portal";
 
+    const nav = aside.querySelector(".simple-sidebar-nav");
     nav.innerHTML = "";
-    PUBLIC_LINKS.forEach(([href, icon, label, desc]) => nav.appendChild(makeLink(href, icon, label, desc)));
+
+    PUBLIC_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
 
     if (session) {
       const divider = document.createElement("div");
-      divider.className = "site-sidebar-divider side-text";
+      divider.className = "simple-side-divider";
       divider.textContent = "Captain";
       nav.appendChild(divider);
-      CAPTAIN_LINKS.forEach(([href, icon, label, desc]) => nav.appendChild(makeLink(href, icon, label, desc)));
+      CAPTAIN_LINKS.forEach(([href, icon, label]) => nav.appendChild(makeLink(href, icon, label)));
     }
 
+    const footer = aside.querySelector(".simple-sidebar-footer");
     footer.innerHTML = session
-      ? `<button class="site-sidebar-mini" type="button" data-site-sidebar-signout><span class="side-icon">S</span><span class="side-text">Sign Out</span></button>`
-      : `<a class="site-sidebar-mini" href="register.html"><span class="side-icon">L</span><span class="side-text">Captain Login</span></a>`;
+      ? `<button class="simple-side-action" type="button" data-site-signout>
+           <span class="simple-icon">↦</span>
+           <span class="simple-label">Sign Out</span>
+         </button>`
+      : `<a class="simple-side-action" href="register.html">
+           <span class="simple-icon">↣</span>
+           <span class="simple-label">Captain Login</span>
+         </a>`;
 
-    footer.querySelector("[data-site-sidebar-signout]")?.addEventListener("click", () => {
+    footer.querySelector("[data-site-signout]")?.addEventListener("click", () => {
       if (typeof window.signOut === "function") window.signOut();
     });
 
-    const headerNav = document.querySelector(".nav .nav-links");
-    if (headerNav) headerNav.classList.add("sidebar-nav-hidden");
-
-    applyCollapsedState(isCollapsed());
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeSidebar();
+    });
   }
 
   window.renderSiteSidebar = renderSiteSidebar;
