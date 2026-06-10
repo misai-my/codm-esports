@@ -78,5 +78,77 @@ function renderVetoAccess(){
   `;
 }
 
-function teamName(id){const t=teamMap[id];return t?`${t.team_name} (${t.team_tag||''})`:'TBD'}function renderMatches(){const wrap=qs('#matchesWrap');if(!myMatches.length){wrap.innerHTML='<div class="notice">Your assigned matches will appear here once the bracket is released.</div>';return}wrap.innerHTML=myMatches.map(m=>{const myTeamId=myTeams.find(t=>t.id===m.team_a_id||t.id===m.team_b_id)?.id;return `<article class="card card-flat"><div class="match-card-top">${statusBadge(m.status)}<span class="small">${escapeHtml(m.round_label||`Round ${m.round_no}`)} · Match ${m.match_no}</span></div><p><strong>${escapeHtml(teamName(m.team_a_id))}</strong> ${m.team_a_series_score} - ${m.team_b_series_score} <strong>${escapeHtml(teamName(m.team_b_id))}</strong></p><p class="small">Winner: ${m.winner_team_id?escapeHtml(teamName(m.winner_team_id)):'TBD'}</p>${m.team_a_id&&m.team_b_id?`<p class="small">Map Veto: ${escapeHtml(vetoPhaseLabel(myVetos[m.id]))}</p><div class="actions"><button class="btn btn-primary" onclick="openReport('${m.id}','${myTeamId}')">Submit Score Report</button><a class="btn btn-ghost" href="veto.html?match_id=${m.id}">Open Map Veto Room</a></div>`:''}</article>`}).join('')}function openReport(matchId,submittedTeamId){selectedMatch=myMatches.find(m=>m.id===matchId);selectedSubmittedTeam=myTeams.find(t=>t.id===submittedTeamId);if(!selectedMatch||!selectedSubmittedTeam)return;setText('#reportTitle',`${teamName(selectedMatch.team_a_id)} vs ${teamName(selectedMatch.team_b_id)}`);setText('#teamALabel',`${teamName(selectedMatch.team_a_id)} Score`);setText('#teamBLabel',`${teamName(selectedMatch.team_b_id)} Score`);qs('#winnerTeam').innerHTML=`<option value="">Select winner</option><option value="${selectedMatch.team_a_id}">${escapeHtml(teamName(selectedMatch.team_a_id))}</option><option value="${selectedMatch.team_b_id}">${escapeHtml(teamName(selectedMatch.team_b_id))}</option>`;qs('#reportPanel').classList.remove('hidden');scrollToId('reportPanel')}async function submitReport(e){e.preventDefault();try{const a=Number(qs('#teamAScore').value),b=Number(qs('#teamBScore').value),winnerId=qs('#winnerTeam').value,proofUrl=normalizeText(qs('#proofUrl').value),notes=normalizeText(qs('#notes').value);if(a===b)return showToast('Series score cannot be tied.','error');if(!winnerId)return showToast('Select winner.','error');if(proofUrl&&!isImageUrlMaybe(proofUrl))return showToast('Proof URL must start with http:// or https://','error');const {error}=await window.sb.from('match_reports').insert({tournament_id:tournament.id,match_id:selectedMatch.id,submitted_by:currentUser.id,submitted_by_team_id:selectedSubmittedTeam.id,team_a_series_score:a,team_b_series_score:b,winner_team_id:winnerId,proof_url:proofUrl||null,notes:notes||null,status:'pending'});if(error)throw error;showToast('Match report submitted for official review.','success');qs('#reportForm').reset();qs('#reportPanel').classList.add('hidden')}catch(err){console.error(err);showToast(err.message||'Failed to submit report.','error')}}async function init(){tournament=await loadDefaultTournament();setText('#tournamentMeta',`${tournament.title} · ${bracketTypeLabel(tournament.bracket_type)} · ${tournament.format}`);qs('#loginBtn').addEventListener('click',login);qs('#refreshBtn').addEventListener('click',loadMyTeamsAndMatches);qs('#reportForm').addEventListener('submit',submitReport);await refreshAuth();window.sb.auth.onAuthStateChange(()=>refreshAuth())}init().catch(err=>{console.error(err);showToast(err.message||'Failed to initialize.','error')});
+
+function scheduleDateTimeValue(match) {
+  if (!match?.match_start_at) return "";
+  const d = new Date(match.match_start_at);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatMatchSchedule(match) {
+  if (!match?.match_start_at) return "Schedule TBD";
+  const tz = match.match_timezone || "Asia/Manila";
+  const d = new Date(match.match_start_at);
+  if (Number.isNaN(d.getTime())) return "Schedule TBD";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: tz
+  }).format(d) + ` · ${tz}`;
+}
+
+function scheduleBadge(match) {
+  const hasSchedule = !!match?.match_start_at;
+  const sync = match?.calendar_sync_status || "not_synced";
+  return `
+    <div class="match-schedule-line ${hasSchedule ? "is-scheduled" : ""}">
+      <span class="schedule-dot"></span>
+      <span>${escapeHtml(formatMatchSchedule(match))}</span>
+      <small>${hasSchedule ? escapeHtml(String(sync).replaceAll("_", " ")) : "calendar ready"}</small>
+    </div>
+  `;
+}
+
+function calendarPayloadPreview(match) {
+  if (!match?.match_start_at) return "Not ready for calendar sync";
+  return `${teamName(match.team_a_id)} vs ${teamName(match.team_b_id)} · ${formatMatchSchedule(match)}`;
+}
+
+function teamName(id){const t=teamMap[id];return t?`${t.team_name} (${t.team_tag||''})`:'TBD'}function renderMatches(){
+  const wrap = qs('#matchesWrap');
+
+  if(!myMatches.length){
+    wrap.innerHTML = '<div class="notice">Your assigned matches will appear here once the bracket is released.</div>';
+    return;
+  }
+
+  wrap.innerHTML = myMatches.map(m=>{
+    const myTeamId = myTeams.find(t=>t.id===m.team_a_id||t.id===m.team_b_id)?.id;
+    return `
+      <article class="card card-flat match-schedule-card">
+        <div class="match-card-top">
+          ${statusBadge(m.status)}
+          <span class="small">${escapeHtml(m.round_label||`Round ${m.round_no}`)} · Match ${m.match_no}</span>
+        </div>
+        ${scheduleBadge(m)}
+        <p><strong>${escapeHtml(teamName(m.team_a_id))}</strong> ${m.team_a_series_score} - ${m.team_b_series_score} <strong>${escapeHtml(teamName(m.team_b_id))}</strong></p>
+        <p class="small">Winner: ${m.winner_team_id?escapeHtml(teamName(m.winner_team_id)):'TBD'}</p>
+        ${m.team_a_id&&m.team_b_id?`
+          <p class="small">Map Veto: ${escapeHtml(vetoPhaseLabel(myVetos[m.id]))}</p>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="openReport('${m.id}','${myTeamId}')">Submit Score Report</button>
+            <a class="btn btn-ghost" href="veto.html?match_id=${m.id}">Open Map Veto Room</a>
+          </div>
+        `:''}
+      </article>
+    `;
+  }).join('');
+}function openReport(matchId,submittedTeamId){selectedMatch=myMatches.find(m=>m.id===matchId);selectedSubmittedTeam=myTeams.find(t=>t.id===submittedTeamId);if(!selectedMatch||!selectedSubmittedTeam)return;setText('#reportTitle',`${teamName(selectedMatch.team_a_id)} vs ${teamName(selectedMatch.team_b_id)}`);setText('#teamALabel',`${teamName(selectedMatch.team_a_id)} Score`);setText('#teamBLabel',`${teamName(selectedMatch.team_b_id)} Score`);qs('#winnerTeam').innerHTML=`<option value="">Select winner</option><option value="${selectedMatch.team_a_id}">${escapeHtml(teamName(selectedMatch.team_a_id))}</option><option value="${selectedMatch.team_b_id}">${escapeHtml(teamName(selectedMatch.team_b_id))}</option>`;qs('#reportPanel').classList.remove('hidden');scrollToId('reportPanel')}async function submitReport(e){e.preventDefault();try{const a=Number(qs('#teamAScore').value),b=Number(qs('#teamBScore').value),winnerId=qs('#winnerTeam').value,proofUrl=normalizeText(qs('#proofUrl').value),notes=normalizeText(qs('#notes').value);if(a===b)return showToast('Series score cannot be tied.','error');if(!winnerId)return showToast('Select winner.','error');if(proofUrl&&!isImageUrlMaybe(proofUrl))return showToast('Proof URL must start with http:// or https://','error');const {error}=await window.sb.from('match_reports').insert({tournament_id:tournament.id,match_id:selectedMatch.id,submitted_by:currentUser.id,submitted_by_team_id:selectedSubmittedTeam.id,team_a_series_score:a,team_b_series_score:b,winner_team_id:winnerId,proof_url:proofUrl||null,notes:notes||null,status:'pending'});if(error)throw error;showToast('Match report submitted for official review.','success');qs('#reportForm').reset();qs('#reportPanel').classList.add('hidden')}catch(err){console.error(err);showToast(err.message||'Failed to submit report.','error')}}async function init(){tournament=await loadDefaultTournament();setText('#tournamentMeta',`${tournament.title} · ${bracketTypeLabel(tournament.bracket_type)} · ${tournament.format}`);qs('#loginBtn').addEventListener('click',login);qs('#refreshBtn').addEventListener('click',loadMyTeamsAndMatches);qs('#reportForm').addEventListener('submit',submitReport);await refreshAuth();window.sb.auth.onAuthStateChange(()=>refreshAuth())}init().catch(err=>{console.error(err);showToast(err.message||'Failed to initialize.','error')});
 </script><script src="assets/js/premium-copy.js"></script></body></html>

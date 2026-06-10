@@ -270,3 +270,82 @@ select option, select optgroup { background-color:#0b121f; color:#f7fbff; }
   border-radius: 14px;
   font-size: 13px;
 }
+
+
+/* ============================================================
+   Match Scheduling / Calendar-ready UI
+   ============================================================ */
+.match-schedule-card {
+  position: relative;
+}
+
+.match-schedule-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 12px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.045);
+  color: rgba(230,239,255,.74);
+  font-weight: 800;
+}
+
+.match-schedule-line.is-scheduled {
+  border-color: rgba(50,230,143,.26);
+  background: rgba(50,230,143,.08);
+  color: rgba(247,251,255,.94);
+}
+
+.match-schedule-line small {
+  margin-left: auto;
+  color: rgba(230,239,255,.52);
+  text-transform: capitalize;
+  font-size: 11px;
+}
+
+.schedule-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(230,239,255,.35);
+  box-shadow: 0 0 0 4px rgba(230,239,255,.06);
+}
+
+.match-schedule-line.is-scheduled .schedule-dot {
+  background: #32e68f;
+  box-shadow: 0 0 0 4px rgba(50,230,143,.12);
+}
+
+.schedule-admin-box {
+  margin: 14px 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(248,209,92,.22);
+  background:
+    linear-gradient(145deg, rgba(248,209,92,.09), rgba(255,255,255,.025)),
+    rgba(255,255,255,.035);
+}
+
+.schedule-input-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(110px, .7fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .schedule-input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .match-schedule-line {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .match-schedule-line small {
+    margin-left: 0;
+  }
+}
