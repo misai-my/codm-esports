@@ -2,6 +2,28 @@
 (function () {
   "use strict";
 
+  function forceFixedDrawer() {
+    const drawer = document.querySelector(".admin-sidebar.simple-drawer");
+    if (!drawer) return;
+
+    drawer.style.position = "fixed";
+    drawer.style.top = "0";
+    drawer.style.left = "0";
+    drawer.style.bottom = "0";
+    drawer.style.height = "100dvh";
+    drawer.style.maxHeight = "100dvh";
+    drawer.style.overflowY = "auto";
+    drawer.style.overflowX = "hidden";
+    drawer.style.zIndex = "9999";
+    drawer.style.willChange = "transform";
+  }
+
+  function setPageScrollLock(locked) {
+    document.documentElement.classList.toggle("sidebar-scroll-locked", locked);
+    document.body.classList.toggle("sidebar-scroll-locked", locked);
+  }
+
+
   const ADMIN_LINKS = [
     ["admin.html", "Admin Hub"],
     ["admin_teams.html", "Registration Admin"],
@@ -20,6 +42,8 @@
 
   function closeSidebar() {
     document.body.classList.remove("admin-sidebar-open");
+    setPageScrollLock(false);
+    forceFixedDrawer();
   }
 
   function createToggleButton() {
@@ -28,7 +52,7 @@
     btn.className = "sidebar-toggle-btn";
     btn.setAttribute("aria-label", "Open menu");
     btn.innerHTML = "<span></span><span></span><span></span>";
-    btn.addEventListener("click", () => document.body.classList.add("admin-sidebar-open"));
+    btn.addEventListener("click", () => document.body.classList.add("admin-sidebar-open"); setPageScrollLock(true); forceFixedDrawer());
     return btn;
   }
 
@@ -66,6 +90,7 @@
     if (!isAdminPage()) return;
 
     ensureHeaderToggle();
+    forceFixedDrawer();
 
     if (!document.querySelector(".admin-sidebar-backdrop")) {
       document.body.appendChild(createBackdrop());
@@ -101,6 +126,7 @@
       });
 
       document.body.appendChild(aside);
+      forceFixedDrawer();
     }
 
     document.addEventListener("keydown", (e) => {
@@ -110,6 +136,8 @@
 
   window.renderAdminSidebar = renderAdminSidebar;
 
+  window.addEventListener("scroll", forceFixedDrawer, { passive: true });
+  window.addEventListener("resize", forceFixedDrawer);
   document.addEventListener("DOMContentLoaded", renderAdminSidebar);
   setTimeout(renderAdminSidebar, 100);
 })();

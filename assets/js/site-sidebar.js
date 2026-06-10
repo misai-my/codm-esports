@@ -2,6 +2,28 @@
 (function () {
   "use strict";
 
+  function forceFixedDrawer() {
+    const drawer = document.querySelector(".site-sidebar.simple-drawer");
+    if (!drawer) return;
+
+    drawer.style.position = "fixed";
+    drawer.style.top = "0";
+    drawer.style.left = "0";
+    drawer.style.bottom = "0";
+    drawer.style.height = "100dvh";
+    drawer.style.maxHeight = "100dvh";
+    drawer.style.overflowY = "auto";
+    drawer.style.overflowX = "hidden";
+    drawer.style.zIndex = "9999";
+    drawer.style.willChange = "transform";
+  }
+
+  function setPageScrollLock(locked) {
+    document.documentElement.classList.toggle("sidebar-scroll-locked", locked);
+    document.body.classList.toggle("sidebar-scroll-locked", locked);
+  }
+
+
   const PUBLIC_LINKS = [
     ["index.html", "Home"],
     ["index.html#tournaments", "Tournament"],
@@ -38,6 +60,8 @@
 
   function closeSidebar() {
     document.body.classList.remove("site-sidebar-open");
+    setPageScrollLock(false);
+    forceFixedDrawer();
   }
 
   function createToggleButton() {
@@ -46,7 +70,7 @@
     btn.className = "sidebar-toggle-btn";
     btn.setAttribute("aria-label", "Open menu");
     btn.innerHTML = "<span></span><span></span><span></span>";
-    btn.addEventListener("click", () => document.body.classList.add("site-sidebar-open"));
+    btn.addEventListener("click", () => document.body.classList.add("site-sidebar-open"); setPageScrollLock(true); forceFixedDrawer());
     return btn;
   }
 
@@ -91,6 +115,7 @@
     if (isAdminPage()) return;
 
     ensureHeaderToggle();
+    forceFixedDrawer();
 
     if (!document.querySelector(".site-sidebar-backdrop")) {
       document.body.appendChild(createBackdrop());
@@ -118,6 +143,7 @@
       `;
       aside.querySelector(".simple-close-btn")?.addEventListener("click", closeSidebar);
       document.body.appendChild(aside);
+      forceFixedDrawer();
     }
 
     const subtitle = aside.querySelector("[data-site-subtitle]");
@@ -152,6 +178,8 @@
 
   window.renderSiteSidebar = renderSiteSidebar;
 
+  window.addEventListener("scroll", forceFixedDrawer, { passive: true });
+  window.addEventListener("resize", forceFixedDrawer);
   document.addEventListener("DOMContentLoaded", renderSiteSidebar);
   setTimeout(renderSiteSidebar, 100);
   setTimeout(renderSiteSidebar, 500);
