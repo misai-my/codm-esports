@@ -1850,3 +1850,34 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     transform: translate3d(0, 0, 0) !important;
   }
 }
+
+
+/* ============================================================
+   Admin Hub Tournament Workspace
+   ============================================================ */
+.admin-selected-tournament {
+  margin: 14px 0;
+}
+
+.admin-selected-tournament-box {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(248,209,92,.22);
+  background:
+    linear-gradient(135deg, rgba(248,209,92,.10), rgba(255,255,255,.035)),
+    rgba(255,255,255,.035);
+}
+
+.admin-selected-tournament-box strong {
+  color: #f8d15c;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.admin-selected-tournament-box span {
+  color: rgba(230,239,255,.72);
+  font-size: 13px;
+  font-weight: 750;
+}

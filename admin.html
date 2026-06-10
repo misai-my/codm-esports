@@ -27,7 +27,7 @@
   <section class="page-hero" data-hero-bg>
     <div class="container">
       <div class="eyebrow">Admin Control Center</div>
-      <h1 class="h1"><span class="gradient-text">Admin tools are now in the sidebar.</span><br/>Manage the tournament from one console.</h1>
+      <h1 class="h1"><span class="gradient-text">Admin Hub</span><br/>Select your tournament workspace.</h1>
       <p class="lead" id="tournamentMeta">Loading tournament...</p>
     </div>
   </section>
@@ -54,30 +54,24 @@
         </form>
       </div>
 
-      <div class="card">
-        <div class="eyebrow">Navigation Update</div>
-        <h2>Sidebar Admin Console</h2>
-        <p>The large admin buttons were replaced with a fixed sidebar so the admin pages are cleaner and easier to navigate.</p>
-        <p class="small">Public and captain pages are unchanged. The sidebar only appears on admin pages.</p>
-      </div>
-    </div>
-  </section>
+      <div class="card hidden" id="tournamentWorkspace">
+        <div class="eyebrow">Tournament Workspace</div>
+        <h2>Current Tournament</h2>
+        <p class="small">Choose which tournament the admin panels should work on. Registration, bracket, veto, matches, rulebook, and support pages will follow this selection.</p>
 
-  <section class="section hidden" id="adminPanel">
-    <div class="container">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Admin Tools</div>
-          <h2>Use the sidebar to continue</h2>
-          <p>Select Registration Admin, Bracket Admin, Map Veto Admin, or Ticket Admin from the left side.</p>
+        <div class="field">
+          <label for="adminTournamentSelect">Tournament</label>
+          <select id="adminTournamentSelect">
+            <option value="">Loading tournaments...</option>
+          </select>
         </div>
-      </div>
 
-      <div class="grid grid-four admin-summary-grid">
-        <div class="card card-flat kpi"><div class="kpi-value">01</div><div class="kpi-label">Registration Admin</div></div>
-        <div class="card card-flat kpi"><div class="kpi-value">02</div><div class="kpi-label">Bracket Admin</div></div>
-        <div class="card card-flat kpi"><div class="kpi-value">03</div><div class="kpi-label">Map Veto Admin</div></div>
-        <div class="card card-flat kpi"><div class="kpi-value">04</div><div class="kpi-label">Ticket Admin</div></div>
+        <div id="selectedTournamentCard" class="admin-selected-tournament"></div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="saveTournamentBtn">Use Selected Tournament</button>
+          <a class="btn btn-ghost" href="admin_teams.html">Open Registration Admin</a>
+        </div>
       </div>
     </div>
   </section>
@@ -93,6 +87,7 @@
 <script>
 let currentTournament = null;
 let currentProfile = null;
+let adminTournaments = [];
 
 async function login() {
   const email = normalizeText(qs("#authEmail").value);
@@ -108,19 +103,83 @@ async function login() {
   if (window.renderSmartNav) await window.renderSmartNav();
 }
 
+function adminTournamentSelectedSlug() {
+  return localStorage.getItem("codm:selected_tournament_slug") || window.TOURNAMENT_OS_CONFIG?.defaultTournamentSlug || "codm-v1";
+}
+
+function setAdminTournamentSlug(slug) {
+  if (typeof window.setSelectedTournamentSlug === "function") {
+    window.setSelectedTournamentSlug(slug);
+    return;
+  }
+  localStorage.setItem("codm:selected_tournament_slug", slug);
+}
+
+async function loadAdminTournaments() {
+  const { data, error } = await window.sb
+    .from("tournaments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  adminTournaments = data || [];
+  const select = qs("#adminTournamentSelect");
+  const selectedSlug = adminTournamentSelectedSlug();
+
+  if (!adminTournaments.length) {
+    select.innerHTML = `<option value="">No tournaments found</option>`;
+    qs("#selectedTournamentCard").innerHTML = `<div class="notice">No tournaments available yet.</div>`;
+    return;
+  }
+
+  select.innerHTML = adminTournaments
+    .map(t => `<option value="${escapeHtml(t.slug)}" ${t.slug === selectedSlug ? "selected" : ""}>${escapeHtml(t.title)} · ${escapeHtml(t.status || "draft")}</option>`)
+    .join("");
+
+  const selected = adminTournaments.find(t => t.slug === select.value) || adminTournaments[0];
+  select.value = selected.slug;
+  renderSelectedTournament(selected);
+}
+
+function renderSelectedTournament(tournament) {
+  if (!tournament) return;
+  qs("#selectedTournamentCard").innerHTML = `
+    <div class="admin-selected-tournament-box">
+      <strong>${escapeHtml(tournament.title)}</strong>
+      <span>${escapeHtml(tournament.game || "CODM")} · ${escapeHtml(tournament.format || "Tournament")} · ${escapeHtml(tournament.status || "draft")}</span>
+      <span>Registration: ${tournament.registration_open ? "Open" : "Closed"}</span>
+    </div>
+  `;
+}
+
+async function saveTournamentSelection() {
+  const slug = qs("#adminTournamentSelect").value;
+  const tournament = adminTournaments.find(t => t.slug === slug);
+  if (!tournament) return showToast("Select a tournament first.", "error");
+
+  setAdminTournamentSlug(slug);
+  currentTournament = tournament;
+
+  setText("#tournamentMeta", `${currentTournament.title} · Admin Workspace`);
+  renderSelectedTournament(currentTournament);
+
+  showToast(`Admin workspace set to ${currentTournament.title}.`, "success");
+}
+
 async function refreshAdminAuth() {
   const session = await getSession();
   const authForm = qs("#authForm");
   const signOutBtn = qs("#signOutBtn");
-  const adminPanel = qs("#adminPanel");
   const authStatus = qs("#authStatus");
+  const workspace = qs("#tournamentWorkspace");
 
   if (!session) {
     authStatus.textContent = "Not logged in.";
     authStatus.classList.remove("online");
     authForm.classList.remove("hidden");
     signOutBtn?.classList.add("hidden");
-    adminPanel.classList.add("hidden");
+    workspace.classList.add("hidden");
     return;
   }
 
@@ -132,19 +191,28 @@ async function refreshAdminAuth() {
   signOutBtn?.classList.remove("hidden");
 
   if (currentProfile.role !== "admin") {
-    adminPanel.classList.add("hidden");
+    workspace.classList.add("hidden");
     showToast("This account is not an admin yet.", "error");
     return;
   }
 
-  adminPanel.classList.remove("hidden");
+  workspace.classList.remove("hidden");
+  await loadAdminTournaments();
 }
 
 async function init() {
   currentTournament = await loadDefaultTournament();
-  setText("#tournamentMeta", `${currentTournament.title} · Admin Hub`);
+  setText("#tournamentMeta", `${currentTournament.title} · Admin Workspace`);
+
   qs("#loginBtn").addEventListener("click", login);
+  qs("#saveTournamentBtn").addEventListener("click", saveTournamentSelection);
+  qs("#adminTournamentSelect").addEventListener("change", () => {
+    const tournament = adminTournaments.find(t => t.slug === qs("#adminTournamentSelect").value);
+    renderSelectedTournament(tournament);
+  });
+
   await refreshAdminAuth();
+
   window.sb.auth.onAuthStateChange(async () => {
     await refreshAdminAuth();
     if (window.renderSmartNav) await window.renderSmartNav();
