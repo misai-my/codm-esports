@@ -105,6 +105,73 @@ function tournamentStatusText(t) {
   return t.registration_open ? "Open" : "Closed";
 }
 
+function formatTournamentDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(d);
+}
+
+function tournamentDateRange(t) {
+  const start = formatTournamentDate(t.start_at);
+  const end = formatTournamentDate(t.end_at);
+
+  if (start && end) return `${start} – ${end}`;
+  if (start) return `Starts ${start}`;
+  if (end) return `Ends ${end}`;
+  return "Dates TBA";
+}
+
+function renderTournamentStageChips(t) {
+  const stages = [...(t.tournament_stages || [])]
+    .sort((a, b) => Number(a.stage_order || 999) - Number(b.stage_order || 999));
+
+  if (!stages.length) return `<div class="tournament-stage-chips"><span>Tournament stages TBA</span></div>`;
+
+  return `
+    <div class="tournament-stage-chips">
+      ${stages.map(stage => {
+        const range = tournamentDateRange({ start_at: stage.start_at, end_at: stage.end_at });
+        return `<span title="${escapeHtml(range)}">${escapeHtml(stage.stage_name)}</span>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+async function attachTournamentStages(list) {
+  const ids = (list || []).map(t => t.id).filter(Boolean);
+  if (!ids.length) return list || [];
+
+  try {
+    const { data, error } = await window.sb
+      .from("tournament_stages")
+      .select("id,tournament_id,stage_name,stage_order,start_at,end_at,is_active")
+      .in("tournament_id", ids)
+      .eq("is_active", true)
+      .order("stage_order", { ascending: true });
+
+    if (error) {
+      console.warn("Tournament stages skipped:", error);
+      return list || [];
+    }
+
+    const grouped = (data || []).reduce((acc, stage) => {
+      acc[stage.tournament_id] ||= [];
+      acc[stage.tournament_id].push(stage);
+      return acc;
+    }, {});
+
+    return (list || []).map(t => ({ ...t, tournament_stages: grouped[t.id] || [] }));
+  } catch (err) {
+    console.warn("Tournament stages failed:", err);
+    return list || [];
+  }
+}
+
 function renderTournamentCards() {
   const wrap = qs("#tournamentCards");
   if (!tournaments.length) {
@@ -119,7 +186,11 @@ function renderTournamentCards() {
         <div class="eyebrow">${escapeHtml(t.status || "Tournament")}</div>
         <h3>${escapeHtml(t.title)}</h3>
         <p>${escapeHtml(t.game || "Call of Duty: Mobile")} · ${escapeHtml(t.format || "BO5")} · ${escapeHtml(bracketTypeLabel(t.bracket_type))}</p>
-        <p class="small">Registration: ${t.registration_open ? "Open" : "Closed"}${t.start_at ? ` · Starts ${new Date(t.start_at).toLocaleString()}` : ""}</p>
+        <div class="tournament-card-meta">
+          <span>${escapeHtml(tournamentDateRange(t))}</span>
+          <span>Registration: ${t.registration_open ? "Open" : "Closed"}</span>
+        </div>
+        ${renderTournamentStageChips(t)}
         <div class="actions">
           <button class="btn ${selected ? "btn-success" : "btn-primary"}" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
           <button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}','register.html')">Register</button>
@@ -142,6 +213,11 @@ function renderSelectedTournamentPanel() {
         <div class="eyebrow">Currently Selected</div>
         <h3>${escapeHtml(selectedTournament.title)}</h3>
         <p>${escapeHtml(selectedTournament.game || "Call of Duty: Mobile")} · ${escapeHtml(selectedTournament.format || "BO5")} · ${escapeHtml(bracketTypeLabel(selectedTournament.bracket_type))}</p>
+        <div class="tournament-card-meta">
+          <span>${escapeHtml(tournamentDateRange(selectedTournament))}</span>
+          <span>Registration: ${selectedTournament.registration_open ? "Open" : "Closed"}</span>
+        </div>
+        ${renderTournamentStageChips(selectedTournament)}
       </div>
       <div class="actions">
         <a class="btn btn-primary" href="register.html">Register for This Tournament</a>
@@ -216,7 +292,7 @@ async function loadSelectedOverview() {
 }
 
 async function initHome() {
-  tournaments = await loadAllTournaments();
+  tournaments = await attachTournamentStages(await loadAllTournaments());
 
   const selectedSlug = getSelectedTournamentSlug();
   selectedTournament = tournaments.find(t => t.slug === selectedSlug)

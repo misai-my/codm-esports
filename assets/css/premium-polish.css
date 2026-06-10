@@ -2150,3 +2150,115 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
   font-size: 13px;
   font-weight: 750;
 }
+
+
+/* ============================================================
+   Tournament Dates + Stage Admin
+   ============================================================ */
+.tournament-card-meta {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  color: rgba(230,239,255,.72);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.tournament-stage-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 14px;
+}
+
+.tournament-stage-chips span {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,209,92,.22);
+  background: rgba(248,209,92,.075);
+  color: rgba(247,251,255,.82);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-selected-tournament {
+  margin: 14px 0;
+}
+
+.admin-selected-tournament-box {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(248,209,92,.22);
+  background:
+    linear-gradient(135deg, rgba(248,209,92,.10), rgba(255,255,255,.035)),
+    rgba(255,255,255,.035);
+}
+
+.admin-selected-tournament-box strong {
+  color: #f8d15c;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.admin-selected-tournament-box span {
+  color: rgba(230,239,255,.72);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.stage-date-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.stage-date-row {
+  display: grid;
+  grid-template-columns: minmax(140px, .75fr) minmax(220px, 1.25fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+}
+
+.stage-date-row strong,
+.stage-date-row span {
+  display: block;
+}
+
+.stage-date-row strong {
+  color: #f8d15c;
+  font-weight: 1000;
+}
+
+.stage-date-row span {
+  margin-top: 4px;
+  color: rgba(230,239,255,.54);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stage-date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stage-add-box {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+@media (max-width: 860px) {
+  .stage-date-row,
+  .stage-date-fields {
+    grid-template-columns: 1fr;
+  }
+}
