@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Rulebook & Support · CODM Tournament OS</title>
+  <title>Rulebook · CODM Tournament OS</title>
   <link rel="stylesheet" href="assets/css/style.css"/>
   <link rel="stylesheet" href="assets/css/premium-polish.css"/>
 </head>
@@ -12,13 +12,13 @@
   <div class="container nav-inner">
     <a class="brand" href="index.html">
       <span class="brand-emblem">M</span>
-      <span class="brand-title">CODM Tournament OS<small>Rulebook & Support</small></span>
+      <span class="brand-title">CODM Tournament OS<small>Official Rulebook</small></span>
     </a>
-    <nav class="nav-links">
+    <nav class="nav-links" data-smart-nav>
       <a class="nav-link" href="index.html">Home</a>
-      <a class="nav-link" href="register.html">Register</a>
-      <a class="nav-link" href="bracket.html">Bracket</a>
-      <a class="nav-link" href="rules.html">Rulebook</a><a class="nav-link" href="matches.html">My Matches</a>
+      <a class="nav-link" href="index.html#tournaments">Tournament</a>
+      <a class="nav-link" href="rules.html">Rulebook</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
     </nav>
   </div>
 </header>
@@ -26,22 +26,13 @@
 <main>
   <section class="page-hero" data-hero-bg>
     <div class="container">
-      <div class="eyebrow">Public Rulebook Access</div>
-      <h1 class="h1"><span class="gradient-text">Know the rules.</span><br/>Compete clean.</h1>
-      <p class="lead">A public player and captain hub for formats, map pools, match flow, Discord coordination, FAQs, and admin support tickets.</p>
+      <div class="eyebrow">Official Rulebook</div>
+      <h1 class="h1"><span class="gradient-text">Rules first.</span><br/>Compete clean.</h1>
+      <p class="lead">Public rulebook for eligibility, match format, map pool, veto procedure, lobby settings, match reporting, and competitive conduct.</p>
       <div class="actions">
         <a class="btn btn-primary" href="#rulebook">Read Rulebook</a>
-        <a class="btn" href="#ask-admin">Ask Admin</a>
+        <a class="btn" href="support.html">FAQ & Support</a>
       </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container grid grid-four">
-      <a class="card card-flat rules-quick-card" href="#formats"><div class="eyebrow">01</div><h3>Formats</h3><p>BO3, BO5, and Grand Finals BO7 structure.</p></a>
-      <a class="card card-flat rules-quick-card" href="#map-pool"><div class="eyebrow">02</div><h3>Map Pool</h3><p>Hardpoint, Search and Destroy, and Control maps.</p></a>
-      <a class="card card-flat rules-quick-card" href="#discord"><div class="eyebrow">03</div><h3>Discord</h3><p>Check-in, match rooms, and admin calls.</p></a>
-      <a class="card card-flat rules-quick-card" href="#ask-admin"><div class="eyebrow">04</div><h3>Support</h3><p>Submit questions through ticket-style chat.</p></a>
     </div>
   </section>
 
@@ -49,9 +40,9 @@
     <div class="container">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Reference Rulebook</div>
-          <h2>Competition Rules</h2>
-          <p>This page is built as a tournament-ready rules hub and should be treated as an editable operational version. Tournament administrators may update or override rules before or during the event.</p>
+          <div class="eyebrow">Competition Rules</div>
+          <h2>Rulebook Index</h2>
+          <p>This public rulebook is the reference for players and captains. Admin announcements and official rulings may update or override sections during live operations.</p>
         </div>
       </div>
 
@@ -66,8 +57,6 @@
           <a href="#lobby-settings">Lobby Settings</a>
           <a href="#match-reporting">Reporting</a>
           <a href="#conduct">Conduct</a>
-          <a href="#discord">Discord</a>
-          <a href="#faq">FAQ</a>
         </aside>
 
         <div class="grid">
@@ -118,11 +107,12 @@
             <h3>Veto Procedure</h3>
             <ul>
               <li>Teams must join the assigned Discord match channel when called by admin.</li>
-              <li>The admin confirms Team 1 after coin toss or tournament procedure.</li>
+              <li>Captains must confirm attendance in the veto room.</li>
+              <li>Admin selects which captain calls heads or tails for the coin toss.</li>
+              <li>The coin toss winner chooses Team 1 or Team 2. Team 1 starts veto selection.</li>
               <li>Each map ban, map pick, or side selection has a visible countdown timer.</li>
               <li>If a team becomes unresponsive, admin may randomize the current action.</li>
               <li>First call is final once locked in the veto room.</li>
-              <li>Admins may pause, resume, stop, or cancel a veto for operational reasons.</li>
             </ul>
           </article>
 
@@ -134,14 +124,13 @@
               <div class="card card-flat"><strong>Search and Destroy</strong><span>Round time 120 seconds. Round win limit and overtime rules follow tournament admin settings.</span></div>
               <div class="card card-flat"><strong>Control</strong><span>Round score limit 3 · Round time 90 seconds.</span></div>
             </div>
-            <p class="small">The lobby host must follow the official room settings issued by tournament administration.</p>
           </article>
 
           <article class="card rules-section" id="match-reporting">
             <div class="eyebrow">Results</div>
             <h3>Match Reporting & Disputes</h3>
             <ul>
-              <li>Captains must submit score reports through the Match Center when required.</li>
+              <li>Captains must submit score reports through the My Matches page when required.</li>
               <li>Admins review reports before official scores are locked.</li>
               <li>Disputes must include clear evidence such as screenshots, VODs, room results, or admin logs.</li>
               <li>Late, incomplete, or abusive disputes may be rejected.</li>
@@ -162,82 +151,6 @@
       </div>
     </div>
   </section>
-
-  <section class="section" id="discord">
-    <div class="container">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Discord Operations</div>
-          <h2>Match Coordination</h2>
-          <p>Discord is the official live coordination channel for captain check-in, match calls, veto rooms, admin rulings, and urgent support.</p>
-        </div>
-      </div>
-
-      <div class="grid grid-three">
-        <div class="card card-flat"><h3>Captain Check-In</h3><p>Captains should be available before scheduled match time. Missing check-in may trigger admin penalties or randomized veto decisions.</p></div>
-        <div class="card card-flat"><h3>Match Channels</h3><p>Use assigned match channels only. Keep discussions clear, short, and focused on tournament operations.</p></div>
-        <div class="card card-flat"><h3>Admin Escalation</h3><p>For disputes, screenshots, or technical issues, create a support ticket below and notify the appropriate Discord admin channel.</p></div>
-      </div>
-
-      <div class="card discord-card">
-        <div>
-          <div class="eyebrow">Official Discord</div>
-          <h3>Join the Tournament Server</h3>
-          <p>Add your final Discord invite link in the button below once the server is ready.</p>
-        </div>
-        <a class="btn btn-primary" href="#" id="discordInviteBtn">Discord Invite Coming Soon</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="faq">
-    <div class="container">
-      <div class="section-heading"><div><div class="eyebrow">FAQ</div><h2>Common Questions</h2></div></div>
-      <div class="faq-grid">
-        <details class="card card-flat" open><summary>Where do captains report scores?</summary><p>Captains report scores through the My Matches page. Admins review and lock the official result.</p></details>
-        <details class="card card-flat"><summary>What happens if a team is late for veto?</summary><p>Admin may pause the process briefly or randomize the current veto action depending on the official ruling.</p></details>
-        <details class="card card-flat"><summary>Can a locked veto choice be changed?</summary><p>Locked choices are final unless an admin determines that a correction is required due to operational error.</p></details>
-        <details class="card card-flat"><summary>How do we raise a dispute?</summary><p>Create a support ticket with the match details, evidence, and a short explanation. Admins will review the case.</p></details>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="ask-admin">
-    <div class="container">
-      <div class="section-heading">
-        <div><div class="eyebrow">Ask Admin</div><h2>Support Ticket Chat</h2><p>Submit rule questions, match issues, veto concerns, Discord problems, or technical support requests.</p></div>
-      </div>
-
-      <div class="grid grid-two">
-        <div class="card">
-          <div class="section-heading"><div><div class="eyebrow">Login</div><h2>Account Access</h2></div></div>
-          <div id="authStatus" class="auth-status">Checking session...</div>
-          <form id="authForm" class="form">
-            <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required/></div>
-            <div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" required/></div>
-            <div class="actions"><button class="btn btn-primary" type="button" id="loginBtn">Login</button><a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a></div>
-          </form>
-        </div>
-
-        <form id="ticketForm" class="card form hidden">
-          <div class="section-heading"><div><div class="eyebrow">New Ticket</div><h2>Ask a Question</h2></div></div>
-          <div class="grid grid-two">
-            <div class="field"><label for="ticketCategory">Category</label><select id="ticketCategory"><option value="general">General</option><option value="registration">Registration</option><option value="match">Match</option><option value="veto">Map Veto</option><option value="technical">Technical</option><option value="dispute">Dispute</option><option value="rules">Rules</option><option value="discord">Discord</option></select></div>
-            <div class="field"><label for="ticketPriority">Priority</label><select id="ticketPriority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
-          </div>
-          <div class="field"><label for="ticketSubject">Subject</label><input id="ticketSubject" placeholder="Example: Question about veto timer" required/></div>
-          <div class="field"><label for="ticketBody">Message</label><textarea id="ticketBody" placeholder="Type your question for admins..." required></textarea></div>
-          <div class="actions"><button class="btn btn-primary" type="submit">Submit Ticket</button></div>
-        </form>
-      </div>
-
-      <div class="section-tight"></div>
-      <div class="card hidden" id="ticketPanel">
-        <div class="section-heading"><div><div class="eyebrow">My Tickets</div><h2>Support Inbox</h2></div><button class="btn" id="refreshTicketsBtn">Refresh</button></div>
-        <div id="ticketList" class="ticket-list"></div>
-      </div>
-    </div>
-  </section>
 </main>
 
 <div id="toast" class="toast"></div>
@@ -245,204 +158,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/main.js"></script>
-<script>
-let currentUser = null;
-let currentProfile = null;
-let currentTournament = null;
-let myTickets = [];
-
-function statusLabel(status) {
-  return String(status || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
-}
-
-async function login() {
-  const email = normalizeText(qs("#authEmail").value);
-  const password = qs("#authPassword").value;
-  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
-
-  const { error } = await window.sb.auth.signInWithPassword({ email, password });
-  if (error) return showToast(error.message, "error");
-
-  showToast("Logged in.", "success");
-  await refreshAuth();
-}
-
-async function refreshAuth() {
-  const session = await getSession();
-  currentUser = session?.user || null;
-
-  if (!currentUser) {
-    currentProfile = null;
-    qs("#authStatus").textContent = "Not logged in.";
-    qs("#authStatus").classList.remove("online");
-    qs("#authForm").classList.remove("hidden");
-    qs("#ticketForm").classList.add("hidden");
-    qs("#ticketPanel").classList.add("hidden");
-    return;
-  }
-
-  currentProfile = await getCurrentProfile();
-  qs("#authStatus").textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
-  qs("#authStatus").classList.add("online");
-  qs("#authForm").classList.add("hidden");
-  qs("#ticketForm").classList.remove("hidden");
-  qs("#ticketPanel").classList.remove("hidden");
-
-  await loadTickets();
-}
-
-async function submitTicket(event) {
-  event.preventDefault();
-  if (!currentUser || !currentProfile) return showToast("Login first.", "error");
-
-  const subject = normalizeText(qs("#ticketSubject").value);
-  const body = normalizeText(qs("#ticketBody").value);
-  const category = qs("#ticketCategory").value;
-  const priority = qs("#ticketPriority").value;
-
-  if (!subject || !body) return showToast("Subject and message are required.", "error");
-
-  try {
-    const { data: ticket, error: ticketError } = await window.sb
-      .from("support_tickets")
-      .insert({
-        tournament_id: currentTournament?.id || null,
-        created_by: currentUser.id,
-        subject,
-        category,
-        priority,
-        status: "open"
-      })
-      .select("*")
-      .single();
-
-    if (ticketError) throw ticketError;
-
-    const { error: messageError } = await window.sb
-      .from("support_ticket_messages")
-      .insert({
-        ticket_id: ticket.id,
-        sender_user_id: currentUser.id,
-        sender_role: currentProfile.role === "admin" ? "admin" : "captain",
-        body
-      });
-
-    if (messageError) throw messageError;
-
-    qs("#ticketForm").reset();
-    showToast("Ticket submitted to admins.", "success");
-    await loadTickets();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Failed to submit ticket.", "error");
-  }
-}
-
-async function loadTickets() {
-  if (!currentUser) return;
-
-  const { data, error } = await window.sb
-    .from("support_tickets")
-    .select("*, support_ticket_messages(*)")
-    .order("updated_at", { ascending: false });
-
-  if (error) throw error;
-
-  myTickets = data || [];
-  renderTickets();
-}
-
-function renderTickets() {
-  const wrap = qs("#ticketList");
-
-  if (!myTickets.length) {
-    wrap.innerHTML = `<div class="notice">No tickets submitted yet.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = myTickets.map(ticket => {
-    const messages = [...(ticket.support_ticket_messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    return `
-      <article class="ticket-card">
-        <div class="ticket-head">
-          <div>
-            <span class="badge badge-${escapeHtml(ticket.status)}">${escapeHtml(statusLabel(ticket.status))}</span>
-            <h3>${escapeHtml(ticket.subject)}</h3>
-            <div class="small">${escapeHtml(ticket.category)} · ${escapeHtml(ticket.priority)} · ${new Date(ticket.updated_at).toLocaleString()}</div>
-          </div>
-        </div>
-
-        <div class="chat-box">
-          ${messages.map(msg => `
-            <div class="chat-bubble ${msg.sender_role === "admin" ? "from-admin" : "from-user"}">
-              <strong>${msg.sender_role === "admin" ? "Admin" : "You"}</strong>
-              <p>${escapeHtml(msg.body)}</p>
-              <span>${new Date(msg.created_at).toLocaleString()}</span>
-            </div>
-          `).join("")}
-        </div>
-
-        ${["resolved","closed"].includes(ticket.status) ? `<div class="notice">This ticket is ${escapeHtml(statusLabel(ticket.status))}.</div>` : `
-          <form class="ticket-reply-form" onsubmit="replyTicket(event, '${ticket.id}')">
-            <div class="field"><label for="reply-${ticket.id}">Reply</label><textarea id="reply-${ticket.id}" placeholder="Add more details..."></textarea></div>
-            <div class="actions"><button class="btn btn-primary" type="submit">Send Reply</button></div>
-          </form>
-        `}
-      </article>
-    `;
-  }).join("");
-}
-
-async function replyTicket(event, ticketId) {
-  event.preventDefault();
-  const body = normalizeText(qs(`#reply-${ticketId}`).value);
-  if (!body) return showToast("Reply cannot be empty.", "error");
-
-  try {
-    const { error: messageError } = await window.sb
-      .from("support_ticket_messages")
-      .insert({
-        ticket_id: ticketId,
-        sender_user_id: currentUser.id,
-        sender_role: currentProfile.role === "admin" ? "admin" : "captain",
-        body
-      });
-
-    if (messageError) throw messageError;
-
-    await window.sb
-      .from("support_tickets")
-      .update({ status: "pending_admin" })
-      .eq("id", ticketId);
-
-    showToast("Reply sent.", "success");
-    await loadTickets();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Failed to send reply.", "error");
-  }
-}
-
-async function init() {
-  try {
-    currentTournament = await loadDefaultTournament();
-  } catch (err) {
-    console.warn("Tournament not loaded for tickets:", err);
-  }
-
-  qs("#loginBtn").addEventListener("click", login);
-  qs("#ticketForm").addEventListener("submit", submitTicket);
-  qs("#refreshTicketsBtn").addEventListener("click", loadTickets);
-
-  await refreshAuth();
-  window.sb.auth.onAuthStateChange(() => refreshAuth());
-}
-
-init().catch(err => {
-  console.error(err);
-  showToast(err.message || "Failed to initialize rulebook page.", "error");
-});
-</script>
+<script src="assets/js/nav-visibility.js"></script>
 <script src="assets/js/premium-copy.js"></script>
 </body>
 </html>

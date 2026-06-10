@@ -18,11 +18,12 @@
           <small>Map Veto Command</small>
         </span>
       </a>
-      <nav class="nav-links">
-        <a class="nav-link" href="bracket.html">Championship Bracket</a>
-        <a class="nav-link" href="admin_bracket.html">Bracket Command</a>
-        <a class="nav-link" href="admin_tickets.html">Support Admin</a><a class="nav-link" href="rules.html">Rulebook</a><button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
-      </nav>
+      <nav class="nav-links" data-smart-nav>
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="index.html#tournaments">Tournament</a>
+      <a class="nav-link" href="rules.html">Rulebook</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    </nav>
     </div>
   </header>
 
@@ -165,6 +166,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/config.js"></script>
   <script src="assets/js/main.js"></script>
+<script src="assets/js/nav-visibility.js"></script>
   <script src="assets/js/veto-engine.js"></script>
   <script src="assets/js/veto-timer.js"></script>
   <script src="assets/js/veto-realtime.js"></script>

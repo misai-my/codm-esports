@@ -11,8 +11,11 @@
 <header class="nav">
   <div class="container nav-inner">
     <a class="brand" href="index.html"><span class="brand-emblem">M</span><span class="brand-title">CODM Tournament OS<small>Team Registration Portal</small></span></a>
-    <nav class="nav-links">
-      <a class="nav-link" href="index.html">Home</a><a class="nav-link" href="bracket.html">Bracket</a><a class="nav-link" href="rules.html">Rulebook</a><a class="nav-link" href="matches.html">My Matches</a><button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    <nav class="nav-links" data-smart-nav>
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="index.html#tournaments">Tournament</a>
+      <a class="nav-link" href="rules.html">Rulebook</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
     </nav>
   </div>
 </header>
@@ -35,6 +38,7 @@
 </main>
 <div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/main.js"></script>
+<script src="assets/js/nav-visibility.js"></script>
 <script>
 let currentUser=null,currentTournament=null,myRegistrations=[],editingTeamId=null;
 function isDiscordHandleValid(handle){return /^[A-Za-z0-9._]{2,32}$/.test(String(handle||'').trim())}
