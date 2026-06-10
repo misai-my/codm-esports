@@ -672,3 +672,73 @@ select option:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Player ID fields + role dropdowns + stage assignment
+   ============================================================ */
+.player-entry-card h3 {
+  margin-bottom: 12px;
+}
+
+.player-field-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stage-control-card {
+  border-color: rgba(50,230,143,.24) !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(50,230,143,.12), transparent 18rem),
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.026)),
+    rgba(8,14,28,.78) !important;
+}
+
+.stage-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stage-chip {
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(50,230,143,.26);
+  background: rgba(50,230,143,.08);
+  color: rgba(247,251,255,.88);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.stage-assign-box {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.stage-assign-box strong {
+  color: #f8d15c;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.stage-assign-box .actions {
+  gap: 6px;
+}
+
+.stage-assign-box .btn {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .player-field-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .player-field-grid {
+    grid-template-columns: 1fr;
+  }
+}
