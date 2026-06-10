@@ -282,3 +282,41 @@ select option:disabled {
     flex-direction: column;
   }
 }
+
+
+/* ============================================================
+   Rulebook / Discord / Ticketing
+   ============================================================ */
+.rules-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
+.rules-toc{position:sticky;top:96px;display:grid;gap:8px}
+.rules-toc a{display:block;padding:10px 12px;border-radius:14px;color:rgba(230,239,255,.78);background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);font-weight:800}
+.rules-toc a:hover,.rules-quick-card:hover{border-color:rgba(248,209,92,.36);background:rgba(248,209,92,.08)}
+.rules-section h3,.rules-section h4{margin-top:0}
+.rules-section li{margin:8px 0;color:rgba(230,239,255,.78);line-height:1.6}
+.rules-format-grid,.rules-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.rules-format-grid strong{display:block;margin-bottom:8px;color:#f8d15c;font-size:18px}
+.rules-format-grid span{color:rgba(230,239,255,.76);line-height:1.55}
+.discord-card{margin-top:18px;display:flex;justify-content:space-between;gap:18px;align-items:center}
+.faq-grid{display:grid;gap:12px}
+.faq-grid summary{cursor:pointer;font-weight:1000;color:#f7fbff}
+.faq-grid p{margin-bottom:0}
+.ticket-list,.admin-ticket-list{display:grid;gap:14px}
+.ticket-card{border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:18px;background:rgba(255,255,255,.04)}
+.ticket-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:14px}
+.chat-box{display:grid;gap:10px;padding:14px;border-radius:20px;background:rgba(0,0,0,.20);border:1px solid rgba(255,255,255,.08);max-height:420px;overflow:auto}
+.chat-bubble{width:min(86%,620px);padding:12px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06)}
+.chat-bubble.from-user{justify-self:end;background:linear-gradient(145deg,rgba(248,209,92,.16),rgba(255,255,255,.045));border-color:rgba(248,209,92,.20)}
+.chat-bubble.from-admin{justify-self:start;background:linear-gradient(145deg,rgba(119,233,255,.12),rgba(255,255,255,.045));border-color:rgba(119,233,255,.20)}
+.chat-bubble strong{display:block;margin-bottom:4px;color:#f8d15c;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.chat-bubble p{margin:0;color:rgba(247,251,255,.92);white-space:pre-wrap}
+.chat-bubble span{display:block;margin-top:8px;color:rgba(230,239,255,.48);font-size:11px}
+.ticket-reply-form{margin-top:14px}
+.admin-ticket-layout{display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px;align-items:start}
+.admin-ticket-row{width:100%;display:grid;gap:6px;text-align:left;padding:14px;border-radius:18px;color:#f7fbff;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10)}
+.admin-ticket-row:hover,.admin-ticket-row.is-active{border-color:rgba(248,209,92,.36);background:rgba(248,209,92,.08)}
+.admin-ticket-row span,.admin-ticket-row small{color:rgba(230,239,255,.66)}
+.admin-chat-box{margin:16px 0}
+.badge-pending_admin,.badge-pending_user,.badge-open{background:rgba(248,209,92,.12);border-color:rgba(248,209,92,.26);color:#f8d15c}
+.badge-resolved{background:rgba(50,230,143,.12);border-color:rgba(50,230,143,.24);color:#32e68f}
+.badge-closed{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:rgba(247,251,255,.66)}
+@media(max-width:900px){.rules-layout,.admin-ticket-layout{grid-template-columns:1fr}.rules-toc{position:static}.discord-card{flex-direction:column;align-items:stretch}.chat-bubble{width:100%}}

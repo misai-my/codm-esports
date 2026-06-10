@@ -43,3 +43,24 @@
     nav.appendChild(link);
   }
 })();
+
+(function () {
+  "use strict";
+  const allowedAdminPages = ["admin.html","admin_bracket.html","admin_veto.html","admin_tickets.html"];
+  const currentPage = window.location.pathname.split("/").pop() || "index.html";
+  if (!allowedAdminPages.includes(currentPage)) return;
+  const nav = document.querySelector(".nav-links");
+  if (!nav) return;
+  function addLink(href, text) {
+    if (nav.querySelector(`[href="${href}"]`)) return;
+    const link = document.createElement("a");
+    link.className = "nav-link";
+    link.href = href;
+    link.textContent = text;
+    const signOut = nav.querySelector("#signOutBtn");
+    if (signOut) nav.insertBefore(link, signOut);
+    else nav.appendChild(link);
+  }
+  addLink("admin_tickets.html", "Support Admin");
+  addLink("rules.html", "Rulebook");
+})();

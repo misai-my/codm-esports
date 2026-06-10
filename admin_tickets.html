@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Support Admin · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-emblem">M</span>
+      <span class="brand-title">CODM Tournament OS<small>Support Command</small></span>
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="admin.html">Registration Admin</a>
+      <a class="nav-link" href="admin_bracket.html">Bracket Admin</a>
+      <a class="nav-link" href="admin_veto.html">Map Veto Admin</a>
+      <a class="nav-link" href="rules.html">Rulebook</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero" data-hero-bg>
+    <div class="container">
+      <div class="eyebrow">Admin Support</div>
+      <h1 class="h1"><span class="gradient-text">Answer tickets.</span><br/>Control support.</h1>
+      <p class="lead">Review captain questions, disputes, Discord issues, rule clarifications, and technical support requests.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid grid-two">
+      <div class="card">
+        <div class="eyebrow">Admin Login</div>
+        <h2>Access</h2>
+        <div id="authStatus" class="auth-status">Checking session...</div>
+        <form id="authForm" class="form">
+          <div class="field"><label for="authEmail">Admin Email</label><input id="authEmail" type="email" required/></div>
+          <div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" required/></div>
+          <div class="actions"><button class="btn btn-primary" type="button" id="loginBtn">Login</button><a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Filters</div>
+        <h2>Ticket Queue</h2>
+        <div class="grid grid-two">
+          <div class="field"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">All</option><option value="open">Open</option><option value="pending_admin">Pending Admin</option><option value="pending_user">Pending User</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
+          <div class="field"><label for="categoryFilter">Category</label><select id="categoryFilter"><option value="all">All</option><option value="general">General</option><option value="registration">Registration</option><option value="match">Match</option><option value="veto">Map Veto</option><option value="technical">Technical</option><option value="dispute">Dispute</option><option value="rules">Rules</option><option value="discord">Discord</option></select></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="adminPanel">
+    <div class="container admin-ticket-layout">
+      <div class="card">
+        <div class="section-heading"><div><div class="eyebrow">Queue</div><h2>Tickets</h2></div><button class="btn" id="refreshBtn">Refresh</button></div>
+        <div id="ticketQueue" class="admin-ticket-list"></div>
+      </div>
+
+      <div class="card"><div id="ticketDetail"><div class="notice">Select a ticket to review.</div></div></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/main.js"></script>
+<script>
+let profile = null;
+let tickets = [];
+let selectedTicketId = null;
+
+function statusLabel(status) {
+  return String(status || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+async function login() {
+  const email = normalizeText(qs("#authEmail").value);
+  const password = qs("#authPassword").value;
+  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
+
+  const { error } = await window.sb.auth.signInWithPassword({ email, password });
+  if (error) return showToast(error.message, "error");
+
+  showToast("Logged in.", "success");
+  await refreshAuth();
+}
+
+async function refreshAuth() {
+  const session = await getSession();
+  if (!session) {
+    profile = null;
+    qs("#authStatus").textContent = "Not logged in.";
+    qs("#authStatus").classList.remove("online");
+    qs("#authForm").classList.remove("hidden");
+    qs("#signOutBtn").classList.add("hidden");
+    qs("#adminPanel").classList.add("hidden");
+    return;
+  }
+
+  profile = await getCurrentProfile();
+  qs("#authStatus").textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
+  qs("#authStatus").classList.add("online");
+  qs("#authForm").classList.add("hidden");
+  qs("#signOutBtn").classList.remove("hidden");
+
+  if (profile.role !== "admin") {
+    qs("#adminPanel").classList.add("hidden");
+    return showToast("This account is not an admin.", "error");
+  }
+
+  qs("#adminPanel").classList.remove("hidden");
+  await loadTickets();
+}
+
+async function loadTickets() {
+  const { data, error } = await window.sb
+    .from("support_tickets")
+    .select("*, profiles!support_tickets_created_by_fkey(email, full_name), support_ticket_messages(*)")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+
+  tickets = data || [];
+  renderTicketQueue();
+  if (selectedTicketId) renderTicketDetail(selectedTicketId);
+}
+
+function filteredTickets() {
+  const status = qs("#statusFilter").value;
+  const category = qs("#categoryFilter").value;
+  return tickets.filter(t => (status === "all" || t.status === status) && (category === "all" || t.category === category));
+}
+
+function renderTicketQueue() {
+  const wrap = qs("#ticketQueue");
+  const rows = filteredTickets();
+
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="notice">No tickets match the current filter.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = rows.map(ticket => {
+    const owner = ticket.profiles?.full_name || ticket.profiles?.email || "Captain";
+    return `
+      <button class="admin-ticket-row ${ticket.id === selectedTicketId ? "is-active" : ""}" onclick="renderTicketDetail('${ticket.id}')">
+        <span class="badge badge-${escapeHtml(ticket.status)}">${escapeHtml(statusLabel(ticket.status))}</span>
+        <strong>${escapeHtml(ticket.subject)}</strong>
+        <span>${escapeHtml(ticket.category)} · ${escapeHtml(ticket.priority)}</span>
+        <small>${escapeHtml(owner)} · ${new Date(ticket.updated_at).toLocaleString()}</small>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderTicketDetail(ticketId) {
+  selectedTicketId = ticketId;
+  const ticket = tickets.find(t => t.id === ticketId);
+  if (!ticket) {
+    qs("#ticketDetail").innerHTML = `<div class="notice">Ticket not found.</div>`;
+    return;
+  }
+
+  const messages = [...(ticket.support_ticket_messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const owner = ticket.profiles?.full_name || ticket.profiles?.email || "Captain";
+
+  qs("#ticketDetail").innerHTML = `
+    <div class="section-heading">
+      <div>
+        <div class="eyebrow">Ticket Detail</div>
+        <h2>${escapeHtml(ticket.subject)}</h2>
+        <p>${escapeHtml(owner)} · ${escapeHtml(ticket.category)} · ${escapeHtml(ticket.priority)} · ${new Date(ticket.updated_at).toLocaleString()}</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <select id="ticketStatusSelect">
+        <option value="open" ${ticket.status === "open" ? "selected" : ""}>Open</option>
+        <option value="pending_admin" ${ticket.status === "pending_admin" ? "selected" : ""}>Pending Admin</option>
+        <option value="pending_user" ${ticket.status === "pending_user" ? "selected" : ""}>Pending User</option>
+        <option value="resolved" ${ticket.status === "resolved" ? "selected" : ""}>Resolved</option>
+        <option value="closed" ${ticket.status === "closed" ? "selected" : ""}>Closed</option>
+      </select>
+      <button class="btn" onclick="updateTicketStatus('${ticket.id}')">Update Status</button>
+    </div>
+
+    <div class="chat-box admin-chat-box">
+      ${messages.map(msg => `
+        <div class="chat-bubble ${msg.sender_role === "admin" ? "from-admin" : "from-user"}">
+          <strong>${msg.sender_role === "admin" ? "Admin" : "Captain"}</strong>
+          <p>${escapeHtml(msg.body)}</p>
+          <span>${new Date(msg.created_at).toLocaleString()}</span>
+        </div>
+      `).join("")}
+    </div>
+
+    <form class="form" onsubmit="sendAdminReply(event, '${ticket.id}')">
+      <div class="field"><label for="adminReply">Admin Reply</label><textarea id="adminReply" placeholder="Type official response..."></textarea></div>
+      <div class="actions"><button class="btn btn-primary" type="submit">Send Reply</button></div>
+    </form>
+  `;
+
+  renderTicketQueue();
+}
+
+async function updateTicketStatus(ticketId) {
+  const status = qs("#ticketStatusSelect").value;
+  const { error } = await window.sb.from("support_tickets").update({ status }).eq("id", ticketId);
+  if (error) return showToast(error.message, "error");
+  showToast("Ticket status updated.", "success");
+  await loadTickets();
+}
+
+async function sendAdminReply(event, ticketId) {
+  event.preventDefault();
+  const body = normalizeText(qs("#adminReply").value);
+  if (!body) return showToast("Reply cannot be empty.", "error");
+
+  const { error: msgError } = await window.sb
+    .from("support_ticket_messages")
+    .insert({ ticket_id: ticketId, sender_user_id: profile.id, sender_role: "admin", body });
+
+  if (msgError) return showToast(msgError.message, "error");
+
+  await window.sb.from("support_tickets").update({ status: "pending_user" }).eq("id", ticketId);
+
+  showToast("Admin reply sent.", "success");
+  await loadTickets();
+}
+
+async function init() {
+  qs("#loginBtn").addEventListener("click", login);
+  qs("#refreshBtn").addEventListener("click", loadTickets);
+  qs("#statusFilter").addEventListener("change", renderTicketQueue);
+  qs("#categoryFilter").addEventListener("change", renderTicketQueue);
+
+  await refreshAuth();
+  window.sb.auth.onAuthStateChange(() => refreshAuth());
+}
+
+init().catch(err => {
+  console.error(err);
+  showToast(err.message || "Failed to initialize support admin.", "error");
+});
+</script>
+<script src="assets/js/premium-copy.js"></script>
+</body>
+</html>
