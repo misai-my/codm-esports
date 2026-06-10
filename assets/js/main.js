@@ -34,9 +34,59 @@ async function getCurrentProfile() {
   return data;
 }
 async function signOut() { await window.sb.auth.signOut(); window.location.reload(); }
-async function loadDefaultTournament() {
-  const { data, error } = await window.sb.from("tournaments").select("*").eq("slug", cfg.DEFAULT_TOURNAMENT_SLUG).single();
+const SELECTED_TOURNAMENT_KEY = "codm:selected_tournament_slug";
+
+function getSelectedTournamentSlug() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = normalizeText(params.get("tournament") || params.get("slug"));
+  if (fromUrl) {
+    localStorage.setItem(SELECTED_TOURNAMENT_KEY, fromUrl);
+    return fromUrl;
+  }
+  return localStorage.getItem(SELECTED_TOURNAMENT_KEY) || cfg.DEFAULT_TOURNAMENT_SLUG;
+}
+
+function setSelectedTournamentSlug(slug) {
+  const clean = normalizeText(slug);
+  if (!clean) return;
+  localStorage.setItem(SELECTED_TOURNAMENT_KEY, clean);
+}
+
+async function loadAllTournaments() {
+  const { data, error } = await window.sb
+    .from("tournaments")
+    .select("*")
+    .order("start_at", { ascending: false, nullsFirst: false })
+    .order("title", { ascending: true });
+
   if (error) throw error;
+  return data || [];
+}
+
+async function loadDefaultTournament() {
+  const selectedSlug = getSelectedTournamentSlug();
+
+  let { data, error } = await window.sb
+    .from("tournaments")
+    .select("*")
+    .eq("slug", selectedSlug)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data && selectedSlug !== cfg.DEFAULT_TOURNAMENT_SLUG) {
+    const fallback = await window.sb
+      .from("tournaments")
+      .select("*")
+      .eq("slug", cfg.DEFAULT_TOURNAMENT_SLUG)
+      .maybeSingle();
+
+    if (fallback.error) throw fallback.error;
+    data = fallback.data;
+    if (data?.slug) setSelectedTournamentSlug(data.slug);
+  }
+
+  if (!data) throw new Error("Tournament not found. Create a tournament record first.");
   return data;
 }
 function statusBadge(status) { return `<span class="badge badge-${escapeHtml(status)}">${escapeHtml(status)}</span>`; }

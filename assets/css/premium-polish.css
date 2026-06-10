@@ -448,3 +448,54 @@ select option:disabled {
     align-items: stretch;
   }
 }
+
+
+/* ============================================================
+   Multi-tournament landing + Registration updates
+   ============================================================ */
+.tournament-select-card.is-selected {
+  border-color: rgba(50,230,143,.40) !important;
+  background:
+    linear-gradient(145deg, rgba(50,230,143,.10), rgba(255,255,255,.026)),
+    rgba(8,14,28,.78) !important;
+}
+
+.selected-tournament-panel,
+.registration-control-card,
+.registration-receipt-card {
+  border-color: rgba(248,209,92,.26) !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(248,209,92,.14), transparent 18rem),
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.026)),
+    rgba(8,14,28,.78) !important;
+}
+
+.selected-tournament-panel,
+.registration-control-card .section-heading {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+}
+
+.registration-receipt-text {
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.28);
+  color: rgba(247,251,255,.90);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .selected-tournament-panel,
+  .registration-control-card .section-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
