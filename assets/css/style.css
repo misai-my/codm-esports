@@ -230,3 +230,10 @@ select option, select optgroup { background-color:#0b121f; color:#f7fbff; }
     align-items: stretch;
   }
 }
+
+
+/* ============================================================
+   Automatic email receipts + Registration change logs
+   ============================================================ */
+.change-log-box{margin-top:12px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18)}
+.change-log-box summary{cursor:pointer;font-weight:1000;color:#f8d15c}.change-log-list{display:grid;gap:8px;margin-top:10px}.change-log-item{padding:10px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}.change-log-item strong{display:block;font-size:12px;letter-spacing:.08em;color:#f8d15c}.change-log-item span{display:block;margin:4px 0;color:rgba(230,239,255,.55);font-size:12px}.change-log-item p{margin:0;color:rgba(247,251,255,.82);font-size:13px}

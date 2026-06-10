@@ -1,490 +1,57 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Register Team · CODM Tournament OS</title><link rel="stylesheet" href="assets/css/style.css"/><link rel="stylesheet" href="assets/css/premium-polish.css"/></head><body>
-<header class="nav"><div class="container nav-inner"><a class="brand" href="index.html"><span class="brand-emblem">M</span><span class="brand-title">CODM Tournament OS<small>Team Registration Portal</small></span></a><nav class="nav-links"><a class="nav-link" href="index.html">Home</a><a class="nav-link" href="bracket.html">Bracket</a><a class="nav-link" href="rules.html">Rules</a><a class="nav-link" href="matches.html">My Matches</a><button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button></nav></div></header>
-<main><section class="page-hero" data-hero-bg><div class="container"><div class="eyebrow">Team Registration</div><h1 class="h1"><span class="gradient-text">Enter the arena.</span><br/>Register your roster.</h1><p class="lead">Submit your official lineup, captain details, competitive IDs, and team identity for organizer review.</p></div></section>
-<section class="section"><div class="container grid grid-two"><div class="card"><div class="eyebrow">Captain Access</div><h2>Secure Entry</h2><div id="authStatus" class="auth-status">Checking session...</div><form id="authForm" class="form"><div class="field"><label for="authName">Captain Name</label><input id="authName" placeholder="Example: Simon Riley"/></div><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required/></div><div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" placeholder="Minimum 6 characters" required/></div><div class="actions"><button type="button" class="btn btn-primary" id="signUpBtn">Create Account</button><button type="button" class="btn" id="loginBtn">Login</button><a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a></div></form></div><div class="card"><div class="eyebrow">Application Status</div><h2>Team Submission</h2><div id="myRegistrations">Sign in to view your team submission.</div></div></div></section>
-<section class="section"><div class="container"><form id="registrationForm" class="card form hidden"><div class="section-heading"><div><div class="eyebrow">Official Entry</div><h2>Team Application</h2><p id="tournamentMeta">Loading tournament...</p></div></div><div class="grid grid-two"><div class="field"><label for="teamName">Team Name</label><input id="teamName" required/></div><div class="field"><label for="teamTag">Team Tag</label><input id="teamTag" required maxlength="12"/></div></div><div class="field"><label for="logoUrl">Team Logo Link</label><input id="logoUrl" placeholder="https://example.com/team-logo.png"/></div><div class="grid grid-three"><div class="field"><label for="captainName">Captain Name</label><input id="captainName" required/></div><div class="field"><label for="captainEmail">Captain Email</label><input id="captainEmail" type="email" required/></div><div class="field"><label for="captainDiscordId">Captain Discord Handle</label><input id="captainDiscordId" required placeholder="Example: SimonRiley / Simon_Riley / Simon.Riley"/></div></div><div class="section-heading"><div><div class="eyebrow">Starting Five</div><h2>Main Roster</h2><p>Register the five players representing your squad on match day.</p></div></div><div id="mainPlayers" class="grid"></div><div class="section-heading"><div><div class="eyebrow">Reserve Bench</div><h2>Substitutes</h2><p>Add reserve players ready to step in when called.</p></div></div><div id="subPlayers" class="grid"></div><div class="actions"><button class="btn btn-primary" type="submit">Submit Official Registration</button></div></form><div id="registrationReceipt" class="section-tight"></div></div></section></main><div id="toast" class="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/main.js"></script><script>
-let currentUser = null;
-let currentTournament = null;
-let myRegistrations = [];
-let editingTeamId = null;
-
-function isDiscordHandleValid(handle) {
-  return /^[A-Za-z0-9._]{2,32}$/.test(String(handle || "").trim());
-}
-
-function playerRowHtml(index, isSubstitute = false) {
-  const label = isSubstitute ? `Sub ${index}` : `Player ${index}`;
-  const prefix = isSubstitute ? "sub" : "player";
-  return `
-    <div class="card card-flat">
-      <h3>${label}</h3>
-      <div class="grid grid-three">
-        <div class="field"><label for="${prefix}${index}Ign">IGN</label><input id="${prefix}${index}Ign" ${isSubstitute ? "" : "required"} /></div>
-        <div class="field"><label for="${prefix}${index}Uid">CODM UID</label><input id="${prefix}${index}Uid" ${isSubstitute ? "" : "required"} /></div>
-        <div class="field"><label for="${prefix}${index}Role">Role</label><input id="${prefix}${index}Role" placeholder="OBJ / Slayer / Anchor / Flex" /></div>
-      </div>
-    </div>
-  `;
-}
-
-function renderPlayerInputs() {
-  qs("#mainPlayers").innerHTML = [1, 2, 3, 4, 5].map(i => playerRowHtml(i, false)).join("");
-  qs("#subPlayers").innerHTML = [1, 2].map(i => playerRowHtml(i, true)).join("");
-}
-
-async function refreshAuth() {
-  const session = await getSession();
-  currentUser = session?.user || null;
-
-  const authForm = qs("#authForm");
-  const signOutBtn = qs("#signOutBtn");
-  const regForm = qs("#registrationForm");
-  const authStatus = qs("#authStatus");
-
-  if (!currentUser) {
-    authStatus.textContent = "Not logged in.";
-    authStatus.classList.remove("online");
-    authForm.classList.remove("hidden");
-    signOutBtn.classList.add("hidden");
-    regForm.classList.add("hidden");
-    qs("#myRegistrations").innerHTML = "Sign in to view your team submission.";
-    qs("#registrationReceipt").innerHTML = "";
-    return;
-  }
-
-  authStatus.textContent = `Logged in as ${currentUser.email}`;
-  authStatus.classList.add("online");
-  authForm.classList.add("hidden");
-  signOutBtn.classList.remove("hidden");
-  regForm.classList.remove("hidden");
-  qs("#captainEmail").value = currentUser.email || "";
-
-  await loadMyRegistrations();
-}
-
-async function signUp() {
-  const fullName = normalizeText(qs("#authName").value);
-  const email = normalizeText(qs("#authEmail").value);
-  const password = qs("#authPassword").value;
-
-  if (!fullName) return showToast("Captain name is required.", "error");
-  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
-  if (password.length < 6) return showToast("Password must be at least 6 characters.", "error");
-
-  const { error } = await window.sb.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName }, emailRedirectTo: window.location.href }
-  });
-
-  if (error) return showToast(error.message, "error");
-
-  showToast("Account created. Check your email to confirm, then login.", "success");
-  await refreshAuth();
-}
-
-async function login() {
-  const email = normalizeText(qs("#authEmail").value);
-  const password = qs("#authPassword").value;
-
-  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
-
-  const { error } = await window.sb.auth.signInWithPassword({ email, password });
-  if (error) return showToast(error.message, "error");
-
-  showToast("Logged in.", "success");
-  await refreshAuth();
-}
-
-function collectPlayers() {
-  const players = [];
-
-  for (let i = 1; i <= 5; i++) {
-    players.push({
-      player_order: i,
-      ign: normalizeText(qs(`#player${i}Ign`).value),
-      uid: normalizeText(qs(`#player${i}Uid`).value),
-      role: normalizeText(qs(`#player${i}Role`).value),
-      is_substitute: false
-    });
-  }
-
-  for (let i = 1; i <= 2; i++) {
-    const ign = normalizeText(qs(`#sub${i}Ign`).value);
-    const uid = normalizeText(qs(`#sub${i}Uid`).value);
-    const role = normalizeText(qs(`#sub${i}Role`).value);
-
-    if (ign || uid || role) {
-      players.push({
-        player_order: 5 + i,
-        ign,
-        uid,
-        role,
-        is_substitute: true
-      });
-    }
-  }
-
-  return players;
-}
-
-function validatePlayers(players) {
-  for (const p of players.filter(p => !p.is_substitute)) {
-    if (!p.ign || !p.uid) return "All 5 main players must have IGN and UID.";
-  }
-
-  for (const p of players) {
-    if ((p.ign && !p.uid) || (!p.ign && p.uid)) return "Substitute players must have both IGN and UID if included.";
-  }
-
-  const set = new Set();
-  for (const p of players) {
-    const key = p.uid.toLowerCase();
-    if (set.has(key)) return `Duplicate UID in this form: ${p.uid}`;
-    set.add(key);
-  }
-
-  return null;
-}
-
-async function checkDuplicates(tournamentId, teamName, teamTag, players, excludeTeamId = null) {
-  let teamQuery = window.sb
-    .from("teams")
-    .select("id,team_name,team_tag")
-    .eq("tournament_id", tournamentId)
-    .or(`team_name.ilike.${teamName},team_tag.ilike.${teamTag}`);
-
-  if (excludeTeamId) teamQuery = teamQuery.neq("id", excludeTeamId);
-
-  const { data: teams, error: teamError } = await teamQuery;
-  if (teamError) throw teamError;
-  if (teams.length) return "Team name or team tag already exists in this tournament.";
-
-  const uids = players.map(p => p.uid).filter(Boolean);
-  if (!uids.length) return null;
-
-  let playerQuery = window.sb
-    .from("team_players")
-    .select("team_id,uid")
-    .eq("tournament_id", tournamentId)
-    .in("uid", uids);
-
-  if (excludeTeamId) playerQuery = playerQuery.neq("team_id", excludeTeamId);
-
-  const { data: foundPlayers, error: playerError } = await playerQuery;
-  if (playerError) throw playerError;
-
-  if (foundPlayers.length) return `One or more CODM UIDs are already registered: ${foundPlayers.map(p => p.uid).join(", ")}`;
-
-  return null;
-}
-
-function buildRegistrationCopy(data) {
-  const lines = [
-    "CODM Tournament OS - Registration Copy",
-    "======================================",
-    `Tournament: ${currentTournament?.title || ""}`,
-    `Action: ${data.action || "Submitted"}`,
-    `Team Name: ${data.teamName}`,
-    `Team Tag: ${data.teamTag}`,
-    `Logo URL: ${data.logoUrl || "N/A"}`,
-    `Captain Name: ${data.captainName}`,
-    `Captain Email: ${data.captainEmail}`,
-    `Captain Discord Handle: ${data.captainDiscordHandle}`,
-    "",
-    "Players:"
-  ];
-
-  data.players.forEach(p => {
-    lines.push(`${p.player_order}. ${p.ign} | UID: ${p.uid}${p.role ? ` | Role: ${p.role}` : ""}${p.is_substitute ? " | Substitute" : ""}`);
-  });
-
-  lines.push("");
-  lines.push(`Generated: ${new Date().toLocaleString()}`);
-  return lines.join("\\n");
-}
-
-function renderReceipt(data) {
-  const copy = buildRegistrationCopy(data);
-  const encodedSubject = encodeURIComponent(`CODM Tournament Registration Copy - ${data.teamTag}`);
-  const encodedBody = encodeURIComponent(copy);
-  const mailto = `mailto:${encodeURIComponent(data.captainEmail)}?subject=${encodedSubject}&body=${encodedBody}`;
-
-  qs("#registrationReceipt").innerHTML = `
-    <div class="card registration-receipt-card">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Registration Copy</div>
-          <h2>${escapeHtml(data.action || "Registration Saved")}</h2>
-          <p>A copy of the entered details is ready below. You can copy it, download it, or open an email draft addressed to yourself.</p>
-        </div>
-      </div>
-      <pre class="registration-receipt-text" id="receiptText">${escapeHtml(copy)}</pre>
-      <div class="actions">
-        <button class="btn btn-primary" type="button" onclick="copyReceipt()">Copy Details</button>
-        <button class="btn" type="button" onclick="downloadReceipt()">Download .txt Copy</button>
-        <a class="btn btn-ghost" href="${mailto}">Email Copy to Myself</a>
-      </div>
-    </div>
-  `;
-
-  localStorage.setItem("codm:last_registration_receipt", copy);
-}
-
-async function copyReceipt() {
-  const text = qs("#receiptText")?.textContent || localStorage.getItem("codm:last_registration_receipt") || "";
-  if (!text) return showToast("No registration copy available.", "error");
-  await navigator.clipboard.writeText(text);
-  showToast("Registration details copied.", "success");
-}
-
-function downloadReceipt() {
-  const text = qs("#receiptText")?.textContent || localStorage.getItem("codm:last_registration_receipt") || "";
-  if (!text) return showToast("No registration copy available.", "error");
-
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `codm-registration-${Date.now()}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function resetEditMode() {
-  editingTeamId = null;
-  qs("#registrationForm").reset();
-  qs("#captainEmail").value = currentUser?.email || "";
-  qs("#registrationForm .section-heading h2").textContent = "Team Application";
-  const submitBtn = qs('#registrationForm button[type="submit"]');
-  if (submitBtn) submitBtn.textContent = "Submit Official Registration";
-}
-
-function fillFormFromTeam(teamId) {
-  const team = myRegistrations.find(t => t.id === teamId);
-  if (!team) return showToast("Registration not found.", "error");
-  if (!currentTournament.registration_open) return showToast("Registration is closed. Editing is disabled.", "error");
-
-  editingTeamId = team.id;
-
-  qs("#teamName").value = team.team_name || "";
-  qs("#teamTag").value = team.team_tag || "";
-  qs("#logoUrl").value = team.logo_url || "";
-  qs("#captainName").value = team.captain_name || "";
-  qs("#captainEmail").value = team.captain_email || currentUser?.email || "";
-  qs("#captainDiscordId").value = team.captain_discord_id || "";
-
-  const players = [...(team.team_players || [])].sort((a, b) => Number(a.player_order) - Number(b.player_order));
-
-  for (let i = 1; i <= 5; i++) {
-    const p = players.find(x => Number(x.player_order) === i && !x.is_substitute);
-    qs(`#player${i}Ign`).value = p?.ign || "";
-    qs(`#player${i}Uid`).value = p?.uid || "";
-    qs(`#player${i}Role`).value = p?.role || "";
-  }
-
-  for (let i = 1; i <= 2; i++) {
-    const p = players.find(x => Number(x.player_order) === 5 + i && x.is_substitute);
-    qs(`#sub${i}Ign`).value = p?.ign || "";
-    qs(`#sub${i}Uid`).value = p?.uid || "";
-    qs(`#sub${i}Role`).value = p?.role || "";
-  }
-
-  qs("#registrationForm .section-heading h2").textContent = "Update Team Application";
-  const submitBtn = qs('#registrationForm button[type="submit"]');
-  if (submitBtn) submitBtn.textContent = "Save Registration Update";
-
-  scrollToId("registrationForm");
-  showToast("Registration loaded for editing.", "success");
-}
-
-async function submitRegistration(event) {
-  event.preventDefault();
-
-  try {
-    if (!currentUser) return showToast("Login first.", "error");
-    if (!currentTournament) return showToast("Tournament not loaded.", "error");
-    if (!currentTournament.registration_open) return showToast("Registration is closed.", "error");
-
-    const teamName = normalizeText(qs("#teamName").value);
-    const teamTag = normalizeText(qs("#teamTag").value).toUpperCase();
-    const logoUrl = normalizeText(qs("#logoUrl").value);
-    const captainName = normalizeText(qs("#captainName").value);
-    const captainEmail = normalizeText(qs("#captainEmail").value);
-    const captainDiscordHandle = normalizeText(qs("#captainDiscordId").value);
-    const players = collectPlayers();
-
-    if (!teamName || !teamTag || !captainName) return showToast("Team name, tag, and captain name are required.", "error");
-    if (!isEmailValid(captainEmail)) return showToast("Enter a valid captain email.", "error");
-    if (captainEmail.toLowerCase() !== currentUser.email.toLowerCase()) return showToast("Captain email must match logged-in account email.", "error");
-    if (!isDiscordHandleValid(captainDiscordHandle)) return showToast("Discord handle must be 2–32 characters using letters, numbers, dots, or underscores.", "error");
-    if (!isImageUrlMaybe(logoUrl)) return showToast("Logo URL must start with http:// or https://", "error");
-
-    const playerError = validatePlayers(players);
-    if (playerError) return showToast(playerError, "error");
-
-    const duplicateError = await checkDuplicates(currentTournament.id, teamName, teamTag, players, editingTeamId);
-    if (duplicateError) return showToast(duplicateError, "error");
-
-    const receiptData = {
-      action: editingTeamId ? "Registration Updated" : "Registration Submitted",
-      teamName,
-      teamTag,
-      logoUrl,
-      captainName,
-      captainEmail,
-      captainDiscordHandle,
-      players
-    };
-
-    if (editingTeamId) {
-      const { error } = await window.sb.rpc("captain_update_registration", {
-        p_team_id: editingTeamId,
-        p_team_name: teamName,
-        p_team_tag: teamTag,
-        p_logo_url: logoUrl || null,
-        p_captain_name: captainName,
-        p_captain_email: captainEmail,
-        p_captain_discord_handle: captainDiscordHandle,
-        p_players: players
-      });
-
-      if (error) throw error;
-
-      showToast("Registration updated and returned to pending review.", "success");
-    } else {
-      const { data: team, error: teamInsertError } = await window.sb
-        .from("teams")
-        .insert({
-          tournament_id: currentTournament.id,
-          captain_user_id: currentUser.id,
-          team_name: teamName,
-          team_tag: teamTag,
-          logo_url: logoUrl || null,
-          captain_name: captainName,
-          captain_email: captainEmail,
-          captain_discord_id: captainDiscordHandle,
-          status: "pending"
-        })
-        .select()
-        .single();
-
-      if (teamInsertError) throw teamInsertError;
-
-      const rows = players.map(p => ({
-        tournament_id: currentTournament.id,
-        team_id: team.id,
-        player_order: p.player_order,
-        ign: p.ign,
-        uid: p.uid,
-        role: p.role || null,
-        is_substitute: p.is_substitute
-      }));
-
-      const { error: playersInsertError } = await window.sb.from("team_players").insert(rows);
-      if (playersInsertError) throw playersInsertError;
-
-      const { error: registrationError } = await window.sb
-        .from("registrations")
-        .insert({
-          tournament_id: currentTournament.id,
-          team_id: team.id,
-          captain_user_id: currentUser.id,
-          status: "pending"
-        });
-
-      if (registrationError) throw registrationError;
-
-      showToast("Registration submitted. Your team is now under organizer review.", "success");
-    }
-
-    renderReceipt(receiptData);
-    resetEditMode();
-    await loadMyRegistrations();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Failed to submit registration.", "error");
-  }
-}
-
-async function loadMyRegistrations() {
-  if (!currentUser) return;
-
-  const { data, error } = await window.sb
-    .from("teams")
-    .select(`id,tournament_id,team_name,team_tag,logo_url,status,created_at,captain_name,captain_email,captain_discord_id,team_players(id,ign,uid,role,is_substitute,player_order)`)
-    .eq("tournament_id", currentTournament.id)
-    .eq("captain_user_id", currentUser.id)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-
-  myRegistrations = data || [];
-  const wrap = qs("#myRegistrations");
-
-  if (!myRegistrations.length) {
-    wrap.innerHTML = `<div class="notice">Your submitted team application will appear here.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = myRegistrations.map(team => {
-    const players = [...(team.team_players || [])]
-      .sort((a, b) => Number(a.player_order) - Number(b.player_order))
-      .map(p => `<li><strong>${escapeHtml(p.ign)}</strong> <span class="small">UID: ${escapeHtml(p.uid)}${p.is_substitute ? " · Sub" : ""}${p.role ? ` · ${escapeHtml(p.role)}` : ""}</span></li>`)
-      .join("");
-
-    return `
-      <div class="card card-flat">
-        <div class="team-card">
-          ${teamLogoHtml(team, "md")}
-          <div>
-            ${statusBadge(team.status)}
-            <h3>${escapeHtml(team.team_name)} <span class="small">(${escapeHtml(team.team_tag)})</span></h3>
-            <div class="small">Discord: ${escapeHtml(team.captain_discord_id || "N/A")}</div>
-          </div>
-        </div>
-        <ol class="players-list">${players}</ol>
-        <div class="actions">
-          ${currentTournament.registration_open ? `<button class="btn btn-primary" type="button" onclick="fillFormFromTeam('${team.id}')">Update Registration</button>` : ""}
-          <button class="btn" type="button" onclick="renderReceiptFromTeam('${team.id}')">View Copy</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderReceiptFromTeam(teamId) {
-  const team = myRegistrations.find(t => t.id === teamId);
-  if (!team) return;
-
-  const players = [...(team.team_players || [])].sort((a, b) => Number(a.player_order) - Number(b.player_order));
-
-  renderReceipt({
-    action: "Registration Copy",
-    teamName: team.team_name,
-    teamTag: team.team_tag,
-    logoUrl: team.logo_url || "",
-    captainName: team.captain_name,
-    captainEmail: team.captain_email,
-    captainDiscordHandle: team.captain_discord_id || "",
-    players
-  });
-}
-
-async function init() {
-  renderPlayerInputs();
-  currentTournament = await loadDefaultTournament();
-  setText("#tournamentMeta", `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"}`);
-  qs("#signUpBtn").addEventListener("click", signUp);
-  qs("#loginBtn").addEventListener("click", login);
-  qs("#registrationForm").addEventListener("submit", submitRegistration);
-  await refreshAuth();
-  window.sb.auth.onAuthStateChange(() => refreshAuth());
-}
-
-init().catch(err => {
-  console.error(err);
-  showToast(err.message || "Failed to initialize.", "error");
-});
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Register Team · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html"><span class="brand-emblem">M</span><span class="brand-title">CODM Tournament OS<small>Team Registration Portal</small></span></a>
+    <nav class="nav-links">
+      <a class="nav-link" href="index.html">Home</a><a class="nav-link" href="bracket.html">Bracket</a><a class="nav-link" href="rules.html">Rulebook</a><a class="nav-link" href="matches.html">My Matches</a><button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero" data-hero-bg><div class="container"><div class="eyebrow">Team Registration</div><h1 class="h1"><span class="gradient-text">Submit your roster.</span><br/>Enter the battleground.</h1><p class="lead" id="tournamentMeta">Loading tournament...</p><div class="actions"><a class="btn btn-ghost" href="index.html#tournaments">Change Tournament</a><a class="btn" href="rules.html">Read Rulebook</a></div></div></section>
+  <section class="section"><div class="container grid grid-two">
+    <div class="card"><div class="section-heading"><div><div class="eyebrow">Account</div><h2>Captain Login</h2></div></div><div id="authStatus" class="auth-status">Checking session...</div><form id="authForm" class="form"><div class="field"><label for="authName">Captain Name</label><input id="authName" placeholder="Used for sign-up only"/></div><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required/></div><div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" required/></div><div class="actions"><button type="button" class="btn btn-primary" id="signUpBtn">Create Account</button><button type="button" class="btn" id="loginBtn">Login</button><a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a></div></form></div>
+    <div class="card"><div class="section-heading"><div><div class="eyebrow">Status</div><h2>My Registration</h2></div></div><div id="myRegistrations">Sign in to view your team submission.</div><div class="section-tight"></div><div class="rulebook-mini-box"><div class="eyebrow">Registration Rulebook Reminder</div><p class="small">Before submitting or updating your roster, review eligibility, roster, and match rules.</p><a class="btn btn-ghost" href="rules.html">Open Rulebook</a></div></div>
+  </div></section>
+  <section class="section"><div class="container"><form id="registrationForm" class="card form hidden"><div class="section-heading"><div><div class="eyebrow">Official Entry</div><h2>Team Application</h2><p>After submission or update, a registration copy will automatically be emailed to the captain email address.</p></div><button type="button" class="btn btn-ghost hidden" id="cancelEditBtn">Cancel Edit</button></div>
+    <div class="grid grid-two"><div class="field"><label for="teamName">Team Name</label><input id="teamName" required/></div><div class="field"><label for="teamTag">Team Tag</label><input id="teamTag" maxlength="8" required/></div></div>
+    <div class="field"><label for="logoUrl">Team Logo URL</label><input id="logoUrl" placeholder="https://..."/></div>
+    <div class="grid grid-three"><div class="field"><label for="captainName">Captain Name</label><input id="captainName" required/></div><div class="field"><label for="captainEmail">Captain Email</label><input id="captainEmail" type="email" required/></div><div class="field"><label for="captainDiscordId">Captain Discord Handle</label><input id="captainDiscordId" placeholder="Example: SimonRiley / Simon_Riley / Simon.Riley" required/></div></div>
+    <div class="section-heading section-tight"><div><div class="eyebrow">Roster</div><h2>Main Five</h2></div></div><div id="mainPlayers" class="grid"></div>
+    <div class="section-heading section-tight"><div><div class="eyebrow">Optional</div><h2>Substitutes</h2></div></div><div id="subPlayers" class="grid"></div>
+    <div class="actions"><button class="btn btn-primary" type="submit" id="registrationSubmitBtn">Submit Official Registration</button></div>
+    <div class="small">Discord handle accepts letters, numbers, dots, and underscores only. A registration receipt is emailed automatically after submission or update.</div>
+  </form></div></section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/main.js"></script>
+<script>
+let currentUser=null,currentTournament=null,myRegistrations=[],editingTeamId=null;
+function isDiscordHandleValid(handle){return /^[A-Za-z0-9._]{2,32}$/.test(String(handle||'').trim())}
+function playerRowHtml(index,isSubstitute=false){const label=isSubstitute?`Sub ${index}`:`Player ${index}`;const prefix=isSubstitute?'sub':'player';return `<div class="card card-flat"><h3>${label}</h3><div class="grid grid-three"><div class="field"><label for="${prefix}${index}Ign">IGN</label><input id="${prefix}${index}Ign" ${isSubstitute?'':'required'} /></div><div class="field"><label for="${prefix}${index}Uid">CODM UID</label><input id="${prefix}${index}Uid" ${isSubstitute?'':'required'} /></div><div class="field"><label for="${prefix}${index}Role">Role</label><input id="${prefix}${index}Role" placeholder="OBJ / Slayer / Anchor / Flex" /></div></div></div>`}
+function renderPlayerInputs(){qs('#mainPlayers').innerHTML=[1,2,3,4,5].map(i=>playerRowHtml(i,false)).join('');qs('#subPlayers').innerHTML=[1,2].map(i=>playerRowHtml(i,true)).join('')}
+async function refreshAuth(){const session=await getSession();currentUser=session?.user||null;const authForm=qs('#authForm'),signOutBtn=qs('#signOutBtn'),regForm=qs('#registrationForm'),authStatus=qs('#authStatus');if(!currentUser){authStatus.textContent='Not logged in.';authStatus.classList.remove('online');authForm.classList.remove('hidden');signOutBtn.classList.add('hidden');regForm.classList.add('hidden');qs('#myRegistrations').innerHTML='Sign in to view your team submission.';return}authStatus.textContent=`Logged in as ${currentUser.email}`;authStatus.classList.add('online');authForm.classList.add('hidden');signOutBtn.classList.remove('hidden');regForm.classList.remove('hidden');qs('#captainEmail').value=currentUser.email||'';await loadMyRegistrations()}
+async function signUp(){const fullName=normalizeText(qs('#authName').value),email=normalizeText(qs('#authEmail').value),password=qs('#authPassword').value;if(!fullName)return showToast('Captain name is required.','error');if(!isEmailValid(email))return showToast('Enter a valid email.','error');if(password.length<6)return showToast('Password must be at least 6 characters.','error');const {error}=await window.sb.auth.signUp({email,password,options:{data:{full_name:fullName},emailRedirectTo:window.location.href}});if(error)return showToast(error.message,'error');showToast('Account created. Check your email to confirm, then login.','success');await refreshAuth()}
+async function login(){const email=normalizeText(qs('#authEmail').value),password=qs('#authPassword').value;if(!isEmailValid(email))return showToast('Enter a valid email.','error');const {error}=await window.sb.auth.signInWithPassword({email,password});if(error)return showToast(error.message,'error');showToast('Logged in.','success');await refreshAuth()}
+function collectPlayers(){const players=[];for(let i=1;i<=5;i++)players.push({player_order:i,ign:normalizeText(qs(`#player${i}Ign`).value),uid:normalizeText(qs(`#player${i}Uid`).value),role:normalizeText(qs(`#player${i}Role`).value),is_substitute:false});for(let i=1;i<=2;i++){const ign=normalizeText(qs(`#sub${i}Ign`).value),uid=normalizeText(qs(`#sub${i}Uid`).value),role=normalizeText(qs(`#sub${i}Role`).value);if(ign||uid||role)players.push({player_order:5+i,ign,uid,role,is_substitute:true})}return players}
+function validatePlayers(players){for(const p of players.filter(p=>!p.is_substitute)){if(!p.ign||!p.uid)return 'All 5 main players must have IGN and UID.'}for(const p of players){if((p.ign&&!p.uid)||(!p.ign&&p.uid))return 'Substitute players must have both IGN and UID if included.'}const set=new Set();for(const p of players){const key=p.uid.toLowerCase();if(set.has(key))return `Duplicate UID in this form: ${p.uid}`;set.add(key)}return null}
+async function checkDuplicates(tournamentId,teamName,teamTag,players,excludeTeamId=null){let teamQuery=window.sb.from('teams').select('id,team_name,team_tag').eq('tournament_id',tournamentId).or(`team_name.ilike.${teamName},team_tag.ilike.${teamTag}`);if(excludeTeamId)teamQuery=teamQuery.neq('id',excludeTeamId);const {data:teams,error:teamError}=await teamQuery;if(teamError)throw teamError;if(teams.length)return 'Team name or team tag already exists in this tournament.';const uids=players.map(p=>p.uid).filter(Boolean);if(!uids.length)return null;let playerQuery=window.sb.from('team_players').select('team_id,uid').eq('tournament_id',tournamentId).in('uid',uids);if(excludeTeamId)playerQuery=playerQuery.neq('team_id',excludeTeamId);const {data:foundPlayers,error:playerError}=await playerQuery;if(playerError)throw playerError;if(foundPlayers.length)return `One or more CODM UIDs are already registered: ${foundPlayers.map(p=>p.uid).join(', ')}`;return null}
+async function sendRegistrationEmail(teamId,changeType){try{const {data,error}=await window.sb.functions.invoke('send-registration-copy',{body:{team_id:teamId,change_type:changeType}});if(error)throw error;if(data&&data.ok===false)throw new Error(data.error||'Email function returned an error.');showToast('Registration saved. A copy was emailed to the captain.','success')}catch(err){console.warn('Email receipt failed:',err);showToast('Registration saved, but the email receipt failed. Check Edge Function setup.','error')}}
+function resetEditMode(){editingTeamId=null;qs('#registrationForm').reset();qs('#captainEmail').value=currentUser?.email||'';qs('#registrationForm .section-heading h2').textContent='Team Application';qs('#registrationSubmitBtn').textContent='Submit Official Registration';qs('#cancelEditBtn').classList.add('hidden')}
+function fillFormFromTeam(teamId){const team=myRegistrations.find(t=>t.id===teamId);if(!team)return showToast('Registration not found.','error');if(!currentTournament.registration_open)return showToast('Registration is closed. Editing is disabled.','error');editingTeamId=team.id;qs('#teamName').value=team.team_name||'';qs('#teamTag').value=team.team_tag||'';qs('#logoUrl').value=team.logo_url||'';qs('#captainName').value=team.captain_name||'';qs('#captainEmail').value=team.captain_email||currentUser?.email||'';qs('#captainDiscordId').value=team.captain_discord_id||'';const players=[...(team.team_players||[])].sort((a,b)=>Number(a.player_order)-Number(b.player_order));for(let i=1;i<=5;i++){const p=players.find(x=>Number(x.player_order)===i&&!x.is_substitute);qs(`#player${i}Ign`).value=p?.ign||'';qs(`#player${i}Uid`).value=p?.uid||'';qs(`#player${i}Role`).value=p?.role||''}for(let i=1;i<=2;i++){const p=players.find(x=>Number(x.player_order)===5+i&&x.is_substitute);qs(`#sub${i}Ign`).value=p?.ign||'';qs(`#sub${i}Uid`).value=p?.uid||'';qs(`#sub${i}Role`).value=p?.role||''}qs('#registrationForm .section-heading h2').textContent='Update Team Application';qs('#registrationSubmitBtn').textContent='Save Registration Update';qs('#cancelEditBtn').classList.remove('hidden');scrollToId('registrationForm');showToast('Registration loaded for editing.','success')}
+async function submitRegistration(event){event.preventDefault();try{if(!currentUser)return showToast('Login first.','error');if(!currentTournament)return showToast('Tournament not loaded.','error');if(!currentTournament.registration_open)return showToast('Registration is closed.','error');const teamName=normalizeText(qs('#teamName').value),teamTag=normalizeText(qs('#teamTag').value).toUpperCase(),logoUrl=normalizeText(qs('#logoUrl').value),captainName=normalizeText(qs('#captainName').value),captainEmail=normalizeText(qs('#captainEmail').value),captainDiscordHandle=normalizeText(qs('#captainDiscordId').value),players=collectPlayers();if(!teamName||!teamTag||!captainName)return showToast('Team name, tag, and captain name are required.','error');if(!isEmailValid(captainEmail))return showToast('Enter a valid captain email.','error');if(captainEmail.toLowerCase()!==currentUser.email.toLowerCase())return showToast('Captain email must match logged-in account email.','error');if(!isDiscordHandleValid(captainDiscordHandle))return showToast('Discord handle must be 2–32 characters using letters, numbers, dots, or underscores.','error');if(!isImageUrlMaybe(logoUrl))return showToast('Logo URL must start with http:// or https://','error');const playerError=validatePlayers(players);if(playerError)return showToast(playerError,'error');const duplicateError=await checkDuplicates(currentTournament.id,teamName,teamTag,players,editingTeamId);if(duplicateError)return showToast(duplicateError,'error');const payload={p_team_name:teamName,p_team_tag:teamTag,p_logo_url:logoUrl||null,p_captain_name:captainName,p_captain_email:captainEmail,p_captain_discord_handle:captainDiscordHandle,p_players:players};let teamId,changeType;if(editingTeamId){const {data,error}=await window.sb.rpc('captain_update_registration',{p_team_id:editingTeamId,...payload});if(error)throw error;teamId=data?.team_id||editingTeamId;changeType='updated'}else{const {data,error}=await window.sb.rpc('captain_create_registration',{p_tournament_id:currentTournament.id,...payload});if(error)throw error;teamId=data?.team_id;changeType='submitted'}resetEditMode();await loadMyRegistrations();if(teamId)await sendRegistrationEmail(teamId,changeType);else showToast('Registration saved.','success')}catch(err){console.error(err);showToast(err.message||'Failed to save registration.','error')}}
+function renderChangeLogs(team){const logs=[...(team.registration_change_logs||[])].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));if(!logs.length)return `<div class="small">No change history recorded yet.</div>`;return `<details class="change-log-box"><summary>Change History (${logs.length})</summary><div class="change-log-list">${logs.map(log=>`<div class="change-log-item"><strong>${escapeHtml(String(log.change_type||'').toUpperCase())}</strong><span>${new Date(log.created_at).toLocaleString()}</span><p>${escapeHtml(log.summary||'Registration details saved.')}</p></div>`).join('')}</div></details>`}
+async function loadMyRegistrations(){if(!currentUser)return;const {data,error}=await window.sb.from('teams').select(`id,tournament_id,team_name,team_tag,logo_url,status,created_at,captain_name,captain_email,captain_discord_id,team_players(id,ign,uid,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at)`).eq('tournament_id',currentTournament.id).eq('captain_user_id',currentUser.id).order('created_at',{ascending:false});if(error)throw error;myRegistrations=data||[];const wrap=qs('#myRegistrations');if(!myRegistrations.length){wrap.innerHTML=`<div class="notice">Your submitted team application will appear here.</div>`;return}wrap.innerHTML=myRegistrations.map(team=>{const players=[...(team.team_players||[])].sort((a,b)=>Number(a.player_order)-Number(b.player_order)).map(p=>`<li><strong>${escapeHtml(p.ign)}</strong> <span class="small">UID: ${escapeHtml(p.uid)}${p.is_substitute?' · Sub':''}${p.role?` · ${escapeHtml(p.role)}`:''}</span></li>`).join('');return `<div class="card card-flat"><div class="team-card">${teamLogoHtml(team,'md')}<div>${statusBadge(team.status)}<h3>${escapeHtml(team.team_name)} <span class="small">(${escapeHtml(team.team_tag)})</span></h3><div class="small">Discord: ${escapeHtml(team.captain_discord_id||'N/A')}</div></div></div><ol class="players-list">${players}</ol>${renderChangeLogs(team)}<div class="actions">${currentTournament.registration_open?`<button class="btn btn-primary" type="button" onclick="fillFormFromTeam('${team.id}')">Update Registration</button>`:''}<button class="btn" type="button" onclick="sendRegistrationEmail('${team.id}','copy_requested')">Email Me a Copy</button></div></div>`}).join('')}
+async function init(){renderPlayerInputs();currentTournament=await loadDefaultTournament();setText('#tournamentMeta',`${currentTournament.title} · Registration ${currentTournament.registration_open?'Open':'Closed'}`);qs('#signUpBtn').addEventListener('click',signUp);qs('#loginBtn').addEventListener('click',login);qs('#cancelEditBtn').addEventListener('click',resetEditMode);qs('#registrationForm').addEventListener('submit',submitRegistration);await refreshAuth();window.sb.auth.onAuthStateChange(()=>refreshAuth())}
+init().catch(err=>{console.error(err);showToast(err.message||'Failed to initialize.','error')});
 </script><script src="assets/js/premium-copy.js"></script></body></html>
