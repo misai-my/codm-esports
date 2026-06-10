@@ -226,7 +226,11 @@ async function setRegistrationOpen(isOpen) {
 }
 
 async function loadStages() {
-  await window.sb.rpc("ensure_default_tournament_stages", { p_tournament_id: currentTournament.id }).catch(() => null);
+  try {
+    await window.sb.rpc("ensure_default_tournament_stages", { p_tournament_id: currentTournament.id });
+  } catch (err) {
+    console.warn("Default stage setup skipped:", err);
+  }
 
   const { data, error } = await window.sb
     .from("tournament_stages")
