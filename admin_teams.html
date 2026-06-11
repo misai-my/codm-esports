@@ -122,6 +122,115 @@
   </section>
 </main>
 
+
+<div id="captainEditModal" class="captain-edit-modal hidden" role="dialog" aria-modal="true" aria-labelledby="captainEditTitle">
+  <div class="captain-edit-backdrop" onclick="closeCaptainEditor()"></div>
+
+  <section class="captain-edit-dialog">
+    <div class="captain-edit-header">
+      <div>
+        <div class="eyebrow">Captain Details Verification</div>
+        <h2 id="captainEditTitle">Change Captain Details</h2>
+        <p class="small" id="captainEditTeamLabel">Select a team.</p>
+      </div>
+      <button class="captain-edit-close" type="button" onclick="closeCaptainEditor()" aria-label="Close captain editor">×</button>
+    </div>
+
+    <div class="captain-ownership-notice">
+      This changes the official captain contact details used by the tournament platform.
+      It does not transfer the captain login account or team ownership.
+    </div>
+
+    <div class="captain-current-details" id="captainCurrentDetails"></div>
+
+    <form id="captainEditForm" class="captain-edit-form">
+      <div class="captain-lock-section">
+        <div class="captain-lock-number">1</div>
+        <div class="captain-lock-content">
+          <h3>Identity Check</h3>
+          <p class="small">Enter the new captain contact details and document why the change is being made.</p>
+
+          <div class="grid grid-two">
+            <div class="field">
+              <label for="editCaptainName">New Captain Name</label>
+              <input id="editCaptainName" maxlength="80" required/>
+            </div>
+            <div class="field">
+              <label for="editCaptainEmail">New Captain Email</label>
+              <input id="editCaptainEmail" type="email" maxlength="160" required/>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="editCaptainDiscord">New Discord Username</label>
+            <input id="editCaptainDiscord" maxlength="32" placeholder="letters, numbers, dots, or underscores" required/>
+          </div>
+
+          <div class="field">
+            <label for="editCaptainReason">Detailed Reason for Change</label>
+            <textarea id="editCaptainReason" rows="3" minlength="12" maxlength="500" placeholder="Example: Captain role transferred after the previous captain stepped down." required></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="captain-lock-section">
+        <div class="captain-lock-number">2</div>
+        <div class="captain-lock-content">
+          <h3>Match Challenge</h3>
+          <p class="small">Re-enter the exact team tag and repeat the new captain email to confirm the correct registration is being edited.</p>
+
+          <div class="grid grid-two">
+            <div class="field">
+              <label for="captainTeamTagChallenge">Type Exact Team Tag</label>
+              <input id="captainTeamTagChallenge" autocomplete="off" placeholder="Team tag"/>
+            </div>
+            <div class="field">
+              <label for="captainEmailChallenge">Repeat New Captain Email</label>
+              <input id="captainEmailChallenge" type="email" autocomplete="off" placeholder="New captain email"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="captain-lock-section">
+        <div class="captain-lock-number">3</div>
+        <div class="captain-lock-content">
+          <h3>Final Before-and-After Review</h3>
+          <p class="small">Review every field before saving. The change is permanently recorded in the registration audit log.</p>
+
+          <div class="captain-review-grid">
+            <div class="captain-review-card">
+              <span>Before</span>
+              <div id="captainReviewBefore"></div>
+            </div>
+            <div class="captain-review-arrow" aria-hidden="true">→</div>
+            <div class="captain-review-card is-after">
+              <span>After</span>
+              <div id="captainReviewAfter"></div>
+            </div>
+          </div>
+
+          <label class="captain-check-row captain-final-confirm">
+            <input id="confirmCaptainReview" type="checkbox"/>
+            <span>I reviewed the before-and-after details and confirm that this is the correct team and captain change.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="captain-validation-status" id="captainValidationStatus">
+        Complete the identity check, match challenge, and final review.
+      </div>
+
+      <div class="actions captain-edit-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeCaptainEditor()">Cancel</button>
+        <button class="btn btn-danger" id="confirmCaptainChangeBtn" type="submit" disabled>
+          Save Captain Change
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -134,6 +243,7 @@ let currentProfile = null;
 let adminTournaments = [];
 let allTeams = [];
 let stages = [];
+let captainEditState = null;
 
 function roleLabel(role) {
   return role || "No role";
@@ -520,6 +630,9 @@ function renderAdminTable() {
           <strong>${escapeHtml(team.captain_name)}</strong>
           <div class="small">${escapeHtml(team.captain_email)}</div>
           <div class="small">Discord: ${escapeHtml(team.captain_discord_id || "N/A")}</div>
+          <button class="btn btn-ghost captain-edit-trigger" type="button" onclick="openCaptainEditor('${team.id}')">
+            Edit Captain
+          </button>
         </td>
         <td><ol class="players-list">${players}</ol>${renderAdminChangeLogs(team)}</td>
         <td>${stageSelectHtml(team)}</td>
@@ -533,6 +646,245 @@ function renderAdminTable() {
       </tr>
     `;
   }).join("");
+}
+
+
+
+
+function captainDetailsSnapshot(team) {
+  return {
+    captain_name: String(team?.captain_name || "").trim(),
+    captain_email: String(team?.captain_email || "").trim(),
+    captain_discord_id: String(team?.captain_discord_id || "").trim()
+  };
+}
+
+function normalizeCaptainDiscord(value) {
+  return String(value || "").trim();
+}
+
+
+function renderCaptainReview() {
+  if (!captainEditState) return;
+
+  const captainName = normalizeText(qs("#editCaptainName")?.value);
+  const captainEmail = normalizeText(qs("#editCaptainEmail")?.value).toLowerCase();
+  const captainDiscord = normalizeCaptainDiscord(qs("#editCaptainDiscord")?.value);
+  const reason = normalizeText(qs("#editCaptainReason")?.value);
+
+  qs("#captainReviewBefore").innerHTML = `
+    <strong>${escapeHtml(captainEditState.original.captain_name || "N/A")}</strong>
+    <p>${escapeHtml(captainEditState.original.captain_email || "N/A")}</p>
+    <p>Discord: ${escapeHtml(captainEditState.original.captain_discord_id || "N/A")}</p>
+  `;
+
+  qs("#captainReviewAfter").innerHTML = `
+    <strong>${escapeHtml(captainName || "Not entered")}</strong>
+    <p>${escapeHtml(captainEmail || "Not entered")}</p>
+    <p>Discord: ${escapeHtml(captainDiscord || "Not entered")}</p>
+    <p class="captain-review-reason"><b>Reason:</b> ${escapeHtml(reason || "Not entered")}</p>
+  `;
+}
+
+
+function validateCaptainEditor() {
+  const state = captainEditState;
+  const button = qs("#confirmCaptainChangeBtn");
+  const status = qs("#captainValidationStatus");
+
+  if (!state || !button || !status) return false;
+
+  renderCaptainReview();
+
+  const captainName = normalizeText(qs("#editCaptainName").value);
+  const captainEmail = normalizeText(qs("#editCaptainEmail").value).toLowerCase();
+  const captainDiscord = normalizeCaptainDiscord(qs("#editCaptainDiscord").value);
+  const reason = normalizeText(qs("#editCaptainReason").value);
+
+  const detailsValid =
+    captainName.length >= 2 &&
+    isEmailValid(captainEmail) &&
+    /^[A-Za-z0-9._]{2,32}$/.test(captainDiscord) &&
+    reason.length >= 12;
+
+  const changed =
+    captainName !== state.original.captain_name ||
+    captainEmail !== state.original.captain_email.toLowerCase() ||
+    captainDiscord !== state.original.captain_discord_id;
+
+  const teamTagMatches =
+    normalizeText(qs("#captainTeamTagChallenge").value).toUpperCase() ===
+    String(state.team.team_tag || "").trim().toUpperCase();
+
+  const emailMatches =
+    normalizeText(qs("#captainEmailChallenge").value).toLowerCase() === captainEmail;
+
+  const finalReviewConfirmed = qs("#confirmCaptainReview").checked;
+
+  const step1 = detailsValid && changed;
+  const step2 = teamTagMatches && emailMatches;
+  const step3 = finalReviewConfirmed;
+  const ready = step1 && step2 && step3;
+
+  button.disabled = !ready;
+
+  const steps = [
+    `${step1 ? "✓" : "○"} Identity details`,
+    `${step2 ? "✓" : "○"} Team/email match`,
+    `${step3 ? "✓" : "○"} Final review`
+  ];
+
+  status.classList.toggle("is-ready", ready);
+  status.textContent = ready
+    ? "All three confirmation steps are complete. The captain change is ready to save."
+    : steps.join("   ");
+
+  return ready;
+}
+
+function openCaptainEditor(teamId) {
+  const team = allTeams.find(item => item.id === teamId);
+  if (!team) return showToast("Team not found.", "error");
+
+  const original = captainDetailsSnapshot(team);
+
+  captainEditState = {
+    team,
+    original
+  };
+
+  setText("#captainEditTeamLabel", `${team.team_name} (${team.team_tag})`);
+
+  qs("#captainCurrentDetails").innerHTML = `
+    <div>
+      <span>Current Captain</span>
+      <strong>${escapeHtml(original.captain_name || "N/A")}</strong>
+    </div>
+    <div>
+      <span>Email</span>
+      <strong>${escapeHtml(original.captain_email || "N/A")}</strong>
+    </div>
+    <div>
+      <span>Discord</span>
+      <strong>${escapeHtml(original.captain_discord_id || "N/A")}</strong>
+    </div>
+  `;
+
+  qs("#editCaptainName").value = original.captain_name;
+  qs("#editCaptainEmail").value = original.captain_email;
+  qs("#editCaptainDiscord").value = original.captain_discord_id;
+  qs("#editCaptainReason").value = "";
+  qs("#captainTeamTagChallenge").value = "";
+  qs("#captainEmailChallenge").value = "";
+  qs("#confirmCaptainReview").checked = false;
+
+  qs("#captainEditModal").classList.remove("hidden");
+  document.body.classList.add("captain-modal-open");
+
+  renderCaptainReview();
+  validateCaptainEditor();
+  window.setTimeout(() => qs("#editCaptainName")?.focus(), 50);
+}
+
+function closeCaptainEditor() {
+  qs("#captainEditModal")?.classList.add("hidden");
+  document.body.classList.remove("captain-modal-open");
+  captainEditState = null;
+}
+
+async function submitCaptainEditor(event) {
+  event.preventDefault();
+
+  if (!captainEditState) return;
+  if (!validateCaptainEditor()) {
+    return showToast("Complete all three captain-change confirmation steps.", "error");
+  }
+
+  const team = captainEditState.team;
+  const captainName = normalizeText(qs("#editCaptainName").value);
+  const captainEmail = normalizeText(qs("#editCaptainEmail").value).toLowerCase();
+  const captainDiscord = normalizeCaptainDiscord(qs("#editCaptainDiscord").value);
+  const reason = normalizeText(qs("#editCaptainReason").value);
+
+  const finalMessage = [
+    `Final captain change confirmation for ${team.team_name}.`,
+    "",
+    `BEFORE`,
+    `Captain: ${captainEditState.original.captain_name || "N/A"}`,
+    `Email: ${captainEditState.original.captain_email || "N/A"}`,
+    `Discord: ${captainEditState.original.captain_discord_id || "N/A"}`,
+    "",
+    `AFTER`,
+    `Captain: ${captainName}`,
+    `Email: ${captainEmail}`,
+    `Discord: ${captainDiscord}`,
+    "",
+    `Reason: ${reason}`,
+    "",
+    "This will create a permanent audit-log entry.",
+    "Save this captain change?"
+  ].join("\n");
+
+  if (!confirm(finalMessage)) return;
+
+  const button = qs("#confirmCaptainChangeBtn");
+  button.disabled = true;
+  button.textContent = "Saving Captain Change...";
+
+  try {
+    const { data, error } = await window.sb.rpc("admin_update_captain_details", {
+      p_team_id: team.id,
+      p_captain_name: captainName,
+      p_captain_email: captainEmail,
+      p_captain_discord_id: captainDiscord,
+      p_reason: reason,
+      p_verification: {
+        identity_details_validated: true,
+        team_tag_challenge: true,
+        email_challenge: true,
+        final_before_after_confirmed: true
+      }
+    });
+
+    if (error) throw error;
+    if (data?.ok === false) throw new Error(data.error || "Captain update failed.");
+
+    closeCaptainEditor();
+    showToast("Captain details updated and added to the audit log.", "success");
+    await loadRegistrations();
+  } catch (err) {
+    console.error(err);
+    button.disabled = false;
+    button.textContent = "Save Captain Change";
+    showToast(err.message || "Failed to update captain details.", "error");
+  }
+}
+
+function bindCaptainEditorValidation() {
+  const selectors = [
+    "#editCaptainName",
+    "#editCaptainEmail",
+    "#editCaptainDiscord",
+    "#editCaptainReason",
+    "#captainTeamTagChallenge",
+    "#captainEmailChallenge",
+    "#confirmCaptainReview"
+  ];
+
+  selectors.forEach(selector => {
+    const element = qs(selector);
+    if (!element) return;
+    element.addEventListener("input", validateCaptainEditor);
+    element.addEventListener("change", validateCaptainEditor);
+  });
+
+  qs("#captainEditForm")?.addEventListener("submit", submitCaptainEditor);
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !qs("#captainEditModal")?.classList.contains("hidden")) {
+      closeCaptainEditor();
+    }
+  });
 }
 
 async function setTeamStatus(teamId, status) {
@@ -615,6 +967,7 @@ async function init() {
   qs("#statusFilter").addEventListener("change", renderAdminTable);
   qs("#stageFilter").addEventListener("change", renderAdminTable);
   qs("#searchBox").addEventListener("input", renderAdminTable);
+  bindCaptainEditorValidation();
   await refreshAdminAuth();
   window.sb.auth.onAuthStateChange(() => refreshAdminAuth());
 }

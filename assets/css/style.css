@@ -2767,3 +2767,328 @@ main,
   align-items: center !important;
   justify-content: flex-start !important;
 }
+
+
+/* ============================================================
+   Captain Details Triple-Lock Editor
+   ============================================================ */
+.captain-edit-trigger {
+  margin-top: 8px !important;
+  padding: 7px 10px !important;
+  font-size: 12px !important;
+}
+
+body.captain-modal-open {
+  overflow: hidden !important;
+}
+
+.captain-edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.captain-edit-modal.hidden {
+  display: none !important;
+}
+
+.captain-edit-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2,5,12,.78);
+  backdrop-filter: blur(8px);
+}
+
+.captain-edit-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(248,209,92,.24);
+  background:
+    radial-gradient(circle at 0 0, rgba(248,209,92,.10), transparent 22rem),
+    linear-gradient(180deg, rgba(19,27,43,.99), rgba(8,13,25,.99));
+  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+  overscroll-behavior: contain;
+}
+
+.captain-edit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.captain-edit-header h2 {
+  margin: 7px 0 5px;
+}
+
+.captain-edit-close {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.captain-ownership-notice {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(248,209,92,.24);
+  background: rgba(248,209,92,.08);
+  color: rgba(247,251,255,.80);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.captain-current-details {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.captain-current-details > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+}
+
+.captain-current-details span,
+.captain-current-details strong {
+  display: block;
+}
+
+.captain-current-details span {
+  margin-bottom: 4px;
+  color: rgba(230,239,255,.48);
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.captain-current-details strong {
+  overflow-wrap: anywhere;
+  color: rgba(247,251,255,.92);
+  font-size: 13px;
+}
+
+.captain-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.captain-lock-section {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  gap: 12px;
+  padding: 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.028);
+}
+
+.captain-lock-number {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8d15c, #e8a62d);
+  color: #111520;
+  font-weight: 1000;
+}
+
+.captain-lock-content {
+  min-width: 0;
+}
+
+.captain-lock-content h3 {
+  margin: 2px 0 5px;
+}
+
+.captain-lock-content .field {
+  min-width: 0;
+}
+
+.captain-lock-content input,
+.captain-lock-content textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.captain-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  color: rgba(230,239,255,.74);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.captain-check-row input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.captain-command-code {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(248,209,92,.44);
+  background: rgba(2,5,12,.55);
+  color: #f8d15c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(15px,2vw,20px);
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-align: center;
+  user-select: all;
+}
+
+.captain-validation-status {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.035);
+  color: rgba(230,239,255,.60);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
+.captain-validation-status.is-ready {
+  border-color: rgba(50,230,143,.28);
+  background: rgba(50,230,143,.08);
+  color: #68efad;
+}
+
+.captain-edit-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .captain-edit-modal {
+    padding: 8px;
+  }
+
+  .captain-edit-dialog {
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .captain-current-details {
+    grid-template-columns: 1fr;
+  }
+
+  .captain-lock-section {
+    grid-template-columns: 1fr;
+  }
+
+  .captain-edit-actions .btn {
+    width: 100%;
+  }
+}
+
+
+/* ============================================================
+   Simplified Captain Before-and-After Review
+   ============================================================ */
+.captain-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 12px;
+  align-items: stretch;
+  margin: 14px 0;
+}
+
+.captain-review-card {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.035);
+}
+
+.captain-review-card.is-after {
+  border-color: rgba(248,209,92,.25);
+  background: rgba(248,209,92,.065);
+}
+
+.captain-review-card > span {
+  display: block;
+  margin-bottom: 10px;
+  color: rgba(230,239,255,.50);
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+.captain-review-card strong,
+.captain-review-card p {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.captain-review-card strong {
+  color: #f8d15c;
+  font-size: 15px;
+}
+
+.captain-review-card p {
+  margin: 6px 0 0;
+  color: rgba(230,239,255,.74);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.captain-review-reason {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.captain-review-arrow {
+  display: grid;
+  place-items: center;
+  color: #f8d15c;
+  font-size: 26px;
+  font-weight: 1000;
+}
+
+.captain-final-confirm {
+  margin-top: 14px !important;
+}
+
+@media (max-width: 720px) {
+  .captain-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .captain-review-arrow {
+    transform: rotate(90deg);
+  }
+}
