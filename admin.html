@@ -122,7 +122,7 @@
       <div class="card">
         <div class="eyebrow">Tournament Stages</div>
         <h2>Stage Dates</h2>
-        <p class="small">Use stages for Qualifiers, Group Stage, Playoffs, Finals, or any custom phase for future tournaments.</p>
+        <p class="small">Rename default stages, adjust their order, set stage dates, or add custom phases for future tournaments.</p>
 
         <div id="stageList" class="stage-date-list"></div>
 
@@ -349,25 +349,87 @@ function renderStages() {
   }
 
   wrap.innerHTML = adminStages.map(stage => `
-    <div class="stage-date-row">
-      <div>
-        <strong>${escapeHtml(stage.stage_name)}</strong>
-        <span>Order ${escapeHtml(stage.stage_order)}</span>
+    <div class="stage-editor-row">
+      <div class="stage-editor-header">
+        <div>
+          <strong>Stage ${escapeHtml(stage.stage_order)}</strong>
+          <span>Edit the stage name, order, and schedule.</span>
+        </div>
       </div>
-      <div class="stage-date-fields">
-        <input id="stageStart-${stage.id}" type="datetime-local" value="${escapeHtml(toDateTimeLocal(stage.start_at))}"/>
-        <input id="stageEnd-${stage.id}" type="datetime-local" value="${escapeHtml(toDateTimeLocal(stage.end_at))}"/>
+
+      <div class="stage-editor-grid">
+        <div class="field">
+          <label for="stageName-${stage.id}">Stage Name</label>
+          <input
+            id="stageName-${stage.id}"
+            type="text"
+            value="${escapeHtml(stage.stage_name)}"
+            maxlength="80"
+            placeholder="Stage name"
+          />
+        </div>
+
+        <div class="field">
+          <label for="stageOrder-${stage.id}">Order</label>
+          <input
+            id="stageOrder-${stage.id}"
+            type="number"
+            min="1"
+            value="${escapeHtml(stage.stage_order)}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="stageStart-${stage.id}">Start Date & Time</label>
+          <input
+            id="stageStart-${stage.id}"
+            type="datetime-local"
+            value="${escapeHtml(toDateTimeLocal(stage.start_at))}"
+          />
+        </div>
+
+        <div class="field">
+          <label for="stageEnd-${stage.id}">End Date & Time</label>
+          <input
+            id="stageEnd-${stage.id}"
+            type="datetime-local"
+            value="${escapeHtml(toDateTimeLocal(stage.end_at))}"
+          />
+        </div>
       </div>
-      <button class="btn btn-primary" type="button" onclick="saveStageDates('${stage.id}')">Save</button>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="button" onclick="saveStage('${stage.id}')">Save Stage</button>
+      </div>
     </div>
   `).join("");
 }
 
-async function saveStageDates(stageId) {
+async function saveStage(stageId) {
   const stage = adminStages.find(s => s.id === stageId);
-  if (!stage) return;
+  if (!stage) return showToast("Stage not found.", "error");
+
+  const stageName = normalizeText(qs(`#stageName-${stageId}`).value);
+  const stageOrder = Number(qs(`#stageOrder-${stageId}`).value);
+
+  if (!stageName) return showToast("Stage name is required.", "error");
+  if (!Number.isInteger(stageOrder) || stageOrder < 1) {
+    return showToast("Stage order must be a whole number of 1 or higher.", "error");
+  }
+
+  const duplicateName = adminStages.some(
+    item => item.id !== stageId && item.stage_name.toLowerCase() === stageName.toLowerCase()
+  );
+  if (duplicateName) return showToast("Another stage already uses that name.", "error");
+
+  const duplicateOrder = adminStages.some(
+    item => item.id !== stageId && Number(item.stage_order) === stageOrder
+  );
+  if (duplicateOrder) return showToast("Another stage already uses that order number.", "error");
 
   const payload = {
+    stage_name: stageName,
+    stage_order: stageOrder,
     start_at: localDateTimeToIso(qs(`#stageStart-${stageId}`).value),
     end_at: localDateTimeToIso(qs(`#stageEnd-${stageId}`).value)
   };
@@ -379,7 +441,7 @@ async function saveStageDates(stageId) {
 
   if (error) return showToast(error.message, "error");
 
-  showToast(`${stage.stage_name} dates saved.`, "success");
+  showToast(`${stageName} updated.`, "success");
   await loadStages();
 }
 

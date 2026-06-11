@@ -2262,3 +2262,155 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   FIX: Admin tournament stage date inputs overflow
+   ============================================================ */
+.stage-date-row {
+  width: 100% !important;
+  min-width: 0 !important;
+  grid-template-columns: minmax(110px, .7fr) minmax(0, 1.5fr) auto !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+.stage-date-row > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.stage-date-fields {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.stage-date-fields input,
+.stage-date-row input[type="datetime-local"] {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.stage-date-row .btn {
+  width: auto !important;
+  min-width: 76px !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+}
+
+/* Stack date controls before they can overflow inside the right-hand card. */
+@media (max-width: 1280px) {
+  .stage-date-row {
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+  }
+
+  .stage-date-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .stage-date-row .btn {
+    justify-self: start !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .stage-date-fields {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stage-date-row .btn {
+    width: 100% !important;
+  }
+}
+
+
+/* ============================================================
+   Editable Tournament Stage Names
+   ============================================================ */
+.stage-editor-row {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+  box-sizing: border-box;
+}
+
+.stage-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stage-editor-header strong,
+.stage-editor-header span {
+  display: block;
+}
+
+.stage-editor-header strong {
+  color: #f8d15c;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.stage-editor-header span {
+  margin-top: 3px;
+  color: rgba(230,239,255,.54);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.stage-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(88px, .45fr);
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.stage-editor-grid > .field {
+  min-width: 0;
+}
+
+.stage-editor-grid input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.stage-editor-grid .field:nth-child(3),
+.stage-editor-grid .field:nth-child(4) {
+  grid-column: span 1;
+}
+
+.stage-editor-row .actions {
+  margin-top: 0;
+}
+
+@media (max-width: 1180px) {
+  .stage-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1181px) {
+  .stage-editor-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(90px, .45fr);
+  }
+
+  .stage-editor-grid .field:nth-child(3),
+  .stage-editor-grid .field:nth-child(4) {
+    grid-column: span 1;
+  }
+}
