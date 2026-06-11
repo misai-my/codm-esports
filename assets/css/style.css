@@ -2655,3 +2655,85 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     display: none !important;
   }
 }
+
+
+/* ============================================================
+   Visible Header Login Button
+   ============================================================ */
+.header-login-button {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+}
+
+.header-login-button.hidden {
+  display: none !important;
+}
+
+
+/* ============================================================
+   REMOVE ALL SIDEBARS / RESTORE TOP NAVIGATION
+   ============================================================ */
+.site-sidebar,
+.admin-sidebar,
+.sidebar-backdrop,
+.sidebar-toggle-btn,
+.simple-drawer {
+  display: none !important;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+body,
+main,
+.nav,
+.toast {
+  margin-left: 0 !important;
+}
+
+.nav .nav-links {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.nav .nav-inner {
+  justify-content: space-between !important;
+}
+
+@media (max-width: 900px) {
+  .nav .nav-inner {
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .nav .nav-links {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav .nav-inner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .nav .nav-links {
+    justify-content: flex-start !important;
+  }
+
+  .header-login-button {
+    margin-left: 0 !important;
+    align-self: flex-start !important;
+  }
+}

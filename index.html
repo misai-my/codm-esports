@@ -18,9 +18,9 @@
       <a class="nav-link" href="index.html">Home</a>
       <a class="nav-link" href="index.html#tournaments">Tournament</a>
       <a class="nav-link" href="rules.html">Rulebook</a>
-      <a class="nav-link nav-login-link" href="register.html#captain-login">Login</a>
       <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
     </nav>
+    <a id="headerLoginBtn" class="nav-button header-login-button" href="register.html#captain-login">Login</a>
   </div>
 </header>
 
@@ -96,10 +96,21 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/nav-visibility.js"></script>
-<script src="assets/js/site-sidebar.js"></script>
 <script>
 let tournaments = [];
 let selectedTournament = null;
+
+async function refreshHeaderLoginButton() {
+  const button = qs("#headerLoginBtn");
+  if (!button) return;
+
+  try {
+    const session = await getSession();
+    button.classList.toggle("hidden", !!session);
+  } catch (err) {
+    console.warn("Header login visibility check failed:", err);
+  }
+}
 
 function tournamentStatusText(t) {
   if (!t) return "-";
@@ -293,6 +304,7 @@ async function loadSelectedOverview() {
 }
 
 async function initHome() {
+  await refreshHeaderLoginButton();
   tournaments = await attachTournamentStages(await loadAllTournaments());
 
   const selectedSlug = getSelectedTournamentSlug();
@@ -317,6 +329,10 @@ initHome().catch(err => {
   console.error(err);
   showToast(err.message || "Failed to load tournaments.", "error");
 });
+
+if (window.sb?.auth) {
+  window.sb.auth.onAuthStateChange(() => refreshHeaderLoginButton());
+}
 </script>
 <script src="assets/js/premium-copy.js"></script>
 </body>
