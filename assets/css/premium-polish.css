@@ -2414,3 +2414,60 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     grid-column: span 1;
   }
 }
+
+
+/* ============================================================
+   Admin Tournament Layout Spacing Fix
+   ============================================================ */
+
+/* Stage editor: equal-width columns */
+.stage-editor-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  column-gap: 12px !important;
+  row-gap: 10px !important;
+}
+
+.stage-editor-grid > .field {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.stage-editor-grid input,
+.stage-editor-grid select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Tournament details and stages cards should align to the top,
+   rather than stretching to match each other's height. */
+#tournamentAdminTools > .container.grid-two {
+  align-items: start !important;
+}
+
+#tournamentAdminTools > .container.grid-two > .card,
+#tournamentAdminTools > .container.grid-two > form.card {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Keep fields compact and naturally stacked instead of filling vertical space. */
+#tournamentDetailsForm {
+  display: block !important;
+}
+
+#tournamentDetailsForm > * + * {
+  margin-top: 16px !important;
+}
+
+#tournamentDetailsForm .grid {
+  align-items: start !important;
+}
+
+@media (max-width: 760px) {
+  .stage-editor-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
