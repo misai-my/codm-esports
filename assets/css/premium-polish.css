@@ -2690,3 +2690,237 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     width: 100% !important;
   }
 }
+
+
+/* ============================================================
+   Scalable Seed Management + Randomizer
+   ============================================================ */
+.seed-management-card {
+  min-width: 0;
+}
+
+.seed-management-heading {
+  align-items: flex-start !important;
+  gap: 14px !important;
+}
+
+.seed-management-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.seed-team-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,209,92,.24);
+  background: rgba(248,209,92,.09);
+  color: #f8d15c;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.seed-collapse-btn {
+  flex: 0 0 auto;
+}
+
+.seed-management-body {
+  display: grid;
+  gap: 12px;
+}
+
+.seed-panel-collapsed .seed-management-body {
+  display: none;
+}
+
+.seed-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.seed-search-field {
+  min-width: 0;
+  margin: 0 !important;
+}
+
+.seed-search-field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.seed-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seed-list-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: rgba(230,239,255,.54);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.seed-list-shell {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 5px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(248,209,92,.35) transparent;
+}
+
+.seed-list-shell::-webkit-scrollbar {
+  width: 6px;
+}
+
+.seed-list-shell::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(248,209,92,.34);
+}
+
+.seed-list-compact {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.seed-team-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) 72px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.075);
+  background: rgba(255,255,255,.028);
+}
+
+.seed-team-row:hover {
+  border-color: rgba(248,209,92,.22);
+  background: rgba(248,209,92,.045);
+}
+
+.seed-row-hidden {
+  display: none !important;
+}
+
+.seed-team-position {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(248,209,92,.09);
+  color: #f8d15c;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.seed-team-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.seed-team-identity .team-logo,
+.seed-team-identity img {
+  width: 30px !important;
+  height: 30px !important;
+  flex: 0 0 auto;
+}
+
+.seed-team-identity > div {
+  min-width: 0;
+}
+
+.seed-team-identity strong,
+.seed-team-identity span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.seed-team-identity strong {
+  color: rgba(247,251,255,.93);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.seed-team-identity span {
+  margin-top: 2px;
+  color: rgba(230,239,255,.50);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.seed-number-field {
+  min-width: 0;
+}
+
+.seed-number-field label {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(230,239,255,.45);
+  font-size: 9px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.seed-number-field input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 6px 8px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1260px) {
+  .seed-list-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .seed-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .seed-toolbar-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .seed-list-shell {
+    max-height: 420px;
+  }
+}
+
+@media (max-width: 480px) {
+  .seed-team-row {
+    grid-template-columns: 30px minmax(0,1fr) 62px;
+    padding: 8px;
+  }
+
+  .seed-team-identity .team-logo,
+  .seed-team-identity img {
+    display: none !important;
+  }
+}
