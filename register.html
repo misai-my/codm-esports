@@ -226,25 +226,22 @@ async function refreshAuth() {
   currentUser = session?.user || null;
 
   const authForm = qs("#authForm");
-  const signOutBtn = qs("#signOutBtn");
   const regForm = qs("#registrationForm");
   const authStatus = qs("#authStatus");
 
   if (!currentUser) {
     authStatus.textContent = "Not logged in.";
-    authStatus.classList.remove("online");
-    authForm.classList.remove("hidden");
-    signOutBtn?.classList.add("hidden");
-    regForm.classList.add("hidden");
+    authStatus?.classList.remove("online");
+    authForm?.classList.remove("hidden");
+    regForm?.classList.add("hidden");
     qs("#myRegistrations").innerHTML = "Sign in to view your team submission.";
     return;
   }
 
   authStatus.textContent = `Logged in as ${currentUser.email}`;
-  authStatus.classList.add("online");
-  authForm.classList.add("hidden");
-  signOutBtn?.classList.remove("hidden");
-  regForm.classList.remove("hidden");
+  authStatus?.classList.add("online");
+  authForm?.classList.add("hidden");
+  regForm?.classList.remove("hidden");
   qs("#captainEmail").value = currentUser.email || "";
 
   await loadMyRegistrations();
@@ -424,7 +421,7 @@ function resetEditMode() {
   qs("#captainEmail").value = currentUser?.email || "";
   qs("#registrationForm .section-heading h2").textContent = "Team Application";
   qs("#registrationSubmitBtn").textContent = "Submit Official Registration";
-  qs("#cancelEditBtn").classList.add("hidden");
+  qs("#cancelEditBtn")?.classList.add("hidden");
 }
 
 function fillFormFromTeam(teamId) {
@@ -461,7 +458,7 @@ function fillFormFromTeam(teamId) {
 
   qs("#registrationForm .section-heading h2").textContent = "Update Team Application";
   qs("#registrationSubmitBtn").textContent = "Save Registration Update";
-  qs("#cancelEditBtn").classList.remove("hidden");
+  qs("#cancelEditBtn")?.classList.remove("hidden");
 
   scrollToId("registrationForm");
   showToast("Registration loaded for editing.", "success");

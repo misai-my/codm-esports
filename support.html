@@ -186,7 +186,7 @@ function clearTicketScreenshot() {
   if (input) input.value = "";
   if (preview) {
     preview.innerHTML = "";
-    preview.classList.add("hidden");
+    preview?.classList.add("hidden");
   }
 }
 
@@ -236,7 +236,7 @@ function handleTicketScreenshotChange(event) {
       </div>
       <button class="btn btn-ghost" type="button" onclick="clearTicketScreenshot()">Remove</button>
     `;
-    preview.classList.remove("hidden");
+    preview?.classList.remove("hidden");
   }
 }
 
@@ -431,19 +431,19 @@ async function refreshAuth() {
   if (!currentUser) {
     currentProfile = null;
     qs("#authStatus").textContent = "Not logged in.";
-    qs("#authStatus").classList.remove("online");
-    qs("#authForm").classList.remove("hidden");
-    qs("#ticketForm").classList.add("hidden");
-    qs("#ticketPanel").classList.add("hidden");
+    qs("#authStatus")?.classList.remove("online");
+    qs("#authForm")?.classList.remove("hidden");
+    qs("#ticketForm")?.classList.add("hidden");
+    qs("#ticketPanel")?.classList.add("hidden");
     return;
   }
 
   currentProfile = await getCurrentProfile();
   qs("#authStatus").textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
-  qs("#authStatus").classList.add("online");
-  qs("#authForm").classList.add("hidden");
-  qs("#ticketForm").classList.remove("hidden");
-  qs("#ticketPanel").classList.remove("hidden");
+  qs("#authStatus")?.classList.add("online");
+  qs("#authForm")?.classList.add("hidden");
+  qs("#ticketForm")?.classList.remove("hidden");
+  qs("#ticketPanel")?.classList.remove("hidden");
 
   await loadTickets();
 }

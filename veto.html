@@ -123,17 +123,15 @@
       if (!session) {
         userProfile = null;
         authStatus.textContent = "Sign in to act when your team is on the clock.";
-        authStatus.classList.remove("online");
-        qs("#authForm").classList.remove("hidden");
-        qs("#signOutBtn").classList.add("hidden");
+        authStatus?.classList.remove("online");
+        qs("#authForm")?.classList.remove("hidden");
         return;
       }
 
       userProfile = await getCurrentProfile();
       authStatus.textContent = `Logged in as ${userProfile.email} · Role: ${userProfile.role}`;
-      authStatus.classList.add("online");
-      qs("#authForm").classList.add("hidden");
-      qs("#signOutBtn").classList.remove("hidden");
+      authStatus?.classList.add("online");
+      qs("#authForm")?.classList.add("hidden");
     }
 
     async function loadMapPools() {

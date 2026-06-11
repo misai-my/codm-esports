@@ -1,4 +1,6 @@
 // CODM Tournament OS - smart navigation
+// nav-visibility.js exclusively controls creation and visibility of Login and Sign Out controls.
+
 // Navigation owns creation/removal of the Sign Out button.
 // Individual pages must not assume #signOutBtn always exists.
 

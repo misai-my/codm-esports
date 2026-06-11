@@ -8,7 +8,128 @@
 <main><section class="page-hero" data-hero-bg><div class="container"><div class="eyebrow">Team Match Center</div><h1 class="h1"><span class="gradient-text">Report results.</span><br/>Protect the record.</h1><p class="lead" id="tournamentMeta">Loading tournament...</p></div></section><section class="section"><div class="container grid grid-two"><div class="card"><div class="eyebrow">Team Access</div><h2>Captain Sign-In</h2><div id="authStatus" class="auth-status">Checking session...</div><form id="authForm" class="form"><div class="field"><label for="authEmail">Captain Email</label><input id="authEmail" type="email" required/></div><div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" required/></div><div class="actions"><button type="button" class="btn btn-primary" id="loginBtn">Login</button><a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a></div></form></div><div class="card"><div class="eyebrow">Registered Teams</div><h2>My Squad</h2><div id="myTeams">Sign in to view your approved team and assigned matches.</div></div></div></section><section class="section hidden" id="matchPanel"><div class="container"><div class="section-heading"><div><div class="eyebrow">Assigned Matches</div><h2>Match Center</h2><p>Submit match reports for organizer review and keep your tournament run moving.</p></div><button class="btn" id="refreshBtn">Refresh</button></div><div id="matchesWrap" class="grid"></div></div></section><section class="section hidden" id="reportPanel"><div class="container"><form id="reportForm" class="card form"><div class="section-heading"><div><div class="eyebrow">Official Report</div><h2 id="reportTitle">Submit Result</h2></div></div><div class="grid grid-two"><div class="field"><label id="teamALabel">Team A Score</label><input id="teamAScore" type="number" min="0" required/></div><div class="field"><label id="teamBLabel">Team B Score</label><input id="teamBScore" type="number" min="0" required/></div></div><div class="field"><label for="winnerTeam">Winner</label><select id="winnerTeam" required></select></div><div class="field"><label for="proofUrl">Proof Screenshot URL</label><input id="proofUrl" placeholder="https://..."/></div><div class="field"><label for="notes">Notes</label><textarea id="notes"></textarea></div><div class="actions"><button class="btn btn-primary" type="submit">Submit Match Report</button></div></form></div></section></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/js/config.js"></script><script src="assets/js/main.js"></script>
 <script src="assets/js/nav-visibility.js"></script><script>
-let tournament=null,currentUser=null,myTeams=[],myMatches=[],myVetos={},teamMap={},selectedMatch=null,selectedSubmittedTeam=null;async function login(){const email=normalizeText(qs('#authEmail').value),password=qs('#authPassword').value;if(!isEmailValid(email))return showToast('Enter a valid email.','error');const {error}=await window.sb.auth.signInWithPassword({email,password});if(error)return showToast(error.message,'error');showToast('Logged in.','success');await refreshAuth()}async function refreshAuth(){const session=await getSession();currentUser=session?.user||null;const authForm=qs('#authForm'),signOutBtn=qs('#signOutBtn'),authStatus=qs('#authStatus');if(!currentUser){authStatus.textContent='Not logged in.';authStatus.classList.remove('online');authForm.classList.remove('hidden');signOutBtn.classList.add('hidden');qs('#matchPanel').classList.add('hidden');qs('#myTeams').innerHTML='Sign in to view your approved team and assigned matches.';return}authStatus.textContent=`Logged in as ${currentUser.email}`;authStatus.classList.add('online');authForm.classList.add('hidden');signOutBtn.classList.remove('hidden');await loadMyTeamsAndMatches()}async function loadMyTeamsAndMatches(){const {data:teams,error:teamsError}=await window.sb.from('teams').select('id,team_name,team_tag,logo_url,status').eq('tournament_id',tournament.id).eq('captain_user_id',currentUser.id).eq('status','approved');if(teamsError)throw teamsError;myTeams=teams||[];if(!myTeams.length){qs('#myTeams').innerHTML='<div class="notice">No approved team is connected to this captain account yet.</div>';qs('#matchPanel').classList.add('hidden');return}qs('#myTeams').innerHTML=myTeams.map(t=>`<div class="card card-flat"><div class="team-card">${teamLogoHtml(t,'sm')}<div><strong>${escapeHtml(t.team_name)}</strong><div class="small">${escapeHtml(t.team_tag)}</div></div></div></div>`).join('');const {data:allMatches,error:matchError}=await window.sb.from('matches').select('*').eq('tournament_id',tournament.id).order('round_no',{ascending:true}).order('match_no',{ascending:true});if(matchError)throw matchError;const myIds=myTeams.map(t=>t.id);myMatches=(allMatches||[]).filter(m=>myIds.includes(m.team_a_id)||myIds.includes(m.team_b_id));const teamIds=[...new Set(myMatches.flatMap(m=>[m.team_a_id,m.team_b_id]).filter(Boolean))];if(teamIds.length){const {data:allTeams}=await window.sb.from('teams').select('id,team_name,team_tag,logo_url').in('id',teamIds);teamMap=Object.fromEntries((allTeams||[]).map(t=>[t.id,t]))}await loadMyVetos();qs('#matchPanel').classList.remove('hidden');renderMatches();renderVetoAccess()}
+let tournament=null,currentUser=null,myTeams=[],myMatches=[],myVetos={},teamMap={},selectedMatch=null,selectedSubmittedTeam=null;async function login(){const email=normalizeText(qs('#authEmail').value),password=qs('#authPassword').value;if(!isEmailValid(email))return showToast('Enter a valid email.','error');const {error}=await window.sb.auth.signInWithPassword({email,password});if(error)return showToast(error.message,'error');showToast('Logged in.','success');await refreshAuth()}async function refreshAuth() {
+  const session = await getSession();
+  currentUser = session?.user || null;
+
+  const authForm = qs("#authForm");
+  const authStatus = qs("#authStatus");
+  const matchPanel = qs("#matchPanel");
+  const myTeamsPanel = qs("#myTeams");
+
+  if (!authForm || !authStatus || !matchPanel || !myTeamsPanel) {
+    console.error("[Match Center] One or more required page elements are missing.");
+    showToast(
+      "Match Center layout is incomplete. Upload the complete updated matches.html file.",
+      "error"
+    );
+    return;
+  }
+
+  if (!currentUser) {
+    authStatus.textContent = "Not logged in.";
+    authStatus.classList.remove("online");
+    authForm.classList.remove("hidden");
+    matchPanel.classList.add("hidden");
+    myTeamsPanel.innerHTML =
+      "Sign in to view your approved team and assigned matches.";
+    return;
+  }
+
+  authStatus.textContent = `Logged in as ${currentUser.email}`;
+  authStatus.classList.add("online");
+  authForm.classList.add("hidden");
+
+  await loadMyTeamsAndMatches();
+}async function loadMyTeamsAndMatches() {
+  const myTeamsPanel = qs("#myTeams");
+  const matchPanel = qs("#matchPanel");
+
+  if (!myTeamsPanel || !matchPanel) {
+    console.error("[Match Center] Team or match panel is missing.");
+    return;
+  }
+
+  const { data: teams, error: teamsError } = await window.sb
+    .from("teams")
+    .select("id,team_name,team_tag,logo_url,status")
+    .eq("tournament_id", tournament.id)
+    .eq("captain_user_id", currentUser.id)
+    .eq("status", "approved");
+
+  if (teamsError) throw teamsError;
+
+  myTeams = teams || [];
+
+  if (!myTeams.length) {
+    myTeamsPanel.innerHTML =
+      '<div class="notice">No approved team is connected to this captain account yet.</div>';
+    matchPanel.classList.add("hidden");
+    return;
+  }
+
+  myTeamsPanel.innerHTML = myTeams
+    .map(
+      team => `
+        <div class="card card-flat">
+          <div class="team-card">
+            ${teamLogoHtml(team, "sm")}
+            <div>
+              <strong>${escapeHtml(team.team_name)}</strong>
+              <div class="small">${escapeHtml(team.team_tag)}</div>
+            </div>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+
+  const { data: allMatches, error: matchError } = await window.sb
+    .from("matches")
+    .select("*")
+    .eq("tournament_id", tournament.id)
+    .order("round_no", { ascending: true })
+    .order("match_no", { ascending: true });
+
+  if (matchError) throw matchError;
+
+  const myTeamIds = myTeams.map(team => team.id);
+
+  myMatches = (allMatches || []).filter(
+    match =>
+      myTeamIds.includes(match.team_a_id) ||
+      myTeamIds.includes(match.team_b_id)
+  );
+
+  const teamIds = [
+    ...new Set(
+      myMatches
+        .flatMap(match => [match.team_a_id, match.team_b_id])
+        .filter(Boolean)
+    )
+  ];
+
+  teamMap = {};
+
+  if (teamIds.length) {
+    const { data: allTeams, error: allTeamsError } = await window.sb
+      .from("teams")
+      .select("id,team_name,team_tag,logo_url")
+      .in("id", teamIds);
+
+    if (allTeamsError) throw allTeamsError;
+
+    teamMap = Object.fromEntries(
+      (allTeams || []).map(team => [team.id, team])
+    );
+  }
+
+  await loadMyVetos();
+
+  matchPanel.classList.remove("hidden");
+  renderMatches();
+  renderVetoAccess();
+}
 async function loadMyVetos(){
   myVetos = {};
   const matchIds = myMatches.map(m => m.id).filter(Boolean);
@@ -150,5 +271,5 @@ function teamName(id){const t=teamMap[id];return t?`${t.team_name} (${t.team_tag
       </article>
     `;
   }).join('');
-}function openReport(matchId,submittedTeamId){selectedMatch=myMatches.find(m=>m.id===matchId);selectedSubmittedTeam=myTeams.find(t=>t.id===submittedTeamId);if(!selectedMatch||!selectedSubmittedTeam)return;setText('#reportTitle',`${teamName(selectedMatch.team_a_id)} vs ${teamName(selectedMatch.team_b_id)}`);setText('#teamALabel',`${teamName(selectedMatch.team_a_id)} Score`);setText('#teamBLabel',`${teamName(selectedMatch.team_b_id)} Score`);qs('#winnerTeam').innerHTML=`<option value="">Select winner</option><option value="${selectedMatch.team_a_id}">${escapeHtml(teamName(selectedMatch.team_a_id))}</option><option value="${selectedMatch.team_b_id}">${escapeHtml(teamName(selectedMatch.team_b_id))}</option>`;qs('#reportPanel').classList.remove('hidden');scrollToId('reportPanel')}async function submitReport(e){e.preventDefault();try{const a=Number(qs('#teamAScore').value),b=Number(qs('#teamBScore').value),winnerId=qs('#winnerTeam').value,proofUrl=normalizeText(qs('#proofUrl').value),notes=normalizeText(qs('#notes').value);if(a===b)return showToast('Series score cannot be tied.','error');if(!winnerId)return showToast('Select winner.','error');if(proofUrl&&!isImageUrlMaybe(proofUrl))return showToast('Proof URL must start with http:// or https://','error');const {error}=await window.sb.from('match_reports').insert({tournament_id:tournament.id,match_id:selectedMatch.id,submitted_by:currentUser.id,submitted_by_team_id:selectedSubmittedTeam.id,team_a_series_score:a,team_b_series_score:b,winner_team_id:winnerId,proof_url:proofUrl||null,notes:notes||null,status:'pending'});if(error)throw error;showToast('Match report submitted for official review.','success');qs('#reportForm').reset();qs('#reportPanel').classList.add('hidden')}catch(err){console.error(err);showToast(err.message||'Failed to submit report.','error')}}async function init(){tournament=await loadDefaultTournament();setText('#tournamentMeta',`${tournament.title} · ${bracketTypeLabel(tournament.bracket_type)} · ${tournament.format}`);qs('#loginBtn').addEventListener('click',login);qs('#refreshBtn').addEventListener('click',loadMyTeamsAndMatches);qs('#reportForm').addEventListener('submit',submitReport);await refreshAuth();window.sb.auth.onAuthStateChange(()=>refreshAuth())}init().catch(err=>{console.error(err);showToast(err.message||'Failed to initialize.','error')});
+}function openReport(matchId,submittedTeamId){selectedMatch=myMatches.find(m=>m.id===matchId);selectedSubmittedTeam=myTeams.find(t=>t.id===submittedTeamId);if(!selectedMatch||!selectedSubmittedTeam)return;setText('#reportTitle',`${teamName(selectedMatch.team_a_id)} vs ${teamName(selectedMatch.team_b_id)}`);setText('#teamALabel',`${teamName(selectedMatch.team_a_id)} Score`);setText('#teamBLabel',`${teamName(selectedMatch.team_b_id)} Score`);qs('#winnerTeam').innerHTML=`<option value="">Select winner</option><option value="${selectedMatch.team_a_id}">${escapeHtml(teamName(selectedMatch.team_a_id))}</option><option value="${selectedMatch.team_b_id}">${escapeHtml(teamName(selectedMatch.team_b_id))}</option>`;qs('#reportPanel')?.classList.remove('hidden');scrollToId('reportPanel')}async function submitReport(e){e.preventDefault();try{const a=Number(qs('#teamAScore').value),b=Number(qs('#teamBScore').value),winnerId=qs('#winnerTeam').value,proofUrl=normalizeText(qs('#proofUrl').value),notes=normalizeText(qs('#notes').value);if(a===b)return showToast('Series score cannot be tied.','error');if(!winnerId)return showToast('Select winner.','error');if(proofUrl&&!isImageUrlMaybe(proofUrl))return showToast('Proof URL must start with http:// or https://','error');const {error}=await window.sb.from('match_reports').insert({tournament_id:tournament.id,match_id:selectedMatch.id,submitted_by:currentUser.id,submitted_by_team_id:selectedSubmittedTeam.id,team_a_series_score:a,team_b_series_score:b,winner_team_id:winnerId,proof_url:proofUrl||null,notes:notes||null,status:'pending'});if(error)throw error;showToast('Match report submitted for official review.','success');qs('#reportForm').reset();qs('#reportPanel')?.classList.add('hidden')}catch(err){console.error(err);showToast(err.message||'Failed to submit report.','error')}}async function init(){tournament=await loadDefaultTournament();setText('#tournamentMeta',`${tournament.title} · ${bracketTypeLabel(tournament.bracket_type)} · ${tournament.format}`);qs('#loginBtn').addEventListener('click',login);qs('#refreshBtn').addEventListener('click',loadMyTeamsAndMatches);qs('#reportForm').addEventListener('submit',submitReport);await refreshAuth();window.sb.auth.onAuthStateChange(()=>refreshAuth())}init().catch(err=>{console.error(err);showToast(err.message||'Failed to initialize.','error')});
 </script><script src="assets/js/premium-copy.js"></script></body></html>
