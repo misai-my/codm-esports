@@ -76,18 +76,21 @@ async function saveMatchSchedule(matchId) {
       match_start_at: startIso,
       match_timezone: timezone,
       match_duration_minutes: duration,
-      calendar_sync_status: "pending"
+      calendar_sync_status: "pending",
+      is_published: false,
+      published_at: null,
+      published_by: null
     })
     .eq("id", matchId);
 
   if (error) return showToast(error.message, "error");
 
-  showToast("Match schedule saved. Calendar sync is marked pending.", "success");
+  showToast("Schedule saved. Post the match when it is ready for the public bracket.", "success");
   await refreshAll();
 }
 
 async function clearMatchSchedule(matchId) {
-  if (!confirm("Clear this match schedule?")) return;
+  if (!confirm("Clear this match schedule? The match will also be removed from the public bracket.")) return;
 
   const { error } = await window.sb
     .from("matches")
@@ -96,13 +99,70 @@ async function clearMatchSchedule(matchId) {
       match_timezone: null,
       match_duration_minutes: null,
       calendar_event_id: null,
-      calendar_sync_status: "not_synced"
+      calendar_sync_status: "not_synced",
+      is_published: false,
+      published_at: null,
+      published_by: null
     })
     .eq("id", matchId);
 
   if (error) return showToast(error.message, "error");
 
-  showToast("Match schedule cleared.", "success");
+  showToast("Match schedule cleared and removed from the public bracket.", "success");
+  await refreshAll();
+}
+
+
+function publicationBadge(match) {
+  if (match?.is_published) {
+    return `<span class="match-publication-badge is-posted">Posted to Bracket</span>`;
+  }
+
+  if (match?.match_start_at) {
+    return `<span class="match-publication-badge is-ready">Scheduled · Not Posted</span>`;
+  }
+
+  return `<span class="match-publication-badge is-draft">Draft · Not Scheduled</span>`;
+}
+
+async function postMatchToBracket(matchId) {
+  const match = matches.find(item => item.id === matchId);
+  if (!match) return showToast("Match not found.", "error");
+  if (!match.match_start_at) return showToast("Schedule the match before posting it.", "error");
+
+  const { error } = await window.sb
+    .from("matches")
+    .update({
+      is_published: true,
+      published_at: new Date().toISOString(),
+      published_by: currentProfile?.id || null
+    })
+    .eq("id", matchId);
+
+  if (error) return showToast(error.message, "error");
+
+  showToast("Match posted to the public bracket.", "success");
+  await refreshAll();
+}
+
+async function unpostMatchFromBracket(matchId) {
+  const match = matches.find(item => item.id === matchId);
+  if (!match) return showToast("Match not found.", "error");
+
+  if (!confirm("Remove this match from the public bracket? Its schedule and score will be kept.")) return;
+
+  const { error } = await window.sb
+    .from("matches")
+    .update({
+      is_published: false,
+      published_at: null,
+      published_by: null
+    })
+    .eq("id", matchId);
+
+  if (error) return showToast(error.message, "error");
+
+  showToast("Match removed from the public bracket.", "success");
   await refreshAll();
 }
 
@@ -113,13 +173,21 @@ function renderScheduleControls(match) {
 
   return `
     <div class="schedule-admin-box">
-      <div class="eyebrow">Match Schedule</div>
+      <div class="schedule-admin-heading">
+        <div>
+          <div class="eyebrow">Match Schedule</div>
+          ${publicationBadge(match)}
+        </div>
+      </div>
+
       ${scheduleBadge(match)}
+
       <div class="schedule-input-grid">
         <div class="field">
           <label for="scheduleAt-${match.id}">Date & Time</label>
           <input id="scheduleAt-${match.id}" type="datetime-local" value="${escapeHtml(value)}"/>
         </div>
+
         <div class="field">
           <label for="scheduleTz-${match.id}">Time Zone</label>
           <select id="scheduleTz-${match.id}">
@@ -130,6 +198,7 @@ function renderScheduleControls(match) {
             <option value="UTC" ${tz === "UTC" ? "selected" : ""}>UTC</option>
           </select>
         </div>
+
         <div class="field">
           <label for="scheduleDuration-${match.id}">Duration</label>
           <select id="scheduleDuration-${match.id}">
@@ -140,11 +209,37 @@ function renderScheduleControls(match) {
           </select>
         </div>
       </div>
+
       <div class="small">Calendar preview: ${escapeHtml(calendarPayloadPreview(match))}</div>
-      <div class="actions">
-        <button class="btn btn-primary" onclick="saveMatchSchedule('${match.id}')">Save Schedule</button>
-        ${match.match_start_at ? `<button class="btn btn-ghost" onclick="clearMatchSchedule('${match.id}')">Clear</button>` : ""}
+
+      <div class="actions match-publish-actions">
+        <button class="btn" type="button" onclick="saveMatchSchedule('${match.id}')">Save Schedule</button>
+
+        ${match.match_start_at && !match.is_published
+          ? `<button class="btn btn-primary" type="button" onclick="postMatchToBracket('${match.id}')">Post Match</button>`
+          : ""
+        }
+
+        ${match.is_published
+          ? `<button class="btn btn-warning" type="button" onclick="unpostMatchFromBracket('${match.id}')">Unpost Match</button>`
+          : ""
+        }
+
+        ${!match.match_start_at
+          ? `<button class="btn btn-primary" type="button" disabled>Schedule Before Posting</button>`
+          : ""
+        }
+
+        ${match.match_start_at
+          ? `<button class="btn btn-ghost" type="button" onclick="clearMatchSchedule('${match.id}')">Clear Schedule</button>`
+          : ""
+        }
       </div>
+
+      ${match.is_published
+        ? `<div class="small match-posted-note">Visible on bracket.html${match.published_at ? ` · Posted ${new Date(match.published_at).toLocaleString()}` : ""}</div>`
+        : `<div class="small">This match remains hidden from bracket.html until you click Post Match.</div>`
+      }
     </div>
   `;
 }

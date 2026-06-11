@@ -2239,3 +2239,60 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
   margin: 18px 0;
   background: rgba(255,255,255,.08);
 }
+
+
+/* ============================================================
+   Match Posting / Public Bracket Visibility
+   ============================================================ */
+.schedule-admin-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.match-publication-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 7px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.match-publication-badge.is-posted {
+  border-color: rgba(50,230,143,.28);
+  background: rgba(50,230,143,.09);
+  color: #66f0ad;
+}
+
+.match-publication-badge.is-ready {
+  border-color: rgba(248,209,92,.30);
+  background: rgba(248,209,92,.09);
+  color: #f8d15c;
+}
+
+.match-publication-badge.is-draft {
+  color: rgba(230,239,255,.58);
+}
+
+.match-publish-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.match-posted-note {
+  margin-top: 10px;
+  color: rgba(102,240,173,.78);
+}
+
+.public-bracket-empty {
+  padding: 22px;
+  text-align: center;
+}
