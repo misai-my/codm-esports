@@ -65,13 +65,15 @@
 
   <section class="section" id="faq">
     <div class="container">
-      <div class="section-heading"><div><div class="eyebrow">FAQ</div><h2>Common Questions</h2></div></div>
-      <div class="faq-grid">
-        <details class="card card-flat" open><summary>Where do captains report scores?</summary><p>Captains report scores through the My Matches page. Admins review and lock the official result.</p></details>
-        <details class="card card-flat"><summary>Where can I find the rules?</summary><p>The official rulebook is on the separate Rulebook page.</p></details>
-        <details class="card card-flat"><summary>What happens if a team is late for veto?</summary><p>Admin may pause the process briefly or randomize the current veto action depending on the official ruling.</p></details>
-        <details class="card card-flat"><summary>Can a locked veto choice be changed?</summary><p>Locked choices are final unless an admin determines that a correction is required due to operational error.</p></details>
-        <details class="card card-flat"><summary>How do we raise a dispute?</summary><p>Create a support ticket with the match details, evidence, and a short explanation. Admins will review the case.</p></details>
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">FAQ</div>
+          <h2>Common Questions</h2>
+          <p>Official answers maintained by tournament administration.</p>
+        </div>
+      </div>
+      <div class="faq-grid" id="faqList">
+        <div class="notice">Loading common questions...</div>
       </div>
     </div>
   </section>
@@ -143,6 +145,7 @@ let currentUser = null;
 let currentProfile = null;
 let currentTournament = null;
 let myTickets = [];
+let faqItems = [];
 let selectedTicketScreenshot = null;
 let ticketScreenshotPreviewUrl = null;
 
@@ -324,6 +327,89 @@ async function renderTicketAttachmentGallery(ticket) {
       <div class="support-attachment-grid">${content}</div>
     </div>
   `;
+}
+
+
+const DEFAULT_FAQ_ITEMS = [
+  {
+    question: "Where do captains report scores?",
+    answer: "Captains report scores through the My Matches page. Admins review and lock the official result.",
+    category: "match",
+    sort_order: 1
+  },
+  {
+    question: "Where can I find the rules?",
+    answer: "The official rulebook is available on the separate Rulebook page.",
+    category: "rules",
+    sort_order: 2
+  },
+  {
+    question: "What happens if a team is late for veto?",
+    answer: "Administration may pause the process briefly or randomize the current veto action depending on the official ruling.",
+    category: "veto",
+    sort_order: 3
+  },
+  {
+    question: "Can a locked veto choice be changed?",
+    answer: "Locked choices are final unless administration determines that a correction is required because of an operational error.",
+    category: "veto",
+    sort_order: 4
+  },
+  {
+    question: "How do we raise a dispute?",
+    answer: "Create a support ticket with the match details, evidence, and a concise explanation. Administrators will review the case.",
+    category: "dispute",
+    sort_order: 5
+  }
+];
+
+function renderFaqItems() {
+  const wrap = qs("#faqList");
+  if (!wrap) return;
+
+  const items = faqItems.length ? faqItems : DEFAULT_FAQ_ITEMS;
+
+  wrap.innerHTML = items.map((item, index) => `
+    <details class="card card-flat faq-item-card" ${index === 0 ? "open" : ""}>
+      <summary>
+        <span>${escapeHtml(item.question)}</span>
+        ${item.category ? `<small>${escapeHtml(statusLabel(item.category))}</small>` : ""}
+      </summary>
+      <p>${escapeHtml(item.answer)}</p>
+    </details>
+  `).join("");
+}
+
+async function loadFaqItems() {
+  try {
+    let query = window.sb
+      .from("faq_items")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (currentTournament?.id) {
+      query = query.or(`tournament_id.is.null,tournament_id.eq.${currentTournament.id}`);
+    } else {
+      query = query.is("tournament_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const rows = data || [];
+    const tournamentSpecific = rows.filter(item => item.tournament_id === currentTournament?.id);
+    const globalItems = rows.filter(item => !item.tournament_id);
+
+    faqItems = tournamentSpecific.length ? tournamentSpecific : globalItems;
+  } catch (err) {
+    console.warn("Dynamic FAQ could not be loaded; using built-in defaults.", err);
+    faqItems = DEFAULT_FAQ_ITEMS;
+  }
+
+  renderFaqItems();
 }
 
 async function login() {
@@ -548,6 +634,8 @@ async function init() {
   } catch (err) {
     console.warn("Tournament not loaded for tickets:", err);
   }
+
+  await loadFaqItems();
 
   qs("#loginBtn").addEventListener("click", login);
   qs("#ticketForm").addEventListener("submit", submitTicket);

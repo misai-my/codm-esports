@@ -66,6 +66,111 @@
       <div class="card"><div id="ticketDetail"><div class="notice">Select a ticket to review.</div></div></div>
     </div>
   </section>
+
+  <section class="section hidden" id="faqAdminPanel">
+    <div class="container">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">FAQ Management</div>
+          <h2>Common Questions</h2>
+          <p>Create, edit, publish, reorder, or remove the questions shown on support.html.</p>
+        </div>
+        <button class="btn btn-primary" id="newFaqBtn" type="button">Add Question</button>
+      </div>
+
+      <div class="grid grid-two faq-admin-layout">
+        <form class="card form" id="faqEditorForm">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow" id="faqEditorEyebrow">New FAQ</div>
+              <h2 id="faqEditorTitle">Add Common Question</h2>
+            </div>
+          </div>
+
+          <input id="faqItemId" type="hidden"/>
+
+          <div class="field">
+            <label for="faqTournamentSelect">Tournament Scope</label>
+            <select id="faqTournamentSelect">
+              <option value="">Global · All Tournaments</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="faqQuestion">Question</label>
+            <input id="faqQuestion" maxlength="180" placeholder="Example: Where do captains report scores?" required/>
+          </div>
+
+          <div class="field">
+            <label for="faqAnswer">Answer</label>
+            <textarea id="faqAnswer" rows="6" maxlength="1600" placeholder="Enter the official answer shown to users..." required></textarea>
+          </div>
+
+          <div class="grid grid-two">
+            <div class="field">
+              <label for="faqCategory">Category</label>
+              <select id="faqCategory">
+                <option value="general">General</option>
+                <option value="registration">Registration</option>
+                <option value="match">Match</option>
+                <option value="veto">Map Veto</option>
+                <option value="technical">Technical</option>
+                <option value="dispute">Dispute</option>
+                <option value="rules">Rules</option>
+                <option value="discord">Discord</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="faqSortOrder">Display Order</label>
+              <input id="faqSortOrder" type="number" min="1" value="1"/>
+            </div>
+          </div>
+
+          <label class="faq-publish-toggle">
+            <input id="faqPublished" type="checkbox" checked/>
+            <span>
+              <strong>Published</strong>
+              <small>Visible in Common Questions on support.html</small>
+            </span>
+          </label>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit" id="saveFaqBtn">Save Question</button>
+            <button class="btn btn-ghost hidden" type="button" id="cancelFaqEditBtn">Cancel Edit</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Published Content</div>
+              <h2>FAQ Library</h2>
+            </div>
+            <button class="btn" id="refreshFaqBtn" type="button">Refresh</button>
+          </div>
+
+          <div class="grid grid-two">
+            <div class="field">
+              <label for="faqScopeFilter">Scope</label>
+              <select id="faqScopeFilter">
+                <option value="all">All Scopes</option>
+                <option value="global">Global</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="faqSearchBox">Search</label>
+              <input id="faqSearchBox" type="search" placeholder="Search questions or answers"/>
+            </div>
+          </div>
+
+          <div id="faqAdminList" class="faq-admin-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <div id="toast" class="toast"></div>
@@ -78,6 +183,9 @@
 let profile = null;
 let tickets = [];
 let selectedTicketId = null;
+let faqItems = [];
+let faqTournaments = [];
+let selectedFaqId = null;
 
 function statusLabel(status) {
   return String(status || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -133,6 +241,283 @@ async function renderAdminTicketAttachments(ticket) {
   `;
 }
 
+
+function faqScopeLabel(item) {
+  if (!item.tournament_id) return "Global";
+
+  const tournament = faqTournaments.find(row => row.id === item.tournament_id);
+  return tournament?.title || "Tournament";
+}
+
+async function loadFaqTournaments() {
+  const { data, error } = await window.sb
+    .from("tournaments")
+    .select("id,title,status")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  faqTournaments = data || [];
+
+  const editorSelect = qs("#faqTournamentSelect");
+  const scopeFilter = qs("#faqScopeFilter");
+
+  const tournamentOptions = faqTournaments.map(tournament => `
+    <option value="${tournament.id}">
+      ${escapeHtml(tournament.title)} · ${escapeHtml(tournament.status || "draft")}
+    </option>
+  `).join("");
+
+  if (editorSelect) {
+    editorSelect.innerHTML = `
+      <option value="">Global · All Tournaments</option>
+      ${tournamentOptions}
+    `;
+  }
+
+  if (scopeFilter) {
+    scopeFilter.innerHTML = `
+      <option value="all">All Scopes</option>
+      <option value="global">Global</option>
+      ${faqTournaments.map(tournament => `
+        <option value="${tournament.id}">${escapeHtml(tournament.title)}</option>
+      `).join("")}
+    `;
+  }
+}
+
+async function loadFaqItemsAdmin() {
+  const { data, error } = await window.sb
+    .from("faq_items")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    qs("#faqAdminList").innerHTML = `
+      <div class="notice">
+        FAQ management is not available yet. Run supabase_faq_management.sql in Supabase.
+      </div>
+    `;
+    throw error;
+  }
+
+  faqItems = data || [];
+  renderFaqAdminList();
+}
+
+function filteredFaqItems() {
+  const scope = qs("#faqScopeFilter")?.value || "all";
+  const search = normalizeText(qs("#faqSearchBox")?.value).toLowerCase();
+
+  return faqItems.filter(item => {
+    const scopeMatches =
+      scope === "all" ||
+      (scope === "global" && !item.tournament_id) ||
+      item.tournament_id === scope;
+
+    const searchMatches =
+      !search ||
+      `${item.question} ${item.answer} ${item.category}`.toLowerCase().includes(search);
+
+    return scopeMatches && searchMatches;
+  });
+}
+
+function renderFaqAdminList() {
+  const wrap = qs("#faqAdminList");
+  if (!wrap) return;
+
+  const rows = filteredFaqItems();
+
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="notice">No FAQ questions match the current filters.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = rows.map(item => `
+    <article class="faq-admin-row ${item.is_published ? "" : "is-unpublished"}">
+      <div class="faq-admin-row-main">
+        <div class="faq-admin-row-top">
+          <span class="badge">${escapeHtml(statusLabel(item.category))}</span>
+          <span class="faq-scope-chip">${escapeHtml(faqScopeLabel(item))}</span>
+          <span class="faq-order-chip">Order ${escapeHtml(item.sort_order)}</span>
+          <span class="faq-publish-chip ${item.is_published ? "is-live" : "is-draft"}">
+            ${item.is_published ? "Published" : "Hidden"}
+          </span>
+        </div>
+
+        <h3>${escapeHtml(item.question)}</h3>
+        <p>${escapeHtml(item.answer)}</p>
+      </div>
+
+      <div class="table-actions faq-admin-actions">
+        <button class="btn" type="button" onclick="editFaqItem('${item.id}')">Edit</button>
+        <button class="btn ${item.is_published ? "btn-warning" : "btn-success"}" type="button" onclick="toggleFaqPublished('${item.id}')">
+          ${item.is_published ? "Unpublish" : "Publish"}
+        </button>
+        <button class="btn btn-danger" type="button" onclick="deleteFaqItem('${item.id}')">Delete</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+function resetFaqEditor() {
+  selectedFaqId = null;
+  qs("#faqEditorForm")?.reset();
+  qs("#faqItemId").value = "";
+  qs("#faqSortOrder").value = String(
+    Math.max(0, ...faqItems.map(item => Number(item.sort_order || 0))) + 1
+  );
+  qs("#faqPublished").checked = true;
+  setText("#faqEditorEyebrow", "New FAQ");
+  setText("#faqEditorTitle", "Add Common Question");
+  setText("#saveFaqBtn", "Save Question");
+  qs("#cancelFaqEditBtn")?.classList.add("hidden");
+}
+
+function editFaqItem(itemId) {
+  const item = faqItems.find(row => row.id === itemId);
+  if (!item) return showToast("FAQ item not found.", "error");
+
+  selectedFaqId = item.id;
+  qs("#faqItemId").value = item.id;
+  qs("#faqTournamentSelect").value = item.tournament_id || "";
+  qs("#faqQuestion").value = item.question;
+  qs("#faqAnswer").value = item.answer;
+  qs("#faqCategory").value = item.category || "general";
+  qs("#faqSortOrder").value = item.sort_order || 1;
+  qs("#faqPublished").checked = !!item.is_published;
+
+  setText("#faqEditorEyebrow", "Edit FAQ");
+  setText("#faqEditorTitle", "Update Common Question");
+  setText("#saveFaqBtn", "Update Question");
+  qs("#cancelFaqEditBtn")?.classList.remove("hidden");
+
+  qs("#faqEditorForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  qs("#faqQuestion")?.focus();
+}
+
+async function saveFaqItem(event) {
+  event.preventDefault();
+
+  const question = normalizeText(qs("#faqQuestion").value);
+  const answer = normalizeText(qs("#faqAnswer").value);
+  const category = qs("#faqCategory").value;
+  const tournamentId = qs("#faqTournamentSelect").value || null;
+  const sortOrder = Number(qs("#faqSortOrder").value || 1);
+  const isPublished = qs("#faqPublished").checked;
+  const saveButton = qs("#saveFaqBtn");
+
+  if (question.length < 5) {
+    return showToast("Question must contain at least 5 characters.", "error");
+  }
+
+  if (answer.length < 10) {
+    return showToast("Answer must contain at least 10 characters.", "error");
+  }
+
+  if (!Number.isInteger(sortOrder) || sortOrder < 1) {
+    return showToast("Display order must be a whole number of 1 or higher.", "error");
+  }
+
+  const duplicate = faqItems.some(item =>
+    item.id !== selectedFaqId &&
+    (item.tournament_id || "") === (tournamentId || "") &&
+    item.question.trim().toLowerCase() === question.toLowerCase()
+  );
+
+  if (duplicate) {
+    return showToast("That question already exists in the selected scope.", "error");
+  }
+
+  const payload = {
+    tournament_id: tournamentId,
+    question,
+    answer,
+    category,
+    sort_order: sortOrder,
+    is_published: isPublished,
+    updated_by: profile.id,
+    updated_at: new Date().toISOString()
+  };
+
+  saveButton.disabled = true;
+  saveButton.textContent = selectedFaqId ? "Updating..." : "Saving...";
+
+  try {
+    let result;
+
+    if (selectedFaqId) {
+      result = await window.sb
+        .from("faq_items")
+        .update(payload)
+        .eq("id", selectedFaqId);
+    } else {
+      result = await window.sb
+        .from("faq_items")
+        .insert({
+          ...payload,
+          created_by: profile.id
+        });
+    }
+
+    if (result.error) throw result.error;
+
+    showToast(
+      selectedFaqId ? "FAQ question updated." : "FAQ question added.",
+      "success"
+    );
+
+    resetFaqEditor();
+    await loadFaqItemsAdmin();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "Failed to save FAQ question.", "error");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = selectedFaqId ? "Update Question" : "Save Question";
+  }
+}
+
+async function toggleFaqPublished(itemId) {
+  const item = faqItems.find(row => row.id === itemId);
+  if (!item) return;
+
+  const { error } = await window.sb
+    .from("faq_items")
+    .update({
+      is_published: !item.is_published,
+      updated_by: profile.id,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", item.id);
+
+  if (error) return showToast(error.message, "error");
+
+  showToast(item.is_published ? "FAQ question unpublished." : "FAQ question published.", "success");
+  await loadFaqItemsAdmin();
+}
+
+async function deleteFaqItem(itemId) {
+  const item = faqItems.find(row => row.id === itemId);
+  if (!item) return;
+
+  if (!confirm(`Delete this FAQ question?\n\n${item.question}\n\nThis cannot be undone.`)) return;
+
+  const { error } = await window.sb
+    .from("faq_items")
+    .delete()
+    .eq("id", item.id);
+
+  if (error) return showToast(error.message, "error");
+
+  if (selectedFaqId === item.id) resetFaqEditor();
+
+  showToast("FAQ question deleted.", "success");
+  await loadFaqItemsAdmin();
+}
+
 async function login() {
   const email = normalizeText(qs("#authEmail").value);
   const password = qs("#authPassword").value;
@@ -147,27 +532,44 @@ async function login() {
 
 async function refreshAuth() {
   const session = await getSession();
+
+  const authStatus = qs("#authStatus");
+  const authForm = qs("#authForm");
+  const adminPanel = qs("#adminPanel");
+  const faqPanel = qs("#faqAdminPanel");
+
   if (!session) {
     profile = null;
-    qs("#authStatus").textContent = "Not logged in.";
-    qs("#authStatus")?.classList.remove("online");
-    qs("#authForm")?.classList.remove("hidden");
-    qs("#adminPanel")?.classList.add("hidden");
+    authStatus.textContent = "Not logged in.";
+    authStatus.classList.remove("online");
+    authForm.classList.remove("hidden");
+    adminPanel?.classList.add("hidden");
+    faqPanel?.classList.add("hidden");
     return;
   }
 
   profile = await getCurrentProfile();
-  qs("#authStatus").textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
-  qs("#authStatus")?.classList.add("online");
-  qs("#authForm")?.classList.add("hidden");
+
+  authStatus.textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
+  authStatus.classList.add("online");
+  authForm.classList.add("hidden");
 
   if (profile.role !== "admin") {
-    qs("#adminPanel")?.classList.add("hidden");
+    adminPanel?.classList.add("hidden");
+    faqPanel?.classList.add("hidden");
     return showToast("This account is not an admin.", "error");
   }
 
-  qs("#adminPanel")?.classList.remove("hidden");
-  await loadTickets();
+  adminPanel?.classList.remove("hidden");
+  faqPanel?.classList.remove("hidden");
+
+  await Promise.all([
+    loadTickets(),
+    loadFaqTournaments()
+  ]);
+
+  resetFaqEditor();
+  await loadFaqItemsAdmin();
 }
 
 async function loadTickets() {
@@ -300,6 +702,13 @@ async function init() {
   qs("#refreshBtn").addEventListener("click", loadTickets);
   qs("#statusFilter").addEventListener("change", renderTicketQueue);
   qs("#categoryFilter").addEventListener("change", renderTicketQueue);
+
+  qs("#faqEditorForm").addEventListener("submit", saveFaqItem);
+  qs("#newFaqBtn").addEventListener("click", resetFaqEditor);
+  qs("#cancelFaqEditBtn").addEventListener("click", resetFaqEditor);
+  qs("#refreshFaqBtn").addEventListener("click", loadFaqItemsAdmin);
+  qs("#faqScopeFilter").addEventListener("change", renderFaqAdminList);
+  qs("#faqSearchBox").addEventListener("input", renderFaqAdminList);
 
   await refreshAuth();
   window.sb.auth.onAuthStateChange(() => refreshAuth());
