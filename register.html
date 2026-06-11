@@ -4,8 +4,246 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Register Team · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260611-delete-modal-2"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260611-delete-modal-2"/>
+
+  <style id="registrationDeleteCriticalStyles">
+    body.registration-delete-open {
+      overflow: hidden !important;
+    }
+
+    .registration-delete-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 99999 !important;
+      display: grid !important;
+      place-items: center !important;
+      padding: 20px !important;
+      box-sizing: border-box !important;
+    }
+
+    .registration-delete-modal.hidden {
+      display: none !important;
+    }
+
+    .registration-delete-backdrop {
+      position: absolute !important;
+      inset: 0 !important;
+      background: rgba(2, 5, 12, .86) !important;
+      backdrop-filter: blur(9px) !important;
+    }
+
+    .registration-delete-dialog {
+      position: relative !important;
+      z-index: 1 !important;
+      width: min(720px, 100%) !important;
+      max-height: calc(100dvh - 40px) !important;
+      overflow-y: auto !important;
+      padding: 24px !important;
+      box-sizing: border-box !important;
+      border: 1px solid rgba(255, 76, 110, .34) !important;
+      border-radius: 24px !important;
+      background:
+        radial-gradient(circle at 0 0, rgba(255, 76, 110, .12), transparent 22rem),
+        linear-gradient(180deg, rgba(20, 27, 42, .99), rgba(8, 13, 25, .99)) !important;
+      box-shadow: 0 32px 100px rgba(0, 0, 0, .62) !important;
+      color: #f7fbff !important;
+      overscroll-behavior: contain !important;
+    }
+
+    .registration-delete-header {
+      display: flex !important;
+      align-items: flex-start !important;
+      justify-content: space-between !important;
+      gap: 18px !important;
+    }
+
+    .registration-delete-header h2 {
+      margin: 7px 0 5px !important;
+      font-size: clamp(22px, 3vw, 30px) !important;
+    }
+
+    .registration-delete-header p {
+      margin: 0 !important;
+    }
+
+    .registration-delete-close {
+      width: 40px !important;
+      height: 40px !important;
+      flex: 0 0 auto !important;
+      display: grid !important;
+      place-items: center !important;
+      padding: 0 !important;
+      border: 1px solid rgba(255, 255, 255, .13) !important;
+      border-radius: 12px !important;
+      background: rgba(255, 255, 255, .055) !important;
+      color: #fff !important;
+      font-size: 24px !important;
+      line-height: 1 !important;
+      cursor: pointer !important;
+    }
+
+    .registration-delete-warning {
+      margin: 16px 0 !important;
+      padding: 13px 14px !important;
+      border: 1px solid rgba(255, 76, 110, .30) !important;
+      border-radius: 15px !important;
+      background: rgba(255, 76, 110, .09) !important;
+      color: rgba(255, 228, 234, .92) !important;
+      font-size: 13px !important;
+      line-height: 1.5 !important;
+    }
+
+    .registration-delete-summary {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+      margin-bottom: 14px !important;
+    }
+
+    .registration-delete-summary > div {
+      min-width: 0 !important;
+      padding: 12px !important;
+      border: 1px solid rgba(255, 255, 255, .08) !important;
+      border-radius: 14px !important;
+      background: rgba(255, 255, 255, .035) !important;
+    }
+
+    .registration-delete-summary span,
+    .registration-delete-summary strong {
+      display: block !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .registration-delete-summary span {
+      margin-bottom: 4px !important;
+      color: rgba(230, 239, 255, .50) !important;
+      font-size: 10px !important;
+      font-weight: 1000 !important;
+      letter-spacing: .08em !important;
+      text-transform: uppercase !important;
+    }
+
+    .registration-delete-summary strong {
+      color: rgba(247, 251, 255, .94) !important;
+      font-size: 13px !important;
+    }
+
+    .registration-delete-form {
+      display: grid !important;
+      gap: 12px !important;
+    }
+
+    .registration-delete-step {
+      display: grid !important;
+      grid-template-columns: 42px minmax(0, 1fr) !important;
+      gap: 12px !important;
+      padding: 15px !important;
+      border: 1px solid rgba(255, 255, 255, .08) !important;
+      border-radius: 18px !important;
+      background: rgba(255, 255, 255, .028) !important;
+    }
+
+    .registration-delete-step-number {
+      width: 38px !important;
+      height: 38px !important;
+      display: grid !important;
+      place-items: center !important;
+      border-radius: 12px !important;
+      background: linear-gradient(135deg, #ff607d, #d62f55) !important;
+      color: #fff !important;
+      font-size: 15px !important;
+      font-weight: 1000 !important;
+    }
+
+    .registration-delete-step-content {
+      min-width: 0 !important;
+    }
+
+    .registration-delete-step-content h3 {
+      margin: 2px 0 5px !important;
+      font-size: 17px !important;
+    }
+
+    .registration-delete-step-content .field {
+      margin-top: 12px !important;
+    }
+
+    .registration-delete-step-content input {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .registration-delete-phrase {
+      margin: 12px 0 !important;
+      padding: 13px !important;
+      border: 1px dashed rgba(255, 96, 125, .48) !important;
+      border-radius: 14px !important;
+      background: rgba(3, 7, 15, .56) !important;
+      color: #ff8ca2 !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+      font-size: 17px !important;
+      font-weight: 1000 !important;
+      letter-spacing: .07em !important;
+      text-align: center !important;
+      user-select: all !important;
+    }
+
+    .registration-delete-validation {
+      padding: 12px 14px !important;
+      border: 1px solid rgba(255, 255, 255, .09) !important;
+      border-radius: 14px !important;
+      background: rgba(255, 255, 255, .035) !important;
+      color: rgba(230, 239, 255, .64) !important;
+      font-size: 12px !important;
+      font-weight: 850 !important;
+      line-height: 1.5 !important;
+      white-space: pre-wrap !important;
+    }
+
+    .registration-delete-validation.is-ready {
+      border-color: rgba(255, 96, 125, .40) !important;
+      background: rgba(255, 96, 125, .09) !important;
+      color: #ff9caf !important;
+    }
+
+    .registration-delete-actions {
+      display: flex !important;
+      justify-content: flex-end !important;
+      gap: 10px !important;
+      margin-top: 4px !important;
+    }
+
+    @media (max-width: 620px) {
+      .registration-delete-modal {
+        padding: 8px !important;
+      }
+
+      .registration-delete-dialog {
+        max-height: calc(100dvh - 16px) !important;
+        padding: 16px !important;
+        border-radius: 18px !important;
+      }
+
+      .registration-delete-summary {
+        grid-template-columns: 1fr !important;
+      }
+
+      .registration-delete-step {
+        grid-template-columns: 1fr !important;
+      }
+
+      .registration-delete-actions {
+        flex-direction: column-reverse !important;
+      }
+
+      .registration-delete-actions .btn {
+        width: 100% !important;
+      }
+    }
+  </style>
+
 </head>
 <body>
 <header class="nav">
