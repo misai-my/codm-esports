@@ -3680,3 +3680,30 @@ body.captain-modal-open {
     justify-content: flex-start;
   }
 }
+
+
+/* ============================================================
+   FAQ Admin Editor Top Alignment
+   ============================================================ */
+.faq-admin-layout {
+  align-items: start !important;
+}
+
+.faq-admin-layout > .card,
+.faq-admin-layout > form.card {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+#faqEditorForm {
+  display: block !important;
+}
+
+#faqEditorForm > * + * {
+  margin-top: 16px !important;
+}
+
+#faqEditorForm .grid {
+  align-items: start !important;
+}
