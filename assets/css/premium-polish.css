@@ -3361,3 +3361,175 @@ body.captain-modal-open {
     transform: rotate(90deg);
   }
 }
+
+
+/* ============================================================
+   Support Ticket Screenshot Upload
+   ============================================================ */
+.support-screenshot-field {
+  min-width: 0;
+}
+
+.support-file-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+}
+
+.support-upload-dropzone {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  min-height: 112px;
+  padding: 18px;
+  border: 1px dashed rgba(248,209,92,.36);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(248,209,92,.07), rgba(255,255,255,.025)),
+    rgba(255,255,255,.025);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.support-upload-dropzone:hover {
+  transform: translateY(-1px);
+  border-color: rgba(248,209,92,.65);
+  background:
+    linear-gradient(135deg, rgba(248,209,92,.12), rgba(255,255,255,.035)),
+    rgba(255,255,255,.03);
+}
+
+.support-upload-dropzone strong {
+  color: #f8d15c;
+  font-size: 14px;
+  font-weight: 1000;
+}
+
+.support-upload-dropzone span {
+  color: rgba(230,239,255,.58);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.support-screenshot-preview {
+  display: grid;
+  grid-template-columns: 96px minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+}
+
+.support-screenshot-preview img {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.support-screenshot-preview strong,
+.support-screenshot-preview span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.support-screenshot-preview strong {
+  color: rgba(247,251,255,.92);
+  font-size: 13px;
+}
+
+.support-screenshot-preview span {
+  margin-top: 3px;
+  color: rgba(230,239,255,.52);
+  font-size: 11px;
+}
+
+.support-attachment-section {
+  margin: 14px 0;
+  padding: 12px;
+  border-radius: 17px;
+  border: 1px solid rgba(248,209,92,.18);
+  background: rgba(248,209,92,.045);
+}
+
+.support-attachment-label {
+  margin-bottom: 9px;
+  color: #f8d15c !important;
+  font-weight: 950 !important;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.support-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.support-attachment-card {
+  display: grid;
+  grid-template-columns: 88px minmax(0,1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(5,9,18,.50);
+  color: inherit;
+  text-decoration: none;
+}
+
+.support-attachment-card:hover {
+  border-color: rgba(248,209,92,.38);
+}
+
+.support-attachment-card img {
+  width: 88px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.09);
+}
+
+.support-attachment-card span,
+.support-attachment-card strong,
+.support-attachment-card small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.support-attachment-card strong {
+  color: rgba(247,251,255,.92);
+  font-size: 12px;
+}
+
+.support-attachment-card small {
+  margin-top: 4px;
+  color: rgba(230,239,255,.52);
+  font-size: 10px;
+}
+
+@media (max-width: 560px) {
+  .support-screenshot-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .support-screenshot-preview img {
+    width: 100%;
+    height: 170px;
+  }
+
+  .support-screenshot-preview .btn {
+    width: 100%;
+  }
+}

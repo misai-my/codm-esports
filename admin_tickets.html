@@ -83,6 +83,56 @@ function statusLabel(status) {
   return String(status || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
+
+const SUPPORT_SCREENSHOT_BUCKET = "support-screenshots";
+
+async function adminSignedScreenshotUrl(storagePath) {
+  if (!storagePath) return "";
+
+  const { data, error } = await window.sb.storage
+    .from(SUPPORT_SCREENSHOT_BUCKET)
+    .createSignedUrl(storagePath, 60 * 30);
+
+  if (error) {
+    console.warn("Could not create admin screenshot URL:", error);
+    return "";
+  }
+
+  return data?.signedUrl || "";
+}
+
+async function renderAdminTicketAttachments(ticket) {
+  const attachments = ticket.support_ticket_attachments || [];
+  if (!attachments.length) return "";
+
+  const cards = await Promise.all(
+    attachments.map(async attachment => {
+      const signedUrl = await adminSignedScreenshotUrl(attachment.storage_path);
+      if (!signedUrl) return "";
+
+      return `
+        <a class="support-attachment-card admin-support-attachment" href="${signedUrl}" target="_blank" rel="noopener">
+          <img src="${signedUrl}" alt="${escapeHtml(attachment.file_name || "Ticket screenshot")}"/>
+          <span>
+            <strong>${escapeHtml(attachment.file_name || "Screenshot")}</strong>
+            <small>${attachment.size_bytes ? `${(attachment.size_bytes / 1024 / 1024).toFixed(2)} MB · ` : ""}Open full screenshot</small>
+          </span>
+        </a>
+      `;
+    })
+  );
+
+  const content = cards.filter(Boolean).join("");
+  if (!content) return "";
+
+  return `
+    <div class="support-attachment-section admin-ticket-attachments">
+      <div class="small support-attachment-label">Submitted Screenshot</div>
+      <div class="support-attachment-grid">${content}</div>
+    </div>
+  `;
+}
+
 async function login() {
   const email = normalizeText(qs("#authEmail").value);
   const password = qs("#authPassword").value;
@@ -123,14 +173,17 @@ async function refreshAuth() {
 async function loadTickets() {
   const { data, error } = await window.sb
     .from("support_tickets")
-    .select("*, profiles!support_tickets_created_by_fkey(email, full_name), support_ticket_messages(*)")
+    .select("*, profiles!support_tickets_created_by_fkey(email, full_name), support_ticket_messages(*), support_ticket_attachments(*)")
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
 
   tickets = data || [];
   renderTicketQueue();
-  if (selectedTicketId) renderTicketDetail(selectedTicketId);
+
+  if (selectedTicketId) {
+    await renderTicketDetail(selectedTicketId);
+  }
 }
 
 function filteredTickets() {
@@ -161,16 +214,20 @@ function renderTicketQueue() {
   }).join("");
 }
 
-function renderTicketDetail(ticketId) {
+async function renderTicketDetail(ticketId) {
   selectedTicketId = ticketId;
   const ticket = tickets.find(t => t.id === ticketId);
+
   if (!ticket) {
     qs("#ticketDetail").innerHTML = `<div class="notice">Ticket not found.</div>`;
     return;
   }
 
-  const messages = [...(ticket.support_ticket_messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const messages = [...(ticket.support_ticket_messages || [])]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
   const owner = ticket.profiles?.full_name || ticket.profiles?.email || "Captain";
+  const attachmentsHtml = await renderAdminTicketAttachments(ticket);
 
   qs("#ticketDetail").innerHTML = `
     <div class="section-heading">
@@ -191,6 +248,8 @@ function renderTicketDetail(ticketId) {
       </select>
       <button class="btn" onclick="updateTicketStatus('${ticket.id}')">Update Status</button>
     </div>
+
+    ${attachmentsHtml}
 
     <div class="chat-box admin-chat-box">
       ${messages.map(msg => `

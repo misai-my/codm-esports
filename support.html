@@ -101,7 +101,25 @@
           </div>
           <div class="field"><label for="ticketSubject">Subject</label><input id="ticketSubject" placeholder="Example: Question about veto timer" required/></div>
           <div class="field"><label for="ticketBody">Message</label><textarea id="ticketBody" placeholder="Type your question for admins..." required></textarea></div>
-          <div class="actions"><button class="btn btn-primary" type="submit">Submit Ticket</button></div>
+
+          <div class="field support-screenshot-field">
+            <label for="ticketScreenshot">Screenshot <span class="small">(optional)</span></label>
+            <label class="support-upload-dropzone" for="ticketScreenshot">
+              <strong>Add Screenshot</strong>
+              <span>PNG, JPG, or WEBP · maximum 5 MB</span>
+            </label>
+            <input
+              id="ticketScreenshot"
+              class="support-file-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+            />
+            <div id="ticketScreenshotPreview" class="support-screenshot-preview hidden"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="submitTicketBtn" type="submit">Submit Ticket</button>
+          </div>
         </form>
       </div>
 
@@ -125,9 +143,187 @@ let currentUser = null;
 let currentProfile = null;
 let currentTournament = null;
 let myTickets = [];
+let selectedTicketScreenshot = null;
+let ticketScreenshotPreviewUrl = null;
 
 function statusLabel(status) {
   return String(status || "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+
+const SUPPORT_SCREENSHOT_BUCKET = "support-screenshots";
+const SUPPORT_SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
+const SUPPORT_SCREENSHOT_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp"
+]);
+
+function screenshotExtension(file) {
+  const byMime = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp"
+  };
+
+  return byMime[file?.type] || "png";
+}
+
+function clearTicketScreenshot() {
+  selectedTicketScreenshot = null;
+
+  if (ticketScreenshotPreviewUrl) {
+    URL.revokeObjectURL(ticketScreenshotPreviewUrl);
+    ticketScreenshotPreviewUrl = null;
+  }
+
+  const input = qs("#ticketScreenshot");
+  const preview = qs("#ticketScreenshotPreview");
+
+  if (input) input.value = "";
+  if (preview) {
+    preview.innerHTML = "";
+    preview.classList.add("hidden");
+  }
+}
+
+function validateScreenshotFile(file) {
+  if (!file) return "";
+
+  if (!SUPPORT_SCREENSHOT_MIME_TYPES.has(file.type)) {
+    return "Screenshot must be a PNG, JPG, or WEBP image.";
+  }
+
+  if (file.size > SUPPORT_SCREENSHOT_MAX_BYTES) {
+    return "Screenshot must be 5 MB or smaller.";
+  }
+
+  return "";
+}
+
+function handleTicketScreenshotChange(event) {
+  const file = event.target.files?.[0] || null;
+  const preview = qs("#ticketScreenshotPreview");
+
+  if (!file) {
+    clearTicketScreenshot();
+    return;
+  }
+
+  const validationError = validateScreenshotFile(file);
+  if (validationError) {
+    clearTicketScreenshot();
+    return showToast(validationError, "error");
+  }
+
+  selectedTicketScreenshot = file;
+
+  if (ticketScreenshotPreviewUrl) {
+    URL.revokeObjectURL(ticketScreenshotPreviewUrl);
+  }
+
+  ticketScreenshotPreviewUrl = URL.createObjectURL(file);
+
+  if (preview) {
+    preview.innerHTML = `
+      <img src="${ticketScreenshotPreviewUrl}" alt="Selected screenshot preview"/>
+      <div>
+        <strong>${escapeHtml(file.name)}</strong>
+        <span>${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+      </div>
+      <button class="btn btn-ghost" type="button" onclick="clearTicketScreenshot()">Remove</button>
+    `;
+    preview.classList.remove("hidden");
+  }
+}
+
+async function uploadTicketScreenshot(ticketId, messageId, file) {
+  if (!file) return null;
+
+  const extension = screenshotExtension(file);
+  const randomId = window.crypto?.randomUUID
+    ? window.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const storagePath = `${currentUser.id}/${ticketId}/${randomId}.${extension}`;
+
+  const { error: uploadError } = await window.sb.storage
+    .from(SUPPORT_SCREENSHOT_BUCKET)
+    .upload(storagePath, file, {
+      cacheControl: "3600",
+      contentType: file.type,
+      upsert: false
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data: attachment, error: attachmentError } = await window.sb
+    .from("support_ticket_attachments")
+    .insert({
+      ticket_id: ticketId,
+      message_id: messageId,
+      uploaded_by: currentUser.id,
+      storage_path: storagePath,
+      file_name: file.name,
+      mime_type: file.type,
+      size_bytes: file.size
+    })
+    .select("*")
+    .single();
+
+  if (attachmentError) {
+    await window.sb.storage.from(SUPPORT_SCREENSHOT_BUCKET).remove([storagePath]);
+    throw attachmentError;
+  }
+
+  return attachment;
+}
+
+async function signedScreenshotUrl(storagePath) {
+  if (!storagePath) return "";
+
+  const { data, error } = await window.sb.storage
+    .from(SUPPORT_SCREENSHOT_BUCKET)
+    .createSignedUrl(storagePath, 60 * 30);
+
+  if (error) {
+    console.warn("Could not create screenshot URL:", error);
+    return "";
+  }
+
+  return data?.signedUrl || "";
+}
+
+async function renderTicketAttachmentGallery(ticket) {
+  const attachments = ticket.support_ticket_attachments || [];
+  if (!attachments.length) return "";
+
+  const cards = await Promise.all(
+    attachments.map(async attachment => {
+      const signedUrl = await signedScreenshotUrl(attachment.storage_path);
+      if (!signedUrl) return "";
+
+      return `
+        <a class="support-attachment-card" href="${signedUrl}" target="_blank" rel="noopener">
+          <img src="${signedUrl}" alt="${escapeHtml(attachment.file_name || "Support screenshot")}"/>
+          <span>
+            <strong>${escapeHtml(attachment.file_name || "Screenshot")}</strong>
+            <small>Open full screenshot</small>
+          </span>
+        </a>
+      `;
+    })
+  );
+
+  const content = cards.filter(Boolean).join("");
+  if (!content) return "";
+
+  return `
+    <div class="support-attachment-section">
+      <div class="small support-attachment-label">Attached Screenshot</div>
+      <div class="support-attachment-grid">${content}</div>
+    </div>
+  `;
 }
 
 async function login() {
@@ -174,8 +370,21 @@ async function submitTicket(event) {
   const body = normalizeText(qs("#ticketBody").value);
   const category = qs("#ticketCategory").value;
   const priority = qs("#ticketPriority").value;
+  const screenshot = selectedTicketScreenshot;
+  const submitButton = qs("#submitTicketBtn");
 
   if (!subject || !body) return showToast("Subject and message are required.", "error");
+
+  const screenshotError = validateScreenshotFile(screenshot);
+  if (screenshotError) return showToast(screenshotError, "error");
+
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = screenshot ? "Uploading Screenshot..." : "Submitting Ticket...";
+  }
+
+  let ticketCreated = false;
+  let screenshotUploaded = false;
 
   try {
     const { data: ticket, error: ticketError } = await window.sb
@@ -192,24 +401,54 @@ async function submitTicket(event) {
       .single();
 
     if (ticketError) throw ticketError;
+    ticketCreated = true;
 
-    const { error: messageError } = await window.sb
+    const { data: message, error: messageError } = await window.sb
       .from("support_ticket_messages")
       .insert({
         ticket_id: ticket.id,
         sender_user_id: currentUser.id,
         sender_role: currentProfile.role === "admin" ? "admin" : "captain",
         body
-      });
+      })
+      .select("*")
+      .single();
 
     if (messageError) throw messageError;
 
+    if (screenshot) {
+      await uploadTicketScreenshot(ticket.id, message.id, screenshot);
+      screenshotUploaded = true;
+    }
+
     qs("#ticketForm").reset();
-    showToast("Ticket submitted to admins.", "success");
+    clearTicketScreenshot();
+
+    showToast(
+      screenshot
+        ? "Ticket and screenshot submitted to admins."
+        : "Ticket submitted to admins.",
+      "success"
+    );
+
     await loadTickets();
   } catch (err) {
     console.error(err);
-    showToast(err.message || "Failed to submit ticket.", "error");
+
+    if (ticketCreated && screenshot && !screenshotUploaded) {
+      showToast(
+        "The ticket was submitted, but the screenshot could not be uploaded. You can add the details in a reply or contact an admin.",
+        "error"
+      );
+      await loadTickets();
+    } else {
+      showToast(err.message || "Failed to submit ticket.", "error");
+    }
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Submit Ticket";
+    }
   }
 }
 
@@ -218,16 +457,16 @@ async function loadTickets() {
 
   const { data, error } = await window.sb
     .from("support_tickets")
-    .select("*, support_ticket_messages(*)")
+    .select("*, support_ticket_messages(*), support_ticket_attachments(*)")
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
 
   myTickets = data || [];
-  renderTickets();
+  await renderTickets();
 }
 
-function renderTickets() {
+async function renderTickets() {
   const wrap = qs("#ticketList");
 
   if (!myTickets.length) {
@@ -235,8 +474,12 @@ function renderTickets() {
     return;
   }
 
-  wrap.innerHTML = myTickets.map(ticket => {
-    const messages = [...(ticket.support_ticket_messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const ticketCards = await Promise.all(myTickets.map(async ticket => {
+    const messages = [...(ticket.support_ticket_messages || [])]
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    const attachmentsHtml = await renderTicketAttachmentGallery(ticket);
+
     return `
       <article class="ticket-card">
         <div class="ticket-head">
@@ -246,6 +489,8 @@ function renderTickets() {
             <div class="small">${escapeHtml(ticket.category)} · ${escapeHtml(ticket.priority)} · ${new Date(ticket.updated_at).toLocaleString()}</div>
           </div>
         </div>
+
+        ${attachmentsHtml}
 
         <div class="chat-box">
           ${messages.map(msg => `
@@ -265,7 +510,9 @@ function renderTickets() {
         `}
       </article>
     `;
-  }).join("");
+  }));
+
+  wrap.innerHTML = ticketCards.join("");
 }
 
 async function replyTicket(event, ticketId) {
@@ -304,6 +551,7 @@ async function init() {
 
   qs("#loginBtn").addEventListener("click", login);
   qs("#ticketForm").addEventListener("submit", submitTicket);
+  qs("#ticketScreenshot").addEventListener("change", handleTicketScreenshotChange);
   qs("#refreshTicketsBtn").addEventListener("click", loadTickets);
 
   await refreshAuth();
