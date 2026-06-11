@@ -2471,3 +2471,40 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ============================================================
+   Registration Admin Tournament Selector
+   ============================================================ */
+.team-admin-tournament-summary {
+  margin-top: 10px;
+}
+
+.team-admin-tournament-summary-box {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(248,209,92,.20);
+  background:
+    linear-gradient(135deg, rgba(248,209,92,.09), rgba(255,255,255,.025)),
+    rgba(255,255,255,.03);
+}
+
+.team-admin-tournament-summary-box strong {
+  color: #f8d15c;
+  font-size: 14px;
+  font-weight: 1000;
+}
+
+.team-admin-tournament-summary-box span {
+  color: rgba(230,239,255,.68);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.admin-filter-divider {
+  height: 1px;
+  margin: 18px 0;
+  background: rgba(255,255,255,.08);
+}

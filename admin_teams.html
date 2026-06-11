@@ -47,8 +47,21 @@
       </div>
 
       <div class="card">
+        <div class="eyebrow">Tournament Workspace</div>
+        <h2>Registration Management</h2>
+
+        <div class="field">
+          <label for="teamAdminTournamentSelect">Tournament</label>
+          <select id="teamAdminTournamentSelect">
+            <option value="">Loading tournaments...</option>
+          </select>
+        </div>
+
+        <div id="teamAdminTournamentSummary" class="team-admin-tournament-summary"></div>
+
+        <div class="admin-filter-divider"></div>
+
         <div class="eyebrow">Filters</div>
-        <h2>Team Search</h2>
         <div class="grid grid-two">
           <div class="field">
             <label for="statusFilter">Status</label>
@@ -119,6 +132,7 @@
 <script>
 let currentTournament = null;
 let currentProfile = null;
+let adminTournaments = [];
 let allTeams = [];
 let stages = [];
 
@@ -132,6 +146,105 @@ function currentStageAssignment(team) {
 
 function currentStageName(team) {
   return currentStageAssignment(team)?.tournament_stages?.stage_name || "Unassigned";
+}
+
+
+function selectedTournamentSlug() {
+  if (typeof window.getSelectedTournamentSlug === "function") {
+    return window.getSelectedTournamentSlug();
+  }
+
+  return localStorage.getItem("codm:selected_tournament_slug")
+    || window.TOURNAMENT_OS_CONFIG?.defaultTournamentSlug
+    || "codm-v1";
+}
+
+function saveSelectedTournamentSlug(slug) {
+  if (typeof window.setSelectedTournamentSlug === "function") {
+    window.setSelectedTournamentSlug(slug);
+    return;
+  }
+
+  localStorage.setItem("codm:selected_tournament_slug", slug);
+}
+
+function renderTeamAdminTournamentSummary() {
+  const wrap = qs("#teamAdminTournamentSummary");
+  if (!wrap || !currentTournament) return;
+
+  wrap.innerHTML = `
+    <div class="team-admin-tournament-summary-box">
+      <strong>${escapeHtml(currentTournament.title)}</strong>
+      <span>${escapeHtml(currentTournament.game || "Call of Duty: Mobile")} · ${escapeHtml(currentTournament.format || "Tournament")}</span>
+      <span>Registration: ${currentTournament.registration_open ? "Open" : "Closed"}</span>
+    </div>
+  `;
+}
+
+async function loadTeamAdminTournaments() {
+  const { data, error } = await window.sb
+    .from("tournaments")
+    .select("*")
+    .order("start_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  adminTournaments = data || [];
+  const select = qs("#teamAdminTournamentSelect");
+
+  if (!select) return;
+
+  if (!adminTournaments.length) {
+    select.innerHTML = `<option value="">No tournaments found</option>`;
+    return;
+  }
+
+  const activeSlug = currentTournament?.slug || selectedTournamentSlug();
+
+  select.innerHTML = adminTournaments.map(tournament => `
+    <option value="${escapeHtml(tournament.slug)}" ${tournament.slug === activeSlug ? "selected" : ""}>
+      ${escapeHtml(tournament.title)} · ${escapeHtml(tournament.status || "draft")}
+    </option>
+  `).join("");
+
+  const selected = adminTournaments.find(tournament => tournament.slug === select.value)
+    || adminTournaments.find(tournament => tournament.slug === activeSlug)
+    || adminTournaments[0];
+
+  select.value = selected.slug;
+  currentTournament = selected;
+  renderTeamAdminTournamentSummary();
+}
+
+async function changeTeamAdminTournament() {
+  const slug = qs("#teamAdminTournamentSelect")?.value;
+  const selected = adminTournaments.find(tournament => tournament.slug === slug);
+
+  if (!selected) return showToast("Select a tournament first.", "error");
+
+  currentTournament = selected;
+  saveSelectedTournamentSlug(selected.slug);
+
+  allTeams = [];
+  stages = [];
+
+  qs("#statusFilter").value = "all";
+  qs("#stageFilter").innerHTML = `<option value="all">All Stages</option>`;
+  qs("#searchBox").value = "";
+
+  setText(
+    "#tournamentMeta",
+    `${currentTournament.title} · ${currentTournament.game} · ${currentTournament.format} · Registration ${currentTournament.registration_open ? "Open" : "Closed"}`
+  );
+
+  renderTeamAdminTournamentSummary();
+  await loadStages();
+  renderRegistrationControl();
+  renderStageControl();
+  await loadRegistrations();
+
+  showToast(`Registration Admin switched to ${currentTournament.title}.`, "success");
 }
 
 async function login() {
@@ -178,6 +291,7 @@ async function refreshAdminAuth() {
   }
 
   adminPanel.classList.remove("hidden");
+  await loadTeamAdminTournaments();
   await loadStages();
   renderRegistrationControl();
   renderStageControl();
@@ -497,6 +611,7 @@ async function init() {
   currentTournament = await loadDefaultTournament();
   setText("#tournamentMeta", `${currentTournament.title} · ${currentTournament.game} · ${currentTournament.format} · Registration ${currentTournament.registration_open ? "Open" : "Closed"}`);
   qs("#loginBtn").addEventListener("click", login);
+  qs("#teamAdminTournamentSelect").addEventListener("change", changeTeamAdminTournament);
   qs("#refreshBtn").addEventListener("click", loadRegistrations);
   qs("#statusFilter").addEventListener("change", renderAdminTable);
   qs("#stageFilter").addEventListener("change", renderAdminTable);
