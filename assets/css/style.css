@@ -2296,3 +2296,128 @@ body.site-sidebar-open .site-sidebar.simple-drawer {
   padding: 22px;
   text-align: center;
 }
+
+
+/* ============================================================
+   Admin Bracket Match Card Spacing
+   ============================================================ */
+.match-schedule-card {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  min-width: 0 !important;
+}
+
+.match-card-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 2px !important;
+}
+
+.match-schedule-card > p {
+  margin: 0 !important;
+  line-height: 1.45 !important;
+}
+
+.schedule-admin-box {
+  display: grid !important;
+  gap: 12px !important;
+  margin: 2px 0 0 !important;
+  padding: 16px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.schedule-admin-heading {
+  margin: 0 !important;
+}
+
+.match-publication-badge {
+  margin-top: 6px !important;
+}
+
+.match-schedule-line {
+  margin: 0 !important;
+}
+
+.schedule-input-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(110px, .65fr) !important;
+  gap: 12px !important;
+  align-items: end !important;
+  margin-top: 0 !important;
+}
+
+.schedule-input-grid > .field {
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.schedule-input-grid input,
+.schedule-input-grid select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.match-publish-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+  margin-top: 2px !important;
+}
+
+.match-publish-actions .btn {
+  margin: 0 !important;
+}
+
+.match-schedule-card > .actions {
+  margin-top: 2px !important;
+}
+
+.match-schedule-card > .actions .btn {
+  margin: 0 !important;
+}
+
+@media (max-width: 1100px) {
+  .schedule-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .schedule-input-grid .field:last-child {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .match-schedule-card {
+    padding: 14px !important;
+  }
+
+  .schedule-admin-box {
+    padding: 14px !important;
+  }
+
+  .schedule-input-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .schedule-input-grid .field:last-child {
+    grid-column: auto !important;
+  }
+
+  .match-publish-actions {
+    align-items: stretch !important;
+  }
+
+  .match-publish-actions .btn,
+  .match-schedule-card > .actions .btn {
+    width: 100% !important;
+  }
+}
