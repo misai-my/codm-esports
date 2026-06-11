@@ -611,7 +611,6 @@ async function loadMyRegistrations() {
         ${renderChangeLogs(team)}
         <div class="actions">
           ${currentTournament.registration_open ? `<button class="btn btn-primary" type="button" onclick="fillFormFromTeam('${team.id}')">Update Registration</button>` : ""}
-          <button class="btn" type="button" onclick="sendRegistrationEmail('${team.id}', 'copy_requested')">Email Me a Copy</button>
         </div>
       </div>
     `;
