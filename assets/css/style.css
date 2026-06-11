@@ -2749,3 +2749,21 @@ main,
 .nav .nav-links {
   justify-content: flex-start !important;
 }
+
+
+/* ============================================================
+   Smart Navigation Login Visibility - Final Fix
+   ============================================================ */
+.nav-links .nav-login-visible,
+#loginNavBtn {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  margin-left: 0 !important;
+}
+
+.nav-links {
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
