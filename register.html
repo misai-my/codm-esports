@@ -156,6 +156,87 @@
   </section>
 </main>
 
+
+<div id="deleteRegistrationModal" class="registration-delete-modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteRegistrationTitle">
+  <div class="registration-delete-backdrop" onclick="closeDeleteRegistrationModal()"></div>
+
+  <section class="registration-delete-dialog">
+    <div class="registration-delete-header">
+      <div>
+        <div class="eyebrow">Permanent Action</div>
+        <h2 id="deleteRegistrationTitle">Delete Team Registration</h2>
+        <p class="small">This permanently removes the registered team and roster from this tournament.</p>
+      </div>
+      <button
+        class="registration-delete-close"
+        type="button"
+        onclick="closeDeleteRegistrationModal()"
+        aria-label="Close delete registration dialog"
+      >×</button>
+    </div>
+
+    <div class="registration-delete-warning">
+      This action cannot be undone. Teams already used in tournament competition data cannot be deleted by a captain and must be handled by an administrator.
+    </div>
+
+    <div id="deleteRegistrationTeamSummary" class="registration-delete-summary"></div>
+
+    <form id="deleteRegistrationForm" class="registration-delete-form">
+      <div class="registration-delete-step">
+        <div class="registration-delete-step-number">1</div>
+        <div class="registration-delete-step-content">
+          <h3>Confirm Team Tag</h3>
+          <p class="small">Type the exact registered team tag shown above.</p>
+
+          <div class="field">
+            <label for="deleteTeamTagChallenge">Exact Team Tag</label>
+            <input
+              id="deleteTeamTagChallenge"
+              autocomplete="off"
+              placeholder="Enter team tag"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="registration-delete-step">
+        <div class="registration-delete-step-number">2</div>
+        <div class="registration-delete-step-content">
+          <h3>Confirm Permanent Deletion</h3>
+          <p class="small">Type the deletion phrase exactly as displayed.</p>
+
+          <div id="deleteRegistrationPhrase" class="registration-delete-phrase">
+            DELETE TEAM
+          </div>
+
+          <div class="field">
+            <label for="deletePhraseChallenge">Deletion Phrase</label>
+            <input
+              id="deletePhraseChallenge"
+              autocomplete="off"
+              placeholder="Type the phrase above"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div id="deleteRegistrationValidation" class="registration-delete-validation">
+        Complete both confirmations to enable deletion.
+      </div>
+
+      <div class="actions registration-delete-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeDeleteRegistrationModal()">
+          Cancel
+        </button>
+        <button class="btn btn-danger" id="confirmDeleteRegistrationBtn" type="submit" disabled>
+          Permanently Delete Registration
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -167,6 +248,7 @@ let currentUser = null;
 let currentTournament = null;
 let myRegistrations = [];
 let editingTeamId = null;
+let deletingRegistration = null;
 
 const ROLE_OPTIONS = ["AR + MM", "AR + SMG", "AR + Heavy", "MM + SMG", "MM + Heavy", "SMG + Heavy"];
 
@@ -606,15 +688,224 @@ async function loadMyRegistrations() {
         <ol class="players-list">${players}</ol>
         ${renderChangeLogs(team)}
         <div class="actions">
-          ${currentTournament.registration_open ? `<button class="btn btn-primary" type="button" onclick="fillFormFromTeam('${team.id}')">Update Registration</button>` : ""}
+          ${currentTournament.registration_open ? `
+            <button class="btn btn-primary" type="button" onclick="fillFormFromTeam('${team.id}')">
+              Update Registration
+            </button>
+            <button class="btn btn-danger" type="button" onclick="openDeleteRegistrationModal('${team.id}')">
+              Delete Registration
+            </button>
+          ` : ""}
         </div>
       </div>
     `;
   }).join("");
 }
 
+
+function deleteRegistrationPhrase(team) {
+  return `DELETE ${String(team?.team_tag || "TEAM").trim().toUpperCase()}`;
+}
+
+function validateDeleteRegistration() {
+  const team = deletingRegistration;
+  const deleteButton = qs("#confirmDeleteRegistrationBtn");
+  const validation = qs("#deleteRegistrationValidation");
+  const teamTagInput = qs("#deleteTeamTagChallenge");
+  const phraseInput = qs("#deletePhraseChallenge");
+
+  if (!team || !deleteButton || !validation || !teamTagInput || !phraseInput) {
+    return false;
+  }
+
+  const expectedTag = String(team.team_tag || "").trim().toUpperCase();
+  const expectedPhrase = deleteRegistrationPhrase(team);
+
+  const tagMatches =
+    normalizeText(teamTagInput.value).toUpperCase() === expectedTag;
+
+  const phraseMatches =
+    normalizeText(phraseInput.value).toUpperCase() === expectedPhrase;
+
+  const ready = tagMatches && phraseMatches;
+
+  deleteButton.disabled = !ready;
+  validation.classList.toggle("is-ready", ready);
+
+  validation.textContent = ready
+    ? "Both confirmations match. This registration is ready for permanent deletion."
+    : `${tagMatches ? "✓" : "○"} Team tag confirmation   ${phraseMatches ? "✓" : "○"} Deletion phrase`;
+
+  return ready;
+}
+
+function openDeleteRegistrationModal(teamId) {
+  const team = myRegistrations.find(item => item.id === teamId);
+
+  if (!team) {
+    return showToast("Team registration not found.", "error");
+  }
+
+  if (!currentTournament?.registration_open) {
+    return showToast(
+      "Registration is closed. Contact an administrator to withdraw this team.",
+      "error"
+    );
+  }
+
+  const modal = qs("#deleteRegistrationModal");
+  const summary = qs("#deleteRegistrationTeamSummary");
+  const teamTagInput = qs("#deleteTeamTagChallenge");
+  const phraseInput = qs("#deletePhraseChallenge");
+  const phrase = qs("#deleteRegistrationPhrase");
+
+  if (!modal || !summary || !teamTagInput || !phraseInput || !phrase) {
+    return showToast(
+      "Delete-registration controls are missing. Upload the complete updated register.html file.",
+      "error"
+    );
+  }
+
+  deletingRegistration = team;
+
+  summary.innerHTML = `
+    <div>
+      <span>Team</span>
+      <strong>${escapeHtml(team.team_name)}</strong>
+    </div>
+    <div>
+      <span>Tag</span>
+      <strong>${escapeHtml(team.team_tag)}</strong>
+    </div>
+    <div>
+      <span>Status</span>
+      <strong>${escapeHtml(String(team.status || "pending").toUpperCase())}</strong>
+    </div>
+  `;
+
+  phrase.textContent = deleteRegistrationPhrase(team);
+  teamTagInput.value = "";
+  phraseInput.value = "";
+
+  modal.classList.remove("hidden");
+  document.body.classList.add("registration-delete-open");
+
+  validateDeleteRegistration();
+  window.setTimeout(() => teamTagInput.focus(), 50);
+}
+
+function closeDeleteRegistrationModal() {
+  qs("#deleteRegistrationModal")?.classList.add("hidden");
+  document.body.classList.remove("registration-delete-open");
+
+  deletingRegistration = null;
+
+  const form = qs("#deleteRegistrationForm");
+  if (form) form.reset();
+
+  const validation = qs("#deleteRegistrationValidation");
+  if (validation) {
+    validation.classList.remove("is-ready");
+    validation.textContent = "Complete both confirmations to enable deletion.";
+  }
+
+  const deleteButton = qs("#confirmDeleteRegistrationBtn");
+  if (deleteButton) {
+    deleteButton.disabled = true;
+    deleteButton.textContent = "Permanently Delete Registration";
+  }
+}
+
+async function submitDeleteRegistration(event) {
+  event.preventDefault();
+
+  if (!currentUser || !deletingRegistration) {
+    return showToast("Registration deletion session is no longer active.", "error");
+  }
+
+  if (!validateDeleteRegistration()) {
+    return showToast("Complete both deletion confirmations exactly.", "error");
+  }
+
+  const team = deletingRegistration;
+  const deleteButton = qs("#confirmDeleteRegistrationBtn");
+
+  if (deleteButton) {
+    deleteButton.disabled = true;
+    deleteButton.textContent = "Deleting Registration...";
+  }
+
+  try {
+    const { data, error } = await window.sb.rpc("captain_delete_registration", {
+      p_team_id: team.id,
+      p_team_tag_confirmation: normalizeText(
+        qs("#deleteTeamTagChallenge").value
+      ),
+      p_delete_phrase: normalizeText(
+        qs("#deletePhraseChallenge").value
+      )
+    });
+
+    if (error) throw error;
+    if (data?.ok === false) {
+      throw new Error(data.error || "Registration deletion failed.");
+    }
+
+    if (editingTeamId === team.id) {
+      resetEditMode();
+    }
+
+    closeDeleteRegistrationModal();
+    await loadMyRegistrations();
+
+    showToast(
+      `${team.team_name} has been permanently removed from this tournament.`,
+      "success"
+    );
+  } catch (error) {
+    console.error(error);
+
+    if (deleteButton) {
+      deleteButton.disabled = false;
+      deleteButton.textContent = "Permanently Delete Registration";
+    }
+
+    showToast(
+      error.message || "Failed to delete the registration.",
+      "error"
+    );
+  }
+}
+
+function bindDeleteRegistrationControls() {
+  qs("#deleteTeamTagChallenge")?.addEventListener(
+    "input",
+    validateDeleteRegistration
+  );
+
+  qs("#deletePhraseChallenge")?.addEventListener(
+    "input",
+    validateDeleteRegistration
+  );
+
+  qs("#deleteRegistrationForm")?.addEventListener(
+    "submit",
+    submitDeleteRegistration
+  );
+
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+
+    const modal = qs("#deleteRegistrationModal");
+    if (modal && !modal.classList.contains("hidden")) {
+      closeDeleteRegistrationModal();
+    }
+  });
+}
+
 async function init() {
   renderPlayerInputs();
+  bindDeleteRegistrationControls();
   currentTournament = await loadDefaultTournament();
   setText("#tournamentMeta", `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"}`);
   qs("#signUpBtn").addEventListener("click", signUp);
