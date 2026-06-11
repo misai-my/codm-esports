@@ -479,37 +479,34 @@ async function createDefaultsAndReload() {
 async function refreshAdminAuth() {
   const session = await getSession();
   const authForm = qs("#authForm");
-  const signOutBtn = qs("#signOutBtn");
   const authStatus = qs("#authStatus");
   const workspace = qs("#tournamentWorkspace");
   const tools = qs("#tournamentAdminTools");
 
   if (!session) {
     authStatus.textContent = "Not logged in.";
-    authStatus.classList.remove("online");
-    authForm.classList.remove("hidden");
-    signOutBtn?.classList.add("hidden");
-    workspace.classList.add("hidden");
-    tools.classList.add("hidden");
+    authStatus?.classList.remove("online");
+    authForm?.classList.remove("hidden");
+    workspace?.classList.add("hidden");
+    tools?.classList.add("hidden");
     return;
   }
 
   currentProfile = await getCurrentProfile();
 
   authStatus.textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
-  authStatus.classList.add("online");
-  authForm.classList.add("hidden");
-  signOutBtn?.classList.remove("hidden");
+  authStatus?.classList.add("online");
+  authForm?.classList.add("hidden");
 
   if (currentProfile.role !== "admin") {
-    workspace.classList.add("hidden");
-    tools.classList.add("hidden");
+    workspace?.classList.add("hidden");
+    tools?.classList.add("hidden");
     showToast("This account is not an admin yet.", "error");
     return;
   }
 
-  workspace.classList.remove("hidden");
-  tools.classList.remove("hidden");
+  workspace?.classList.remove("hidden");
+  tools?.classList.remove("hidden");
   await loadAdminTournaments();
 }
 

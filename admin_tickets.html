@@ -100,25 +100,23 @@ async function refreshAuth() {
   if (!session) {
     profile = null;
     qs("#authStatus").textContent = "Not logged in.";
-    qs("#authStatus").classList.remove("online");
-    qs("#authForm").classList.remove("hidden");
-    qs("#signOutBtn").classList.add("hidden");
-    qs("#adminPanel").classList.add("hidden");
+    qs("#authStatus")?.classList.remove("online");
+    qs("#authForm")?.classList.remove("hidden");
+    qs("#adminPanel")?.classList.add("hidden");
     return;
   }
 
   profile = await getCurrentProfile();
   qs("#authStatus").textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
-  qs("#authStatus").classList.add("online");
-  qs("#authForm").classList.add("hidden");
-  qs("#signOutBtn").classList.remove("hidden");
+  qs("#authStatus")?.classList.add("online");
+  qs("#authForm")?.classList.add("hidden");
 
   if (profile.role !== "admin") {
-    qs("#adminPanel").classList.add("hidden");
+    qs("#adminPanel")?.classList.add("hidden");
     return showToast("This account is not an admin.", "error");
   }
 
-  qs("#adminPanel").classList.remove("hidden");
+  qs("#adminPanel")?.classList.remove("hidden");
   await loadTickets();
 }
 

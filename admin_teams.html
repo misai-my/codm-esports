@@ -245,6 +245,28 @@ let allTeams = [];
 let stages = [];
 let captainEditState = null;
 
+function getAdminElement(selector, required = false) {
+  const element = qs(selector);
+
+  if (!element && required) {
+    console.error(`[Registration Admin] Missing required element: ${selector}`);
+  }
+
+  return element;
+}
+
+function setAdminClass(selector, className, enabled) {
+  const element = getAdminElement(selector);
+
+  if (!element) {
+    console.warn(`[Registration Admin] Could not update class "${className}" because ${selector} was not found.`);
+    return false;
+  }
+
+  element?.classList.toggle(className, !!enabled);
+  return true;
+}
+
 function roleLabel(role) {
   return role || "No role";
 }
@@ -372,26 +394,39 @@ async function login() {
 
 async function refreshAdminAuth() {
   const session = await getSession();
-  const authForm = qs("#authForm");
-  const signOutBtn = qs("#signOutBtn");
-  const adminPanel = qs("#adminPanel");
-  const authStatus = qs("#authStatus");
+
+  const authForm = getAdminElement("#authForm", true);
+  const signOutBtn = getAdminElement("#signOutBtn");
+  const adminPanel = getAdminElement("#adminPanel", true);
+  const authStatus = getAdminElement("#authStatus", true);
+
+  if (!authForm || !adminPanel || !authStatus) {
+    showToast("Registration Admin layout is incomplete. Upload the full updated admin_teams.html file.", "error");
+    return;
+  }
 
   if (!session) {
     authStatus.textContent = "Not logged in.";
     authStatus.classList.remove("online");
     authForm.classList.remove("hidden");
-    signOutBtn?.classList.add("hidden");
     adminPanel.classList.add("hidden");
     return;
   }
 
   currentProfile = await getCurrentProfile();
 
+  if (!currentProfile) {
+    authStatus.textContent = "Profile could not be loaded.";
+    authStatus.classList.remove("online");
+    authForm.classList.remove("hidden");
+    adminPanel.classList.add("hidden");
+    showToast("Your admin profile could not be loaded.", "error");
+    return;
+  }
+
   authStatus.textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
   authStatus.classList.add("online");
   authForm.classList.add("hidden");
-  signOutBtn?.classList.remove("hidden");
 
   if (currentProfile.role !== "admin") {
     adminPanel.classList.add("hidden");
@@ -667,18 +702,26 @@ function normalizeCaptainDiscord(value) {
 function renderCaptainReview() {
   if (!captainEditState) return;
 
-  const captainName = normalizeText(qs("#editCaptainName")?.value);
-  const captainEmail = normalizeText(qs("#editCaptainEmail")?.value).toLowerCase();
-  const captainDiscord = normalizeCaptainDiscord(qs("#editCaptainDiscord")?.value);
-  const reason = normalizeText(qs("#editCaptainReason")?.value);
+  const before = getAdminElement("#captainReviewBefore");
+  const after = getAdminElement("#captainReviewAfter");
 
-  qs("#captainReviewBefore").innerHTML = `
+  if (!before || !after) {
+    console.warn("[Registration Admin] Captain review containers were not found.");
+    return;
+  }
+
+  const captainName = normalizeText(getAdminElement("#editCaptainName")?.value);
+  const captainEmail = normalizeText(getAdminElement("#editCaptainEmail")?.value).toLowerCase();
+  const captainDiscord = normalizeCaptainDiscord(getAdminElement("#editCaptainDiscord")?.value);
+  const reason = normalizeText(getAdminElement("#editCaptainReason")?.value);
+
+  before.innerHTML = `
     <strong>${escapeHtml(captainEditState.original.captain_name || "N/A")}</strong>
     <p>${escapeHtml(captainEditState.original.captain_email || "N/A")}</p>
     <p>Discord: ${escapeHtml(captainEditState.original.captain_discord_id || "N/A")}</p>
   `;
 
-  qs("#captainReviewAfter").innerHTML = `
+  after.innerHTML = `
     <strong>${escapeHtml(captainName || "Not entered")}</strong>
     <p>${escapeHtml(captainEmail || "Not entered")}</p>
     <p>Discord: ${escapeHtml(captainDiscord || "Not entered")}</p>
@@ -689,17 +732,37 @@ function renderCaptainReview() {
 
 function validateCaptainEditor() {
   const state = captainEditState;
-  const button = qs("#confirmCaptainChangeBtn");
-  const status = qs("#captainValidationStatus");
+  const button = getAdminElement("#confirmCaptainChangeBtn");
+  const status = getAdminElement("#captainValidationStatus");
+  const nameInput = getAdminElement("#editCaptainName");
+  const emailInput = getAdminElement("#editCaptainEmail");
+  const discordInput = getAdminElement("#editCaptainDiscord");
+  const reasonInput = getAdminElement("#editCaptainReason");
+  const tagChallenge = getAdminElement("#captainTeamTagChallenge");
+  const emailChallenge = getAdminElement("#captainEmailChallenge");
+  const reviewCheckbox = getAdminElement("#confirmCaptainReview");
 
-  if (!state || !button || !status) return false;
+  if (
+    !state ||
+    !button ||
+    !status ||
+    !nameInput ||
+    !emailInput ||
+    !discordInput ||
+    !reasonInput ||
+    !tagChallenge ||
+    !emailChallenge ||
+    !reviewCheckbox
+  ) {
+    return false;
+  }
 
   renderCaptainReview();
 
-  const captainName = normalizeText(qs("#editCaptainName").value);
-  const captainEmail = normalizeText(qs("#editCaptainEmail").value).toLowerCase();
-  const captainDiscord = normalizeCaptainDiscord(qs("#editCaptainDiscord").value);
-  const reason = normalizeText(qs("#editCaptainReason").value);
+  const captainName = normalizeText(nameInput.value);
+  const captainEmail = normalizeText(emailInput.value).toLowerCase();
+  const captainDiscord = normalizeCaptainDiscord(discordInput.value);
+  const reason = normalizeText(reasonInput.value);
 
   const detailsValid =
     captainName.length >= 2 &&
@@ -713,13 +776,13 @@ function validateCaptainEditor() {
     captainDiscord !== state.original.captain_discord_id;
 
   const teamTagMatches =
-    normalizeText(qs("#captainTeamTagChallenge").value).toUpperCase() ===
+    normalizeText(tagChallenge.value).toUpperCase() ===
     String(state.team.team_tag || "").trim().toUpperCase();
 
   const emailMatches =
-    normalizeText(qs("#captainEmailChallenge").value).toLowerCase() === captainEmail;
+    normalizeText(emailChallenge.value).toLowerCase() === captainEmail;
 
-  const finalReviewConfirmed = qs("#confirmCaptainReview").checked;
+  const finalReviewConfirmed = reviewCheckbox.checked;
 
   const step1 = detailsValid && changed;
   const step2 = teamTagMatches && emailMatches;
@@ -746,6 +809,34 @@ function openCaptainEditor(teamId) {
   const team = allTeams.find(item => item.id === teamId);
   if (!team) return showToast("Team not found.", "error");
 
+  const modal = getAdminElement("#captainEditModal", true);
+  const currentDetails = getAdminElement("#captainCurrentDetails", true);
+  const nameInput = getAdminElement("#editCaptainName", true);
+  const emailInput = getAdminElement("#editCaptainEmail", true);
+  const discordInput = getAdminElement("#editCaptainDiscord", true);
+  const reasonInput = getAdminElement("#editCaptainReason", true);
+  const tagChallenge = getAdminElement("#captainTeamTagChallenge", true);
+  const emailChallenge = getAdminElement("#captainEmailChallenge", true);
+  const reviewCheckbox = getAdminElement("#confirmCaptainReview", true);
+
+  if (
+    !modal ||
+    !currentDetails ||
+    !nameInput ||
+    !emailInput ||
+    !discordInput ||
+    !reasonInput ||
+    !tagChallenge ||
+    !emailChallenge ||
+    !reviewCheckbox
+  ) {
+    showToast(
+      "Captain editor components are missing. Replace admin_teams.html with the full updated file and hard-refresh the page.",
+      "error"
+    );
+    return;
+  }
+
   const original = captainDetailsSnapshot(team);
 
   captainEditState = {
@@ -755,7 +846,7 @@ function openCaptainEditor(teamId) {
 
   setText("#captainEditTeamLabel", `${team.team_name} (${team.team_tag})`);
 
-  qs("#captainCurrentDetails").innerHTML = `
+  currentDetails.innerHTML = `
     <div>
       <span>Current Captain</span>
       <strong>${escapeHtml(original.captain_name || "N/A")}</strong>
@@ -770,25 +861,30 @@ function openCaptainEditor(teamId) {
     </div>
   `;
 
-  qs("#editCaptainName").value = original.captain_name;
-  qs("#editCaptainEmail").value = original.captain_email;
-  qs("#editCaptainDiscord").value = original.captain_discord_id;
-  qs("#editCaptainReason").value = "";
-  qs("#captainTeamTagChallenge").value = "";
-  qs("#captainEmailChallenge").value = "";
-  qs("#confirmCaptainReview").checked = false;
+  nameInput.value = original.captain_name;
+  emailInput.value = original.captain_email;
+  discordInput.value = original.captain_discord_id;
+  reasonInput.value = "";
+  tagChallenge.value = "";
+  emailChallenge.value = "";
+  reviewCheckbox.checked = false;
 
-  qs("#captainEditModal").classList.remove("hidden");
+  modal.classList.remove("hidden");
   document.body.classList.add("captain-modal-open");
 
   renderCaptainReview();
   validateCaptainEditor();
-  window.setTimeout(() => qs("#editCaptainName")?.focus(), 50);
+  window.setTimeout(() => nameInput.focus(), 50);
 }
 
 function closeCaptainEditor() {
-  qs("#captainEditModal")?.classList.add("hidden");
-  document.body.classList.remove("captain-modal-open");
+  const modal = getAdminElement("#captainEditModal");
+
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+
+  document.body?.classList.remove("captain-modal-open");
   captainEditState = null;
 }
 
@@ -881,7 +977,10 @@ function bindCaptainEditorValidation() {
   qs("#captainEditForm")?.addEventListener("submit", submitCaptainEditor);
 
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !qs("#captainEditModal")?.classList.contains("hidden")) {
+    if (event.key !== "Escape") return;
+
+    const modal = getAdminElement("#captainEditModal");
+    if (modal && !modal.classList.contains("hidden")) {
       closeCaptainEditor();
     }
   });

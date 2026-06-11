@@ -199,26 +199,24 @@
 
       if (!session) {
         authStatus.textContent = "Not logged in.";
-        authStatus.classList.remove("online");
-        qs("#authForm").classList.remove("hidden");
-        qs("#signOutBtn").classList.add("hidden");
-        qs("#adminPanel").classList.add("hidden");
+        authStatus?.classList.remove("online");
+        qs("#authForm")?.classList.remove("hidden");
+        qs("#adminPanel")?.classList.add("hidden");
         return;
       }
 
       profile = await getCurrentProfile();
       authStatus.textContent = `Logged in as ${profile.email} · Role: ${profile.role}`;
-      authStatus.classList.add("online");
-      qs("#authForm").classList.add("hidden");
-      qs("#signOutBtn").classList.remove("hidden");
+      authStatus?.classList.add("online");
+      qs("#authForm")?.classList.add("hidden");
 
       if (profile.role !== "admin") {
         showToast("This account is not an admin.", "error");
-        qs("#adminPanel").classList.add("hidden");
+        qs("#adminPanel")?.classList.add("hidden");
         return;
       }
 
-      qs("#adminPanel").classList.remove("hidden");
+      qs("#adminPanel")?.classList.remove("hidden");
       await loadAdminData();
     }
 
@@ -424,7 +422,7 @@
       if (!activeVeto) {
         activeSteps = [];
         qs("#currentVetoPanel").innerHTML = `<div class="notice">No active veto for this match.</div>`;
-        qs("#vetoRoomSection").classList.add("hidden");
+        qs("#vetoRoomSection")?.classList.add("hidden");
         updateAdminControlButtons();
         return;
       }
@@ -759,11 +757,11 @@
 
       if (pauseBtn) {
         pauseBtn.disabled = !hasVeto || paused || stopped || completed;
-        pauseBtn.classList.toggle("hidden", paused);
+        pauseBtn?.classList.toggle("hidden", paused);
       }
       if (resumeBtn) {
         resumeBtn.disabled = !hasVeto || !paused || stopped || completed;
-        resumeBtn.classList.toggle("hidden", !paused);
+        resumeBtn?.classList.toggle("hidden", !paused);
       }
       if (stopBtn) stopBtn.disabled = !hasVeto || stopped || completed;
       if (cancelBtn) cancelBtn.disabled = !hasVeto;
@@ -859,7 +857,7 @@
       activeVeto = null;
       activeSteps = [];
       qs("#currentVetoPanel").innerHTML = `<div class="notice">Veto cancelled. No active veto for this match.</div>`;
-      qs("#vetoRoomSection").classList.add("hidden");
+      qs("#vetoRoomSection")?.classList.add("hidden");
       updateAdminControlButtons();
       showToast("Map veto cancelled and deleted.", "success");
 
@@ -889,7 +887,7 @@
         ${renderVetoSummary(team1, team2)}
       `;
 
-      qs("#vetoRoomSection").classList.remove("hidden");
+      qs("#vetoRoomSection")?.classList.remove("hidden");
       updateAdminControlButtons();
       renderVetoRoom();
       if (window.CODMVetoTimer) window.CODMVetoTimer.start();

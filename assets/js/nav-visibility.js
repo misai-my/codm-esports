@@ -1,4 +1,7 @@
 // CODM Tournament OS - smart navigation
+// Navigation owns creation/removal of the Sign Out button.
+// Individual pages must not assume #signOutBtn always exists.
+
 // Public/captain pages remain user-facing even when an admin is logged in.
 // Admin links are only shown on admin pages.
 (function () {

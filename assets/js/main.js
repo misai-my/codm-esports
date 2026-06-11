@@ -122,3 +122,16 @@ function applyBrandLogo() {
 }
 
 document.addEventListener("DOMContentLoaded", applyBrandLogo);
+
+
+// Null-safe UI state helper for pages whose navigation/content is rendered dynamically.
+window.setElementClass = function setElementClass(selector, className, enabled) {
+  const element = typeof selector === "string"
+    ? document.querySelector(selector)
+    : selector;
+
+  if (!element) return false;
+
+  element.classList.toggle(className, Boolean(enabled));
+  return true;
+};
