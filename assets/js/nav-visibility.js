@@ -33,11 +33,12 @@
     return currentPage().startsWith("admin");
   }
 
-  function makeLink(href, text) {
+  function makeLink(href, text, id = "") {
     const a = document.createElement("a");
     a.className = "nav-link";
     a.href = href;
     a.textContent = text;
+    if (id) a.id = id;
     return a;
   }
 
@@ -98,6 +99,10 @@
 
       if (session) {
         USER_LINKS.forEach(([href, text]) => nav.appendChild(makeLink(href, text)));
+      } else {
+        nav.appendChild(
+          makeLink("register.html#captain-login", "Login", "headerLoginBtn")
+        );
       }
     }
 
