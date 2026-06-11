@@ -3006,3 +3006,15 @@ main,
     align-self: flex-start !important;
   }
 }
+
+
+/* ============================================================
+   Index Nav Gap Fix
+   ============================================================ */
+#headerLoginBtn.nav-link {
+  margin-left: 0 !important;
+}
+
+.nav .nav-links {
+  justify-content: flex-start !important;
+}
