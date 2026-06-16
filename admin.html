@@ -650,61 +650,108 @@ async function createDefaultsAndReload() {
 }
 
 async function refreshAdminAuth() {
-  const session = await getSession();
   const authForm = qs("#authForm");
   const authStatus = qs("#authStatus");
   const workspace = qs("#tournamentWorkspace");
   const tools = qs("#tournamentAdminTools");
 
-  if (!session) {
-    authStatus.textContent = "Not logged in.";
-    authStatus?.classList.remove("online");
+  try {
+    if (authStatus) authStatus.textContent = "Checking admin session...";
+
+    const { data: userData, error: userError } = await window.sb.auth.getUser();
+
+    if (userError || !userData?.user) {
+      if (authStatus) {
+        authStatus.textContent = "Not logged in.";
+        authStatus.classList.remove("online");
+      }
+      authForm?.classList.remove("hidden");
+      workspace?.classList.add("hidden");
+      tools?.classList.add("hidden");
+      return false;
+    }
+
+    let profile = null;
+
+    try {
+      profile = await getCurrentProfile();
+    } catch (profileError) {
+      console.warn("Profile lookup failed:", profileError);
+
+      const { data: fallbackProfile, error: fallbackError } = await window.sb
+        .from("profiles")
+        .select("*")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+
+      if (fallbackError) throw fallbackError;
+      profile = fallbackProfile;
+    }
+
+    currentProfile = profile;
+
+    if (!currentProfile) {
+      if (authStatus) {
+        authStatus.textContent = `Logged in as ${userData.user.email}, but no profile row was found.`;
+        authStatus.classList.remove("online");
+      }
+      authForm?.classList.add("hidden");
+      workspace?.classList.add("hidden");
+      tools?.classList.add("hidden");
+      showToast("No profile row found for this account. Check the profiles table.", "error");
+      return false;
+    }
+
+    if (authStatus) {
+      authStatus.textContent = `Logged in as ${currentProfile.email || userData.user.email} · Role: ${currentProfile.role || "none"}`;
+      authStatus.classList.add("online");
+    }
+
+    authForm?.classList.add("hidden");
+
+    if (currentProfile.role !== "admin") {
+      workspace?.classList.add("hidden");
+      tools?.classList.add("hidden");
+      showToast("This account is not an admin yet.", "error");
+      return false;
+    }
+
+    workspace?.classList.remove("hidden");
+
+    await loadAdminTournaments();
+
+    return true;
+  } catch (err) {
+    console.error(err);
+
+    if (authStatus) {
+      authStatus.textContent = "Admin session check failed.";
+      authStatus.classList.remove("online");
+    }
+
     authForm?.classList.remove("hidden");
     workspace?.classList.add("hidden");
     tools?.classList.add("hidden");
-    return;
+    showToast(err.message || "Failed to check admin session.", "error");
+
+    return false;
   }
-
-  currentProfile = await getCurrentProfile();
-
-  authStatus.textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
-  authStatus?.classList.add("online");
-  authForm?.classList.add("hidden");
-
-  if (currentProfile.role !== "admin") {
-    workspace?.classList.add("hidden");
-    tools?.classList.add("hidden");
-    showToast("This account is not an admin yet.", "error");
-    return;
-  }
-
-  workspace?.classList.remove("hidden");
-  tools?.classList.remove("hidden");
-  await loadAdminTournaments();
 }
 
 async function init() {
-  currentTournament = await loadDefaultTournament();
-  setText("#tournamentMeta", `${currentTournament.title} · Admin Workspace`);
+  qs("#loginBtn")?.addEventListener("click", login);
+  qs("#saveTournamentBtn")?.addEventListener("click", saveTournamentSelection);
 
-  qs("#loginBtn").addEventListener("click", login);
-  qs("#saveTournamentBtn").addEventListener("click", saveTournamentSelection);
   qs("#adminTournamentSelect")?.addEventListener("change", () => {
     loadTournamentFromSelection({ save: false }).catch(err => {
       console.error(err);
       showToast(err.message || "Failed to load selected tournament.", "error");
     });
   });
-  qs("#tournamentDetailsForm").addEventListener("submit", saveTournamentDetails);
-  qs("#addStageBtn").addEventListener("click", addCustomStage);
-  qs("#defaultStagesBtn").addEventListener("click", createDefaultsAndReload);
-  qs("#adminTournamentSelect").addEventListener("change", async () => {
-    const tournament = adminTournaments.find(t => t.slug === qs("#adminTournamentSelect").value);
-    currentTournament = tournament;
-    renderSelectedTournament(tournament);
-    fillTournamentDetails(tournament);
-    await loadStages();
-  });
+
+  qs("#tournamentDetailsForm")?.addEventListener("submit", saveTournamentDetails);
+  qs("#addStageBtn")?.addEventListener("click", addCustomStage);
+  qs("#defaultStagesBtn")?.addEventListener("click", createDefaultsAndReload);
 
   await refreshAdminAuth();
 
@@ -712,6 +759,13 @@ async function init() {
     await refreshAdminAuth();
     if (window.renderSmartNav) await window.renderSmartNav();
   });
+
+  // Supabase session hydration can lag on static hosting. Re-check once shortly after load.
+  window.setTimeout(() => {
+    refreshAdminAuth().catch(err => {
+      console.error(err);
+    });
+  }, 500);
 }
 
 init().catch(err => {
