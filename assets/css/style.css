@@ -3701,3 +3701,55 @@ body.registration-delete-open {
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   Google Form Registration Mode
+   ============================================================ */
+.btn.disabled,
+.btn:disabled {
+  opacity: .52 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.external-registration-note {
+  border-color: rgba(248,209,92,.24) !important;
+  background: rgba(248,209,92,.065) !important;
+}
+
+
+/* ============================================================
+   Registration Mode + Login Invite UI
+   ============================================================ */
+.mode-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,209,92,.26);
+  background: rgba(248,209,92,.09);
+  color: #f8d15c;
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.grid-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .grid-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .grid-four {
+    grid-template-columns: 1fr;
+  }
+}

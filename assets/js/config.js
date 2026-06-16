@@ -11,6 +11,13 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const DEFAULT_TOURNAMENT_SLUG = "codm-v1";
 
+// Registration is now handled outside the site through Google Forms.
+// Paste the public Google Form URL here once final.
+const REGISTRATION_FORM_URL = "";
+
+// Used by login-invite emails and admin instructions.
+const SITE_LOGIN_URL = "https://misai-my.github.io/codm-esports/login.html";
+
 const ASSETS = {
   // Recommended filenames for your Google Drive assets.
   // Put files inside: /assets/img/
@@ -27,6 +34,8 @@ window.TOURNAMENT_OS_CONFIG = {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   DEFAULT_TOURNAMENT_SLUG,
+  REGISTRATION_FORM_URL,
+  SITE_LOGIN_URL,
   ASSETS
 };
 

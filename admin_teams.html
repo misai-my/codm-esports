@@ -77,6 +77,17 @@
             <label for="stageFilter">Stage</label>
             <select id="stageFilter"><option value="all">All Stages</option></select>
           </div>
+
+          <div class="field">
+            <label for="modeFilter">Mode</label>
+            <select id="modeFilter">
+              <option value="all">All Modes</option>
+              <option value="multiplayer_1v1">Multiplayer 1v1</option>
+              <option value="multiplayer_5v5">Multiplayer 5v5</option>
+              <option value="battle_royale_solo">Battle Royale Solo</option>
+              <option value="battle_royale_squads">Battle Royale Squads</option>
+            </select>
+          </div>
         </div>
         <div class="field">
           <label for="searchBox">Search</label>
@@ -108,6 +119,7 @@
               <tr>
                 <th>Status</th>
                 <th>Team</th>
+                <th>Mode</th>
                 <th>Captain</th>
                 <th>Players</th>
                 <th>Stage</th>
@@ -535,7 +547,7 @@ function renderStageControl() {
 async function loadRegistrations() {
   const { data, error } = await window.sb
     .from("teams")
-    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
+    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,registration_mode,game_mode,registration_source,login_invite_status,login_invite_sent_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
     .eq("tournament_id", currentTournament.id)
     .order("created_at", { ascending: false });
 
@@ -553,6 +565,8 @@ function teamMatchesSearch(team, search) {
     team.captain_name,
     team.captain_email,
     team.captain_discord_id,
+    team.registration_mode,
+    team.game_mode,
     currentStageName(team),
     ...(team.team_players || []).flatMap(p => [p.ign, p.uid, p.player_id, p.role])
   ].join(" ").toLowerCase();
@@ -602,6 +616,7 @@ function stageSelectHtml(team) {
 function renderAdminTable() {
   const status = qs("#statusFilter").value;
   const stageFilter = qs("#stageFilter").value;
+  const modeFilter = qs("#modeFilter")?.value || "all";
   const search = normalizeText(qs("#searchBox").value);
 
   const filtered = allTeams.filter(team => {
@@ -610,8 +625,11 @@ function renderAdminTable() {
       || (stageFilter === "unassigned" && !current)
       || current?.stage_id === stageFilter;
 
+    const modeOk = modeFilter === "all" || team.registration_mode === modeFilter;
+
     return (status === "all" || team.status === status)
       && stageOk
+      && modeOk
       && teamMatchesSearch(team, search);
   });
 
@@ -630,7 +648,7 @@ function renderAdminTable() {
   const body = qs("#registrationsBody");
 
   if (!filtered.length) {
-    body.innerHTML = `<tr><td colspan="6">No registrations found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7">No registrations found.</td></tr>`;
     return;
   }
 
@@ -662,6 +680,11 @@ function renderAdminTable() {
           </div>
         </td>
         <td>
+          ${registrationModeChip(team.registration_mode)}
+          <div class="small">${escapeHtml(registrationModeLabel(team.registration_mode))}</div>
+          <div class="small">${escapeHtml(team.registration_source || "site")}</div>
+        </td>
+        <td>
           <strong>${escapeHtml(team.captain_name)}</strong>
           <div class="small">${escapeHtml(team.captain_email)}</div>
           <div class="small">Discord: ${escapeHtml(team.captain_discord_id || "N/A")}</div>
@@ -673,9 +696,11 @@ function renderAdminTable() {
         <td>${stageSelectHtml(team)}</td>
         <td>
           <div class="table-actions">
-            <button class="btn btn-success" onclick="setTeamStatus('${team.id}','approved')">Approve</button>
+            <button class="btn btn-success" onclick="approveTeamAndSendLogin('${team.id}')">Approve + Login</button>
             <button class="btn btn-warning" onclick="setTeamStatus('${team.id}','waitlisted')">Waitlist</button>
             <button class="btn btn-danger" onclick="setTeamStatus('${team.id}','rejected')">Reject</button>
+            ${team.status === "approved" ? `<button class="btn" onclick="sendApprovedLoginInvite('${team.id}')">${team.login_invite_sent_at ? "Resend Login" : "Send Login"}</button>` : ""}
+            ${team.login_invite_sent_at ? `<div class="small">Invite: ${escapeHtml(team.login_invite_status || "sent")} · ${new Date(team.login_invite_sent_at).toLocaleString()}</div>` : ""}
           </div>
         </td>
       </tr>
@@ -1008,10 +1033,36 @@ async function setTeamStatus(teamId, status) {
 
     showToast(`Team marked as ${status}.`, "success");
     await loadRegistrations();
+    return true;
   } catch (err) {
     console.error(err);
     showToast(err.message || "Failed to update status.", "error");
+    return false;
   }
+}
+
+async function sendApprovedLoginInvite(teamId) {
+  try {
+    const { data, error } = await window.sb.functions.invoke("send-approved-login", {
+      body: { team_id: teamId }
+    });
+
+    if (error) throw error;
+    if (data?.ok === false) throw new Error(data.error || "Failed to send login invite.");
+
+    showToast(data?.message || "Login invite processed.", "success");
+    await loadRegistrations();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "Failed to send login invite.", "error");
+  }
+}
+
+async function approveTeamAndSendLogin(teamId) {
+  const ok = await setTeamStatus(teamId, "approved");
+  if (!ok) return;
+
+  await sendApprovedLoginInvite(teamId);
 }
 
 async function assignTeamStage(teamId) {
@@ -1065,6 +1116,7 @@ async function init() {
   qs("#refreshBtn").addEventListener("click", loadRegistrations);
   qs("#statusFilter").addEventListener("change", renderAdminTable);
   qs("#stageFilter").addEventListener("change", renderAdminTable);
+  qs("#modeFilter")?.addEventListener("change", renderAdminTable);
   qs("#searchBox").addEventListener("input", renderAdminTable);
   bindCaptainEditorValidation();
   await refreshAdminAuth();

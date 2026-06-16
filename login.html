@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Captain Login · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-emblem">M</span>
+      <span class="brand-title">CODM Tournament OS<small>Captain Access</small></span>
+    </a>
+    <nav class="nav-links" data-smart-nav>
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="index.html#tournaments">Tournament</a>
+      <a class="nav-link" href="rules.html">Rulebook</a>
+      <a id="loginNavFallback" class="nav-link" href="login.html">Login</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero" data-hero-bg>
+    <div class="container">
+      <div class="eyebrow">Captain Account</div>
+      <h1 class="h1"><span class="gradient-text">Sign in.</span><br/>Track your tournament.</h1>
+      <p class="lead">Team registration is now handled through Google Forms. Use this page only for captain account access to My Matches and Support.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid grid-two">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Account Access</div>
+            <h2>Captain Login</h2>
+            <p>Use the same email address submitted in the Google Form whenever possible.</p>
+          </div>
+        </div>
+
+        <div id="authStatus" class="auth-status">Checking session...</div>
+
+        <form id="authForm" class="form">
+          <div class="field">
+            <label for="authEmail">Email</label>
+            <input id="authEmail" type="email" required/>
+          </div>
+
+          <div class="field">
+            <label for="authPassword">Password</label>
+            <input id="authPassword" type="password" required/>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="loginBtn">Login</button>
+            <a class="btn btn-ghost" href="forgot-password.html">Forgot Password?</a>
+          </div>
+        </form>
+        <div class="notice section-tight">
+          Accounts are issued only after an approved Google Form registration.
+          Approved registrants will receive a secure login invite from tournament administration.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">External Registration</div>
+        <h2>Google Form Registration</h2>
+        <p>Team registration is collected from the official Google Form, then synced into the database for admin approval.</p>
+        <div class="actions">
+          <a class="btn btn-primary" id="registrationFormLink" href="#" target="_blank" rel="noopener">Open Google Form</a>
+          <a class="btn" href="matches.html">Open My Matches</a>
+          <a class="btn btn-ghost" href="support.html">Open Support</a>
+        </div>
+        <div id="registrationFormNote" class="small section-tight"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/main.js"></script>
+<script src="assets/js/nav-visibility.js"></script>
+<script>
+let currentUser = null;
+
+function registrationFormUrl() {
+  return window.TOURNAMENT_OS_CONFIG?.REGISTRATION_FORM_URL || "";
+}
+
+function refreshRegistrationLink() {
+  const link = qs("#registrationFormLink");
+  const note = qs("#registrationFormNote");
+  const url = registrationFormUrl();
+
+  if (!link || !note) return;
+
+  if (!url) {
+    link.classList.add("disabled");
+    link.removeAttribute("target");
+    link.href = "#";
+    note.textContent = "Google Form link is not configured yet. Add REGISTRATION_FORM_URL in assets/js/config.js.";
+    return;
+  }
+
+  link.href = url;
+  note.textContent = "This opens the official external registration form.";
+}
+
+async function refreshAuth() {
+  const session = await getSession();
+  currentUser = session?.user || null;
+
+  const authStatus = qs("#authStatus");
+  const authForm = qs("#authForm");
+
+  if (!currentUser) {
+    authStatus.textContent = "Not logged in.";
+    authStatus.classList.remove("online");
+    authForm.classList.remove("hidden");
+    return;
+  }
+
+  authStatus.textContent = `Logged in as ${currentUser.email}`;
+  authStatus.classList.add("online");
+  authForm.classList.add("hidden");
+}
+
+async function login() {
+  const email = normalizeText(qs("#authEmail").value);
+  const password = qs("#authPassword").value;
+
+  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
+
+  const { error } = await window.sb.auth.signInWithPassword({ email, password });
+
+  if (error) return showToast(error.message, "error");
+
+  showToast("Logged in.", "success");
+  await refreshAuth();
+  if (window.renderSmartNav) await window.renderSmartNav();
+}
+
+
+
+async function init() {
+  refreshRegistrationLink();
+  qs("#loginBtn").addEventListener("click", login);
+  await refreshAuth();
+  window.sb.auth.onAuthStateChange(() => refreshAuth());
+}
+
+init().catch(err => {
+  console.error(err);
+  showToast(err.message || "Failed to initialize login page.", "error");
+});
+</script>
+<script src="assets/js/premium-copy.js"></script>
+</body>
+</html>

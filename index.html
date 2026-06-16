@@ -18,7 +18,7 @@
       <a class="nav-link" href="index.html">Home</a>
       <a class="nav-link" href="index.html#tournaments">Tournament</a>
       <a class="nav-link" href="rules.html">Rulebook</a>
-      <a id="loginNavFallback" class="nav-link" href="register.html#captain-login">Login</a>
+      <a id="loginNavFallback" class="nav-link" href="login.html">Login</a>
       <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
     </nav>
   </div>
@@ -30,7 +30,7 @@
       <div>
         <div class="eyebrow">CODM Competition Portal</div>
         <h1><span class="gradient-text">Choose your event.</span><br/>Lock your squad.</h1>
-        <p class="lead">A reusable tournament hub for Call of Duty: Mobile events — select the tournament you are joining, then register, review the rulebook, track brackets, and report matches.</p>
+        <p class="lead">A reusable tournament hub for Call of Duty: Mobile events — select the tournament you are joining, then open the official Google Form, review the rulebook, track brackets, and report matches.</p>
         <div class="actions">
           <a class="btn btn-primary" href="#tournaments">Select Tournament</a>
           <a class="btn btn-ghost" href="rules.html">Open Rulebook</a>
@@ -55,7 +55,7 @@
         <div>
           <div class="eyebrow">Tournament Selection</div>
           <h2>Choose the competition</h2>
-          <p>Select the tournament you are participating in. The registration, bracket, matches, and rulebook links will follow your selected tournament.</p>
+          <p>Select the tournament you are participating in. The Google Form registration, bracket, matches, and rulebook links will follow your selected tournament.</p>
         </div>
       </div>
       <div id="selectedTournamentPanel" class="section-tight"></div>
@@ -99,6 +99,24 @@
 <script>
 let tournaments = [];
 let selectedTournament = null;
+
+function registrationFormUrl() {
+  return window.TOURNAMENT_OS_CONFIG?.REGISTRATION_FORM_URL || "";
+}
+
+function registrationButtonHtml(t) {
+  const formUrl = registrationFormUrl();
+
+  if (!t.registration_open) {
+    return `<button class="btn btn-ghost" disabled>Registration Closed</button>`;
+  }
+
+  if (!formUrl) {
+    return `<button class="btn btn-ghost" disabled>Google Form TBA</button>`;
+  }
+
+  return `<button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}', formUrl)">Open Google Form</button>`;
+}
 
 
 
@@ -195,7 +213,7 @@ function renderTournamentCards() {
         ${renderTournamentStageChips(t)}
         <div class="actions">
           <button class="btn ${selected ? "btn-success" : "btn-primary"}" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
-          <button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}','register.html')">Register</button>
+          ${registrationButtonHtml(t)}
         </div>
       </article>
     `;
@@ -222,7 +240,7 @@ function renderSelectedTournamentPanel() {
         ${renderTournamentStageChips(selectedTournament)}
       </div>
       <div class="actions">
-        <a class="btn btn-primary" href="register.html">Register for This Tournament</a>
+        ${selectedTournament.registration_open && registrationFormUrl() ? `<a class="btn btn-primary" href="${registrationFormUrl()}" target="_blank" rel="noopener">Open Google Form</a>` : `<a class="btn btn-primary disabled" href="#">Google Form TBA</a>`}
         <a class="btn" href="bracket.html">View Bracket</a>
       </div>
     </div>

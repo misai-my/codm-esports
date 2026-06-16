@@ -34,6 +34,69 @@ async function getCurrentProfile() {
   return data;
 }
 async function signOut() { await window.sb.auth.signOut(); window.location.reload(); }
+
+/* ============================================================
+   Registration Mode Helpers
+   ============================================================ */
+const REGISTRATION_MODE_OPTIONS = [
+  { value: "multiplayer_1v1", label: "Multiplayer 1v1", short: "MP 1v1", minPlayers: 1 },
+  { value: "multiplayer_5v5", label: "Multiplayer 5v5", short: "MP 5v5", minPlayers: 5 },
+  { value: "battle_royale_solo", label: "Battle Royale Solo", short: "BR Solo", minPlayers: 1 },
+  { value: "battle_royale_squads", label: "Battle Royale Squads", short: "BR Squads", minPlayers: 5 }
+];
+
+const SELECTED_REGISTRATION_MODE_KEY = "codm:selected_registration_mode";
+
+function registrationModeLabel(value) {
+  return REGISTRATION_MODE_OPTIONS.find(option => option.value === value)?.label || value || "Unassigned Mode";
+}
+
+function registrationModeShortLabel(value) {
+  return REGISTRATION_MODE_OPTIONS.find(option => option.value === value)?.short || value || "Mode";
+}
+
+function registrationModeOptionsHtml(selected = "") {
+  return REGISTRATION_MODE_OPTIONS
+    .map(option => `
+      <option value="${escapeHtml(option.value)}" ${selected === option.value ? "selected" : ""}>
+        ${escapeHtml(option.label)}
+      </option>
+    `)
+    .join("");
+}
+
+function getSelectedRegistrationMode() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = normalizeText(params.get("mode") || params.get("registration_mode"));
+
+  if (REGISTRATION_MODE_OPTIONS.some(option => option.value === fromUrl)) {
+    localStorage.setItem(SELECTED_REGISTRATION_MODE_KEY, fromUrl);
+    return fromUrl;
+  }
+
+  const saved = localStorage.getItem(SELECTED_REGISTRATION_MODE_KEY);
+  if (REGISTRATION_MODE_OPTIONS.some(option => option.value === saved)) return saved;
+
+  return "multiplayer_5v5";
+}
+
+function setSelectedRegistrationMode(mode) {
+  if (!REGISTRATION_MODE_OPTIONS.some(option => option.value === mode)) return;
+  localStorage.setItem(SELECTED_REGISTRATION_MODE_KEY, mode);
+}
+
+function registrationModeChip(mode) {
+  return `<span class="mode-chip">${escapeHtml(registrationModeShortLabel(mode))}</span>`;
+}
+
+window.CODM_REGISTRATION_MODES = REGISTRATION_MODE_OPTIONS;
+window.registrationModeLabel = registrationModeLabel;
+window.registrationModeShortLabel = registrationModeShortLabel;
+window.registrationModeOptionsHtml = registrationModeOptionsHtml;
+window.getSelectedRegistrationMode = getSelectedRegistrationMode;
+window.setSelectedRegistrationMode = setSelectedRegistrationMode;
+window.registrationModeChip = registrationModeChip;
+
 const SELECTED_TOURNAMENT_KEY = "codm:selected_tournament_slug";
 
 function getSelectedTournamentSlug() {

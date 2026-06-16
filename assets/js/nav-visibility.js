@@ -16,7 +16,6 @@
   ];
 
   const USER_LINKS = [
-    ["register.html", "Register"],
     ["bracket.html", "Bracket"],
     ["matches.html", "My Matches"],
     ["support.html", "FAQ & Support"]
@@ -85,7 +84,7 @@
     });
 
     nav.appendChild(
-      makeLink("register.html#captain-login", "Login", {
+      makeLink("login.html", "Login", {
         id: "loginNavBtn",
         className: "nav-link nav-login-visible",
         ariaLabel: "Captain Login"

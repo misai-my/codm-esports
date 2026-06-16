@@ -31,26 +31,39 @@ function matchPairKey(aId, bId) {
   return [aId, bId].filter(Boolean).sort().join("::");
 }
 
-async function fetchApprovedTeams(tournamentId) {
-  const { data, error } = await window.sb
+async function fetchApprovedTeams(tournamentId, registrationMode = null) {
+  let query = window.sb
     .from("teams")
-    .select("id, team_name, team_tag, logo_url, captain_name")
+    .select("id, team_name, team_tag, logo_url, captain_name, registration_mode")
     .eq("tournament_id", tournamentId)
-    .eq("status", "approved")
-    .order("team_name", { ascending: true });
+    .eq("status", "approved");
+
+  if (registrationMode) query = query.eq("registration_mode", registrationMode);
+
+  const { data, error } = await query.order("team_name", { ascending: true });
+
   if (error) throw error;
   return data || [];
 }
 
-async function fetchSeeds(tournamentId) {
-  const { data, error } = await window.sb.from("tournament_seeds").select("team_id, seed").eq("tournament_id", tournamentId);
+async function fetchSeeds(tournamentId, registrationMode = null) {
+  let query = window.sb
+    .from("tournament_seeds")
+    .select("team_id, seed")
+    .eq("tournament_id", tournamentId);
+
+  if (registrationMode) query = query.eq("registration_mode", registrationMode);
+
+  const { data, error } = await query;
   if (error) throw error;
   return Object.fromEntries((data || []).map(row => [row.team_id, row.seed]));
 }
 
 async function upsertSeeds(tournamentId, seededTeams) {
+  const registrationMode = seededTeams[0]?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5';
   const rows = seededTeams.map((team, idx) => ({
     tournament_id: tournamentId,
+    registration_mode: team.registration_mode || registrationMode,
     team_id: team.id,
     seed: Number(team.seed || idx + 1)
   }));
@@ -80,7 +93,8 @@ async function upsertSeeds(tournamentId, seededTeams) {
   const { error: deleteError } = await window.sb
     .from("tournament_seeds")
     .delete()
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .eq("registration_mode", registrationMode);
 
   if (deleteError) throw deleteError;
 
@@ -92,8 +106,10 @@ async function upsertSeeds(tournamentId, seededTeams) {
 }
 
 async function initializeStandings(tournamentId, seededTeams) {
+  const registrationMode = seededTeams[0]?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5';
   const rows = seededTeams.map((team, idx) => ({
     tournament_id: tournamentId,
+    registration_mode: team.registration_mode || registrationMode,
     team_id: team.id,
     seed: Number(team.seed || idx + 1),
     matches_played: 0,
@@ -109,7 +125,7 @@ async function initializeStandings(tournamentId, seededTeams) {
     status: "active"
   }));
   if (!rows.length) return;
-  const { error } = await window.sb.from("tournament_standings").upsert(rows, { onConflict: "tournament_id,team_id" });
+  const { error } = await window.sb.from("tournament_standings").upsert(rows, { onConflict: "tournament_id,registration_mode,team_id" });
   if (error) throw error;
 }
 
@@ -121,10 +137,12 @@ async function createMatchGames(matchId, tournament) {
 }
 
 async function createMatch(tournament, roundNo, matchNo, teamA, teamB, bracketGroup, roundLabel, isBye = false) {
+  const registrationMode = tournament.registration_mode || teamA?.registration_mode || teamB?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5';
   const { data, error } = await window.sb
     .from("matches")
     .insert({
       tournament_id: tournament.id,
+      registration_mode: registrationMode,
       bracket_type: tournament.bracket_type,
       bracket_group: bracketGroup,
       round_no: roundNo,
@@ -155,26 +173,57 @@ async function createMatch(tournament, roundNo, matchNo, teamA, teamB, bracketGr
   return data;
 }
 
-async function clearCompetition() {
+async function clearCompetition(tournamentOrSlug = null, registrationMode = null) {
+  if (tournamentOrSlug?.id) {
+    const tournamentId = tournamentOrSlug.id;
+    const mode = registrationMode || tournamentOrSlug.registration_mode || window.getSelectedRegistrationMode?.() || "multiplayer_5v5";
+
+    const { data: modeMatches, error: matchLookupError } = await window.sb
+      .from("matches")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("registration_mode", mode);
+
+    if (matchLookupError) throw matchLookupError;
+
+    const matchIds = (modeMatches || []).map(match => match.id);
+
+    if (matchIds.length) {
+      await window.sb.from("match_reports").delete().in("match_id", matchIds);
+      await window.sb.from("match_games").delete().in("match_id", matchIds);
+      await window.sb.from("matches").delete().in("id", matchIds);
+    }
+
+    await window.sb.from("tournament_standings").delete().eq("tournament_id", tournamentId).eq("registration_mode", mode);
+    await window.sb.from("tournament_seeds").delete().eq("tournament_id", tournamentId).eq("registration_mode", mode);
+    return;
+  }
+
   const { error } = await window.sb.rpc("clear_tournament_competition", { p_slug: cfg.DEFAULT_TOURNAMENT_SLUG });
   if (error) throw error;
 }
 
-async function fetchCompletedMatches(tournamentId) {
-  const { data, error } = await window.sb
+async function fetchCompletedMatches(tournamentId, registrationMode = null) {
+  let query = window.sb
     .from("matches")
     .select("*")
     .eq("tournament_id", tournamentId)
     .eq("status", "completed");
+
+  if (registrationMode) query = query.eq("registration_mode", registrationMode);
+
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
 
 async function recalcStandings(tournament, approvedTeams) {
-  const seeds = await fetchSeeds(tournament.id);
+  const registrationMode = tournament.registration_mode || approvedTeams[0]?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5';
+  const seeds = await fetchSeeds(tournament.id, registrationMode);
   const base = approvedTeams.map((team, idx) => ({ ...team, seed: seeds[team.id] || idx + 1 }));
   const table = new Map(base.map(team => [team.id, {
     tournament_id: tournament.id,
+    registration_mode: team.registration_mode || registrationMode,
     team_id: team.id,
     seed: team.seed,
     matches_played: 0,
@@ -190,7 +239,7 @@ async function recalcStandings(tournament, approvedTeams) {
     status: "active"
   }]));
 
-  const matches = await fetchCompletedMatches(tournament.id);
+  const matches = await fetchCompletedMatches(tournament.id, registrationMode);
   for (const match of matches) {
     if (!match.winner_team_id) continue;
     const a = match.team_a_id;
@@ -245,7 +294,7 @@ async function recalcStandings(tournament, approvedTeams) {
 
   const rows = Array.from(table.values());
   if (rows.length) {
-    const { error } = await window.sb.from("tournament_standings").upsert(rows, { onConflict: "tournament_id,team_id" });
+    const { error } = await window.sb.from("tournament_standings").upsert(rows, { onConflict: "tournament_id,registration_mode,team_id" });
     if (error) throw error;
   }
   return rows;
@@ -306,7 +355,7 @@ async function setTournamentEngine(tournament, bracketType, swissRoundCount) {
 }
 
 async function generateInitialRound(tournament, seededTeams) {
-  await clearCompetition();
+  await clearCompetition(tournament, tournament.registration_mode || seededTeams[0]?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5');
   await setTournamentEngine(tournament, tournament.bracket_type, tournament.swiss_round_count);
   await upsertSeeds(tournament.id, seededTeams);
   await initializeStandings(tournament.id, seededTeams);
