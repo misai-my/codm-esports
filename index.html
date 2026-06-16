@@ -214,6 +214,7 @@ function renderTournamentCards() {
         <div class="actions">
           <button class="btn ${selected ? "btn-success" : "btn-primary"}" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
           ${registrationButtonHtml(t)}
+          <button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}', rulebookPageUrl(t))">Rulebook</button>
         </div>
       </article>
     `;
@@ -241,7 +242,8 @@ function renderSelectedTournamentPanel() {
       </div>
       <div class="actions">
         ${selectedTournament.registration_open && registrationFormUrl() ? `<a class="btn btn-primary" href="${registrationFormUrl()}" target="_blank" rel="noopener">Open Google Form</a>` : `<a class="btn btn-primary disabled" href="#">Google Form TBA</a>`}
-        <a class="btn" href="bracket.html">View Bracket</a>
+        <a class="btn" href="${rulebookPageUrl(selectedTournament)}">Rulebook</a>
+        <a class="btn btn-ghost" href="captain.html">Captain Portal</a>
       </div>
     </div>
   `;

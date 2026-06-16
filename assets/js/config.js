@@ -22,7 +22,6 @@ const SITE_LOGIN_URL = "https://misai-my.github.io/codm-esports/login.html";
 const RULEBOOK_DOC_ID = "1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78";
 const RULEBOOK_DOC_URL = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
 const RULEBOOK_PREVIEW_URL = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing";
-const RULEBOOK_DOCS_OUTLINE_URL = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
 
 const ASSETS = {
   // Recommended filenames for your Google Drive assets.
@@ -45,7 +44,6 @@ window.TOURNAMENT_OS_CONFIG = {
   RULEBOOK_DOC_ID,
   RULEBOOK_DOC_URL,
   RULEBOOK_PREVIEW_URL,
-  RULEBOOK_DOCS_OUTLINE_URL,
   ASSETS
 };
 

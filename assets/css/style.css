@@ -4028,3 +4028,32 @@ body.registration-delete-open {
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   Tournament Rulebook Selector
+   ============================================================ */
+.rulebook-viewer-shell-simple {
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+}
+
+.rulebook-viewer-shell-simple .rulebook-viewer-note,
+.rulebook-viewer-shell-simple #cleanViewerBtn,
+.rulebook-viewer-shell-simple #docsLayoutBtn,
+.rulebook-viewer-shell-simple #openRulebookPopout {
+  display: none !important;
+}
+
+.rulebook-outline-card .field {
+  margin-top: 14px;
+}
+
+.rulebook-outline-card select {
+  width: 100%;
+}
+
+@media (max-width: 980px) {
+  .rulebook-viewer-shell-simple {
+    grid-template-columns: 1fr;
+  }
+}

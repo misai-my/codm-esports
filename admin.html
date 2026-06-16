@@ -114,6 +114,16 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="tournamentRulebookUrl">Rulebook Google Doc URL</label>
+          <input
+            id="tournamentRulebookUrl"
+            type="url"
+            placeholder="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk"
+          />
+          <div class="small">Paste the Google Docs rulebook link for the selected tournament.</div>
+        </div>
+
         <div class="actions">
           <button class="btn btn-primary" type="submit">Save Tournament Details</button>
         </div>
@@ -250,12 +260,14 @@ async function loadAdminTournaments() {
 
 function renderSelectedTournament(tournament) {
   if (!tournament) return;
+  const rulebookUrl = rulebookDocUrlForTournament(tournament);
   qs("#selectedTournamentCard").innerHTML = `
     <div class="admin-selected-tournament-box">
       <strong>${escapeHtml(tournament.title)}</strong>
       <span>${escapeHtml(tournament.game || "CODM")} · ${escapeHtml(tournament.format || "Tournament")} · ${escapeHtml(tournament.status || "draft")}</span>
       <span>${escapeHtml(formatRange(tournament.start_at, tournament.end_at))}</span>
       <span>Registration: ${tournament.registration_open ? "Open" : "Closed"}</span>
+      <span>Rulebook: ${rulebookUrl ? "Linked" : "Using config fallback"}</span>
     </div>
   `;
 }
@@ -266,6 +278,8 @@ function fillTournamentDetails(tournament) {
   qs("#tournamentEndAt").value = toDateTimeLocal(tournament.end_at);
   qs("#tournamentStatus").value = tournament.status || "draft";
   qs("#registrationOpen").value = tournament.registration_open ? "true" : "false";
+  const rulebookInput = qs("#tournamentRulebookUrl");
+  if (rulebookInput) rulebookInput.value = normalizeText(tournament.rulebook_doc_url) || cfg.RULEBOOK_DOC_URL || "";
   setText("#tournamentMeta", `${tournament.title} · Admin Workspace`);
 }
 
@@ -288,11 +302,14 @@ async function saveTournamentDetails(event) {
   event.preventDefault();
   if (!currentTournament) return showToast("Select a tournament first.", "error");
 
+  const rulebookUrl = normalizeText(qs("#tournamentRulebookUrl")?.value || "");
+
   const payload = {
     start_at: localDateTimeToIso(qs("#tournamentStartAt").value),
     end_at: localDateTimeToIso(qs("#tournamentEndAt").value),
     status: qs("#tournamentStatus").value || "draft",
-    registration_open: qs("#registrationOpen").value === "true"
+    registration_open: qs("#registrationOpen").value === "true",
+    rulebook_doc_url: rulebookUrl || null
   };
 
   const { data, error } = await window.sb

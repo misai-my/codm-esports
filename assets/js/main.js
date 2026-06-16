@@ -35,6 +35,38 @@ async function getCurrentProfile() {
 }
 async function signOut() { await window.sb.auth.signOut(); window.location.reload(); }
 
+
+/* ============================================================
+   Rulebook Link Helpers
+   ============================================================ */
+function googleDocIdFromUrl(url) {
+  const text = normalizeText(url);
+  const match = text.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  return match?.[1] || "";
+}
+
+function rulebookDocUrlForTournament(tournament = null) {
+  return normalizeText(tournament?.rulebook_doc_url)
+    || cfg?.RULEBOOK_DOC_URL
+    || "";
+}
+
+function rulebookPreviewUrlFromDocUrl(url) {
+  const docId = googleDocIdFromUrl(url);
+  if (!docId) return url || cfg?.RULEBOOK_PREVIEW_URL || "";
+  return `https://docs.google.com/document/d/${docId}/preview?usp=sharing`;
+}
+
+function rulebookPageUrl(tournament = null) {
+  const slug = normalizeText(tournament?.slug);
+  return slug ? `rules.html?tournament=${encodeURIComponent(slug)}` : "rules.html";
+}
+
+window.googleDocIdFromUrl = googleDocIdFromUrl;
+window.rulebookDocUrlForTournament = rulebookDocUrlForTournament;
+window.rulebookPreviewUrlFromDocUrl = rulebookPreviewUrlFromDocUrl;
+window.rulebookPageUrl = rulebookPageUrl;
+
 /* ============================================================
    Registration Mode Helpers
    ============================================================ */
