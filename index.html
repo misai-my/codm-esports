@@ -37,7 +37,7 @@
         </div>
 
         <div class="grid grid-three section-tight">
-          <div class="card card-flat kpi"><div class="kpi-value" id="approvedCount">0</div><div class="kpi-label">Approved Teams</div></div>
+          <div class="card card-flat kpi"><div class="kpi-value" id="approvedCount">0</div><div class="kpi-label">Participating Teams</div></div>
           <div class="card card-flat kpi"><div class="kpi-value" id="bracketType">-</div><div class="kpi-label">Selected Format</div></div>
           <div class="card card-flat kpi"><div class="kpi-value" id="registrationStatus">-</div><div class="kpi-label">Registration</div></div>
         </div>
@@ -78,14 +78,20 @@
 
   <section id="teams" class="section">
     <div class="container">
-      <div class="section-heading">
+      <div class="section-heading participating-heading">
         <div>
           <div class="eyebrow">Selected Tournament Field</div>
-          <h2>Approved Teams</h2>
+          <h2>Participating Teams</h2>
           <p id="tournamentMeta">Loading tournament...</p>
         </div>
+        <div class="field mode-select-field">
+          <label for="homeModeSelect">Mode</label>
+          <select id="homeModeSelect">
+            <option value="all">All Modes</option>
+          </select>
+        </div>
       </div>
-      <div id="approvedTeams" class="grid grid-two"></div>
+      <div id="approvedTeams" class="participating-grid"></div>
     </div>
   </section>
 </main>
@@ -99,6 +105,7 @@
 <script>
 let tournaments = [];
 let selectedTournament = null;
+let selectedHomeMode = getSelectedRegistrationMode?.() || "all";
 
 function registrationFormUrl() {
   return window.TOURNAMENT_OS_CONFIG?.REGISTRATION_FORM_URL || "";
@@ -119,6 +126,30 @@ function registrationButtonHtml(t) {
 }
 
 
+function discordButtonHtml(t) {
+  const discordUrl = discordInviteUrlForTournament(t);
+
+  if (!discordUrl) {
+    return `<button class="btn btn-ghost" disabled>Discord TBA</button>`;
+  }
+
+  return `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>`;
+}
+
+function populateHomeModeSelect() {
+  const select = qs("#homeModeSelect");
+  if (!select) return;
+
+  const savedMode = getSelectedRegistrationMode?.() || "all";
+  selectedHomeMode = savedMode || "all";
+
+  select.innerHTML = `
+    <option value="all">All Modes</option>
+    ${registrationModeOptionsHtml(selectedHomeMode)}
+  `;
+
+  select.value = selectedHomeMode;
+}
 
 function tournamentStatusText(t) {
   if (!t) return "-";
@@ -215,6 +246,7 @@ function renderTournamentCards() {
           <button class="btn ${selected ? "btn-success" : "btn-primary"}" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
           ${registrationButtonHtml(t)}
           <button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}', rulebookPageUrl(t))">Rulebook</button>
+          ${discordButtonHtml(t)}
         </div>
       </article>
     `;
@@ -228,22 +260,24 @@ function renderSelectedTournamentPanel() {
     return;
   }
 
+  const discordUrl = discordInviteUrlForTournament(selectedTournament);
+
   panel.innerHTML = `
     <div class="card selected-tournament-panel">
       <div>
         <div class="eyebrow">Currently Selected</div>
         <h3>${escapeHtml(selectedTournament.title)}</h3>
-        <p>${escapeHtml(selectedTournament.game || "Call of Duty: Mobile")} · ${escapeHtml(selectedTournament.format || "BO5")} · ${escapeHtml(bracketTypeLabel(selectedTournament.bracket_type))}</p>
+        <p>${escapeHtml(selectedTournament.game || "Call of Duty: Mobile")} · ${escapeHtml(selectedTournament.format || "MULTI")} · ${escapeHtml(bracketTypeLabel(selectedTournament.bracket_type))}</p>
         <div class="tournament-card-meta">
           <span>${escapeHtml(tournamentDateRange(selectedTournament))}</span>
           <span>Registration: ${selectedTournament.registration_open ? "Open" : "Closed"}</span>
+          ${selectedTournament.max_teams ? `<span>Max Teams: ${escapeHtml(selectedTournament.max_teams)}</span>` : ""}
         </div>
         ${renderTournamentStageChips(selectedTournament)}
       </div>
       <div class="actions">
-        ${selectedTournament.registration_open && registrationFormUrl() ? `<a class="btn btn-primary" href="${registrationFormUrl()}" target="_blank" rel="noopener">Open Google Form</a>` : `<a class="btn btn-primary disabled" href="#">Google Form TBA</a>`}
-        <a class="btn" href="${rulebookPageUrl(selectedTournament)}">Rulebook</a>
-        <a class="btn btn-ghost" href="captain.html">Captain Portal</a>
+        <a class="btn" href="captain.html">Captain Portal</a>
+        ${discordUrl ? `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>` : ""}
       </div>
     </div>
   `;
@@ -265,18 +299,20 @@ async function loadSelectedOverview() {
   setText("#bracketType", bracketTypeLabel(selectedTournament.bracket_type).replace(" Elimination", ""));
   setText("#registrationStatus", tournamentStatusText(selectedTournament));
 
-  const session = await getSession();
-  const canShowPlayers = !!session;
+  const mode = selectedHomeMode || "all";
 
-  const selectFields = canShowPlayers
-    ? `id,team_name,team_tag,logo_url,captain_name,team_players(ign,uid,role,is_substitute,player_order)`
-    : `id,team_name,team_tag,logo_url,captain_name`;
-
-  const { data, error } = await window.sb
+  let query = window.sb
     .from("teams")
-    .select(selectFields)
+    .select(`id,team_name,team_tag,logo_url,captain_name,registration_mode,team_players(ign,is_substitute,player_order)`)
     .eq("tournament_id", selectedTournament.id)
-    .eq("status", "approved")
+    .eq("status", "approved");
+
+  if (mode !== "all") {
+    query = query.eq("registration_mode", mode);
+  }
+
+  const { data, error } = await query
+    .order("registration_mode", { ascending: true })
     .order("team_name", { ascending: true });
 
   if (error) throw error;
@@ -285,29 +321,31 @@ async function loadSelectedOverview() {
   const wrap = qs("#approvedTeams");
 
   if (!data.length) {
-    wrap.innerHTML = `<div class="notice">The approved team field for this tournament will appear here.</div>`;
+    const modeLabel = mode === "all" ? "this tournament" : registrationModeLabel(mode);
+    wrap.innerHTML = `<div class="notice">No participating teams found for ${escapeHtml(modeLabel)} yet.</div>`;
     return;
   }
 
   wrap.innerHTML = data.map(team => {
-    const players = canShowPlayers
-      ? [...(team.team_players || [])]
-          .sort((a, b) => Number(a.player_order) - Number(b.player_order))
-          .map(p => `<li><strong>${escapeHtml(p.ign)}</strong> <span class="small">UID: ${escapeHtml(p.uid)}${p.is_substitute ? " · Sub" : ""}${p.role ? ` · ${escapeHtml(p.role)}` : ""}</span></li>`)
-          .join("")
-      : "";
+    const players = [...(team.team_players || [])]
+      .sort((a, b) => Number(a.player_order) - Number(b.player_order))
+      .map(p => `<span class="participant-player">${escapeHtml(p.ign)}${p.is_substitute ? " · Sub" : ""}</span>`)
+      .join("");
 
     return `
-      <article class="card card-flat">
-        <div class="team-card">
+      <article class="participant-card">
+        <div class="participant-logo-wrap">
           ${teamLogoHtml(team, "lg")}
-          <div>
-            <span class="badge badge-approved">Approved</span>
-            <h3>${escapeHtml(team.team_name)} <span class="small">(${escapeHtml(team.team_tag)})</span></h3>
-            <div class="small">Captain: ${escapeHtml(team.captain_name)}</div>
-          </div>
         </div>
-        ${canShowPlayers ? `<ol class="players-list">${players}</ol>` : `<div class="notice compact-notice">Login as a captain to view approved team rosters.</div>`}
+        <div class="participant-content">
+          <div class="participant-topline">
+            ${registrationModeChip(team.registration_mode)}
+            <span class="participant-tag">${escapeHtml(team.team_tag)}</span>
+          </div>
+          <h3>${escapeHtml(team.team_name)}</h3>
+          <div class="participant-captain">Captain: ${escapeHtml(team.captain_name || "TBA")}</div>
+          ${players ? `<div class="participant-roster">${players}</div>` : ""}
+        </div>
       </article>
     `;
   }).join("");
@@ -323,6 +361,15 @@ async function initHome() {
     || null;
 
   if (selectedTournament?.slug) setSelectedTournamentSlug(selectedTournament.slug);
+
+  populateHomeModeSelect();
+  qs("#homeModeSelect")?.addEventListener("change", async event => {
+    selectedHomeMode = event.target.value;
+    if (selectedHomeMode !== "all" && window.setSelectedRegistrationMode) {
+      setSelectedRegistrationMode(selectedHomeMode);
+    }
+    await loadSelectedOverview();
+  });
 
   renderTournamentCards();
   renderSelectedTournamentPanel();

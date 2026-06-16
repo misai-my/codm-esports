@@ -114,6 +114,46 @@
           </div>
         </div>
 
+        <div class="admin-subsection-heading">
+          <div class="eyebrow">Tournament Setup</div>
+          <h3>Links & Format</h3>
+          <p class="small">These values control tournament cards, registration links, rulebook selection, Discord access, and bracket generation defaults.</p>
+        </div>
+
+        <div class="grid grid-two">
+          <div class="field">
+            <label for="tournamentRulebookUrl">Rulebook URL</label>
+            <input id="tournamentRulebookUrl" type="url" placeholder="https://docs.google.com/document/d/..."/>
+          </div>
+          <div class="field">
+            <label for="tournamentDiscordUrl">Discord Invitation URL</label>
+            <input id="tournamentDiscordUrl" type="url" placeholder="https://discord.gg/..."/>
+          </div>
+        </div>
+
+        <div class="grid grid-four">
+          <div class="field">
+            <label for="tournamentFormat">Format</label>
+            <input id="tournamentFormat" placeholder="Example: MULTI"/>
+          </div>
+          <div class="field">
+            <label for="tournamentMaxTeams">Max Teams</label>
+            <input id="tournamentMaxTeams" type="number" min="1" placeholder="Example: 64"/>
+          </div>
+          <div class="field">
+            <label for="tournamentBracketType">Bracket Type</label>
+            <select id="tournamentBracketType">
+              <option value="single_elimination">Single Elimination</option>
+              <option value="double_elimination">Double Elimination</option>
+              <option value="swiss">Swiss</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tournamentRoundCount">Round Count</label>
+            <input id="tournamentRoundCount" type="number" min="1" max="20" placeholder="Example: 5"/>
+          </div>
+        </div>
+
         <div class="field">
           <label for="tournamentRulebookUrl">Rulebook Google Doc URL</label>
           <input
@@ -260,26 +300,49 @@ async function loadAdminTournaments() {
 
 function renderSelectedTournament(tournament) {
   if (!tournament) return;
+
   const rulebookUrl = rulebookDocUrlForTournament(tournament);
+  const discordUrl = discordInviteUrlForTournament(tournament);
+  const maxTeams = tournament.max_teams ? `${Number(tournament.max_teams)} max teams` : "Max teams not set";
+  const rounds = tournament.round_count || tournament.swiss_round_count || 1;
+
   qs("#selectedTournamentCard").innerHTML = `
     <div class="admin-selected-tournament-box">
       <strong>${escapeHtml(tournament.title)}</strong>
-      <span>${escapeHtml(tournament.game || "CODM")} · ${escapeHtml(tournament.format || "Tournament")} · ${escapeHtml(tournament.status || "draft")}</span>
+      <span>${escapeHtml(tournament.game || "CODM")} · ${escapeHtml(tournament.format || "Tournament")} · ${escapeHtml(bracketTypeLabel(tournament.bracket_type))}</span>
       <span>${escapeHtml(formatRange(tournament.start_at, tournament.end_at))}</span>
-      <span>Registration: ${tournament.registration_open ? "Open" : "Closed"}</span>
-      <span>Rulebook: ${rulebookUrl ? "Linked" : "Using config fallback"}</span>
+      <span>Registration: ${tournament.registration_open ? "Open" : "Closed"} · ${escapeHtml(maxTeams)} · ${escapeHtml(rounds)} round${Number(rounds) === 1 ? "" : "s"}</span>
+      <span>Rulebook: ${rulebookUrl ? "Linked" : "Using config fallback"} · Discord: ${discordUrl ? "Linked" : "Not set"}</span>
     </div>
   `;
 }
 
 function fillTournamentDetails(tournament) {
   if (!tournament) return;
+
   qs("#tournamentStartAt").value = toDateTimeLocal(tournament.start_at);
   qs("#tournamentEndAt").value = toDateTimeLocal(tournament.end_at);
   qs("#tournamentStatus").value = tournament.status || "draft";
   qs("#registrationOpen").value = tournament.registration_open ? "true" : "false";
+
   const rulebookInput = qs("#tournamentRulebookUrl");
   if (rulebookInput) rulebookInput.value = normalizeText(tournament.rulebook_doc_url) || cfg.RULEBOOK_DOC_URL || "";
+
+  const discordInput = qs("#tournamentDiscordUrl");
+  if (discordInput) discordInput.value = normalizeText(tournament.discord_invite_url);
+
+  const formatInput = qs("#tournamentFormat");
+  if (formatInput) formatInput.value = normalizeText(tournament.format) || "MULTI";
+
+  const maxTeamsInput = qs("#tournamentMaxTeams");
+  if (maxTeamsInput) maxTeamsInput.value = tournament.max_teams || "";
+
+  const bracketSelect = qs("#tournamentBracketType");
+  if (bracketSelect) bracketSelect.value = tournament.bracket_type || "single_elimination";
+
+  const roundInput = qs("#tournamentRoundCount");
+  if (roundInput) roundInput.value = tournament.round_count || tournament.swiss_round_count || 5;
+
   setText("#tournamentMeta", `${tournament.title} · Admin Workspace`);
 }
 
@@ -302,14 +365,30 @@ async function saveTournamentDetails(event) {
   event.preventDefault();
   if (!currentTournament) return showToast("Select a tournament first.", "error");
 
-  const rulebookUrl = normalizeText(qs("#tournamentRulebookUrl")?.value || "");
+  const roundCount = Number(qs("#tournamentRoundCount")?.value || 1);
+  const maxTeamsValue = qs("#tournamentMaxTeams")?.value;
+  const maxTeams = maxTeamsValue ? Number(maxTeamsValue) : null;
+
+  if (!Number.isInteger(roundCount) || roundCount < 1) {
+    return showToast("Round count must be a whole number of 1 or higher.", "error");
+  }
+
+  if (maxTeams !== null && (!Number.isInteger(maxTeams) || maxTeams < 1)) {
+    return showToast("Max teams must be blank or a whole number of 1 or higher.", "error");
+  }
 
   const payload = {
     start_at: localDateTimeToIso(qs("#tournamentStartAt").value),
     end_at: localDateTimeToIso(qs("#tournamentEndAt").value),
     status: qs("#tournamentStatus").value || "draft",
     registration_open: qs("#registrationOpen").value === "true",
-    rulebook_doc_url: rulebookUrl || null
+    rulebook_doc_url: normalizeText(qs("#tournamentRulebookUrl")?.value || "") || null,
+    discord_invite_url: normalizeText(qs("#tournamentDiscordUrl")?.value || "") || null,
+    format: normalizeText(qs("#tournamentFormat")?.value || "") || "MULTI",
+    max_teams: maxTeams,
+    bracket_type: qs("#tournamentBracketType")?.value || "single_elimination",
+    round_count: roundCount,
+    swiss_round_count: roundCount
   };
 
   const { data, error } = await window.sb
@@ -416,9 +495,32 @@ function renderStages() {
 
       <div class="actions">
         <button class="btn btn-primary" type="button" onclick="saveStage('${stage.id}')">Save Stage</button>
+        <button class="btn btn-danger" type="button" onclick="deleteStage('${stage.id}')">Delete Stage</button>
       </div>
     </div>
   `).join("");
+}
+
+
+async function deleteStage(stageId) {
+  const stage = adminStages.find(s => s.id === stageId);
+  if (!stage) return showToast("Stage not found.", "error");
+
+  const confirmation = prompt(
+    `Delete stage "${stage.stage_name}"?\\n\\nType DELETE to confirm.`
+  );
+
+  if (confirmation !== "DELETE") return;
+
+  const { error } = await window.sb
+    .from("tournament_stages")
+    .delete()
+    .eq("id", stageId);
+
+  if (error) return showToast(error.message || "Failed to delete stage.", "error");
+
+  showToast("Stage deleted.", "success");
+  await loadStages();
 }
 
 async function saveStage(stageId) {

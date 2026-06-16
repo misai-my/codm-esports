@@ -346,17 +346,24 @@ function pairSwiss(standings, playedSet) {
   return pairs;
 }
 
-async function setTournamentEngine(tournament, bracketType, swissRoundCount) {
+async function setTournamentEngine(tournament, bracketType, roundCount) {
+  const value = Number(roundCount || tournament.round_count || (tournament.round_count || tournament.swiss_round_count) || 5);
+
   const { error } = await window.sb
     .from("tournaments")
-    .update({ bracket_type: bracketType, swiss_round_count: swissRoundCount || 5 })
+    .update({
+      bracket_type: bracketType,
+      round_count: value,
+      swiss_round_count: value
+    })
     .eq("id", tournament.id);
+
   if (error) throw error;
 }
 
 async function generateInitialRound(tournament, seededTeams) {
   await clearCompetition(tournament, tournament.registration_mode || seededTeams[0]?.registration_mode || window.getSelectedRegistrationMode?.() || 'multiplayer_5v5');
-  await setTournamentEngine(tournament, tournament.bracket_type, tournament.swiss_round_count);
+  await setTournamentEngine(tournament, tournament.bracket_type, (tournament.round_count || tournament.swiss_round_count));
   await upsertSeeds(tournament.id, seededTeams);
   await initializeStandings(tournament.id, seededTeams);
 
@@ -412,7 +419,7 @@ async function generateNextRound(tournament) {
   let pairs = [];
 
   if (tournament.bracket_type === "swiss") {
-    if (tournament.current_round >= tournament.swiss_round_count) {
+    if (tournament.current_round >= (tournament.round_count || tournament.swiss_round_count)) {
       await window.sb.from("tournaments").update({ bracket_status: "completed" }).eq("id", tournament.id);
       return { completed: true, message: "Swiss rounds completed." };
     }

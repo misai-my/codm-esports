@@ -4057,3 +4057,157 @@ body.registration-delete-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Admin Tournament Setup + Premium Participating Teams
+   ============================================================ */
+.admin-subsection-heading {
+  margin: 18px 0 12px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.028);
+}
+
+.admin-subsection-heading h3 {
+  margin: 4px 0 4px;
+}
+
+.participating-heading {
+  align-items: end;
+}
+
+.mode-select-field {
+  min-width: min(320px, 100%);
+}
+
+.participating-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.participant-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  min-height: 150px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(circle at 0 0, rgba(248,209,92,.14), transparent 16rem),
+    linear-gradient(145deg, rgba(23,31,48,.96), rgba(7,12,22,.96));
+  box-shadow: 0 24px 70px rgba(0,0,0,.24);
+}
+
+.participant-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -45% auto;
+  width: 190px;
+  height: 190px;
+  border-radius: 999px;
+  background: rgba(50,230,143,.08);
+  pointer-events: none;
+}
+
+.participant-logo-wrap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+
+.participant-logo-wrap .team-logo-lg {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(0,0,0,.34);
+}
+
+.participant-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.participant-topline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.participant-tag {
+  color: rgba(230,239,255,.66);
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+}
+
+.participant-card h3 {
+  margin: 0;
+  color: rgba(247,251,255,.96);
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.participant-captain {
+  margin-top: 6px;
+  color: rgba(230,239,255,.62);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.participant-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.participant-player {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  color: rgba(230,239,255,.78);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+@media (max-width: 1160px) {
+  .participating-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .participating-heading {
+    align-items: stretch;
+  }
+
+  .mode-select-field {
+    width: 100%;
+  }
+
+  .participating-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .participant-card {
+    grid-template-columns: 70px minmax(0, 1fr);
+    border-radius: 20px;
+  }
+
+  .participant-logo-wrap .team-logo-lg {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+  }
+}

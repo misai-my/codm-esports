@@ -67,6 +67,14 @@ window.rulebookDocUrlForTournament = rulebookDocUrlForTournament;
 window.rulebookPreviewUrlFromDocUrl = rulebookPreviewUrlFromDocUrl;
 window.rulebookPageUrl = rulebookPageUrl;
 
+function discordInviteUrlForTournament(tournament = null) {
+  return normalizeText(tournament?.discord_invite_url)
+    || normalizeText(tournament?.discord_url)
+    || "";
+}
+window.discordInviteUrlForTournament = discordInviteUrlForTournament;
+
+
 /* ============================================================
    Registration Mode Helpers
    ============================================================ */
