@@ -151,15 +151,73 @@ function populateHomeModeSelect() {
   const select = qs("#homeModeSelect");
   if (!select) return;
 
-  const savedMode = getSelectedRegistrationMode?.() || "all";
+  const savedMode = typeof getSelectedRegistrationMode === "function"
+    ? getSelectedRegistrationMode()
+    : "all";
+
   selectedHomeMode = savedMode || "all";
+
+  const modeOptions = typeof registrationModeOptionsHtml === "function"
+    ? registrationModeOptionsHtml(selectedHomeMode)
+    : `
+      <option value="multiplayer_1v1">Multiplayer 1v1</option>
+      <option value="multiplayer_5v5">Multiplayer 5v5</option>
+      <option value="battle_royale_solo">Battle Royale Solo</option>
+      <option value="battle_royale_squads">Battle Royale Squads</option>
+    `;
 
   select.innerHTML = `
     <option value="all">All Modes</option>
-    ${registrationModeOptionsHtml(selectedHomeMode)}
+    ${modeOptions}
   `;
 
   select.value = selectedHomeMode;
+}
+
+
+function safeRegistrationModeLabel(mode) {
+  if (typeof window.registrationModeLabel === "function") {
+    return window.registrationModeLabel(mode);
+  }
+
+  const labels = {
+    multiplayer_1v1: "Multiplayer 1v1",
+    multiplayer_5v5: "Multiplayer 5v5",
+    battle_royale_solo: "Battle Royale Solo",
+    battle_royale_squads: "Battle Royale Squads"
+  };
+
+  return labels[mode] || mode || "Unassigned Mode";
+}
+
+function safeRegistrationModeShortLabel(mode) {
+  if (typeof window.registrationModeShortLabel === "function") {
+    return window.registrationModeShortLabel(mode);
+  }
+
+  const labels = {
+    multiplayer_1v1: "MP 1v1",
+    multiplayer_5v5: "MP 5v5",
+    battle_royale_solo: "BR Solo",
+    battle_royale_squads: "BR Squads"
+  };
+
+  return labels[mode] || "Mode";
+}
+
+function safeRegistrationModeChip(mode) {
+  return `<span class="mode-chip">${escapeHtml(safeRegistrationModeShortLabel(mode))}</span>`;
+}
+
+function participatingModeOrder(mode) {
+  const order = {
+    multiplayer_1v1: 1,
+    multiplayer_5v5: 2,
+    battle_royale_solo: 3,
+    battle_royale_squads: 4
+  };
+
+  return order[mode] || 99;
 }
 
 function tournamentStatusText(t) {
@@ -306,15 +364,22 @@ async function selectTournament(slug, redirectTo = null) {
 
 async function loadSelectedOverview() {
   selectedTournament = selectedTournament || await loadDefaultTournament();
-  setText("#tournamentMeta", `${selectedTournament.title} · ${selectedTournament.game} · ${selectedTournament.format}`);
-  setText("#bracketType", bracketTypeLabel(selectedTournament.bracket_type).replace(" Elimination", ""));
+
+  setText(
+    "#tournamentMeta",
+    `${selectedTournament.title} · ${selectedTournament.game} · ${selectedTournament.format}`
+  );
+  setText(
+    "#bracketType",
+    bracketTypeLabel(selectedTournament.bracket_type).replace(" Elimination", "")
+  );
   setText("#registrationStatus", tournamentStatusText(selectedTournament));
 
   const mode = selectedHomeMode || "all";
 
   let query = window.sb
     .from("teams")
-    .select(`id,team_name,team_tag,logo_url,captain_name,registration_mode,team_players(ign,is_substitute,player_order)`)
+    .select("id,team_name,team_tag,logo_url,captain_name,registration_mode,status")
     .eq("tournament_id", selectedTournament.id)
     .eq("status", "approved");
 
@@ -328,38 +393,76 @@ async function loadSelectedOverview() {
 
   if (error) throw error;
 
-  setText("#approvedCount", data.length);
-  const wrap = qs("#approvedTeams");
+  const teams = (data || []).sort((a, b) =>
+    participatingModeOrder(a.registration_mode) - participatingModeOrder(b.registration_mode)
+    || String(a.team_name || "").localeCompare(String(b.team_name || ""))
+  );
 
-  if (!data.length) {
-    const modeLabel = mode === "all" ? "this tournament" : registrationModeLabel(mode);
-    wrap.innerHTML = `<div class="notice">No participating teams found for ${escapeHtml(modeLabel)} yet.</div>`;
+  setText("#approvedCount", teams.length);
+
+  const wrap = qs("#approvedTeams");
+  if (!wrap) return;
+
+  if (!teams.length) {
+    const modeLabel = mode === "all" ? "this tournament" : safeRegistrationModeLabel(mode);
+    wrap.innerHTML = `
+      <div class="notice participating-empty">
+        No participating teams found for ${escapeHtml(modeLabel)} yet.
+      </div>
+    `;
     return;
   }
 
-  wrap.innerHTML = data.map(team => {
-    const players = [...(team.team_players || [])]
-      .sort((a, b) => Number(a.player_order) - Number(b.player_order))
-      .map(p => `<span class="participant-player">${escapeHtml(p.ign)}${p.is_substitute ? " · Sub" : ""}</span>`)
-      .join("");
+  const grouped = teams.reduce((acc, team) => {
+    const key = team.registration_mode || "unassigned";
+    acc[key] ||= [];
+    acc[key].push(team);
+    return acc;
+  }, {});
 
-    return `
-      <article class="participant-card">
-        <div class="participant-logo-wrap">
-          ${teamLogoHtml(team, "lg")}
-        </div>
-        <div class="participant-content">
-          <div class="participant-topline">
-            ${registrationModeChip(team.registration_mode)}
-            <span class="participant-tag">${escapeHtml(team.team_tag)}</span>
+  wrap.innerHTML = Object.entries(grouped)
+    .sort(([modeA], [modeB]) => participatingModeOrder(modeA) - participatingModeOrder(modeB))
+    .map(([modeKey, modeTeams]) => `
+      <section class="participating-mode-section">
+        <div class="participating-mode-header">
+          <div>
+            <div class="eyebrow">${escapeHtml(safeRegistrationModeLabel(modeKey))}</div>
+            <h3>${modeTeams.length} ${modeTeams.length === 1 ? "Entry" : "Entries"}</h3>
           </div>
-          <h3>${escapeHtml(team.team_name)}</h3>
-          <div class="participant-captain">Captain: ${escapeHtml(team.captain_name || "TBA")}</div>
-          ${players ? `<div class="participant-roster">${players}</div>` : ""}
+          <span class="mode-chip">${escapeHtml(safeRegistrationModeShortLabel(modeKey))}</span>
         </div>
-      </article>
-    `;
-  }).join("");
+
+        <div class="participating-card-grid">
+          ${modeTeams.map((team, index) => {
+            const seedNumber = String(index + 1).padStart(2, "0");
+            return `
+              <article class="participant-card-v2">
+                <div class="participant-rank">${seedNumber}</div>
+
+                <div class="participant-logo-wrap-v2">
+                  ${teamLogoHtml(team, "lg")}
+                </div>
+
+                <div class="participant-content-v2">
+                  <div class="participant-topline-v2">
+                    ${safeRegistrationModeChip(team.registration_mode)}
+                    <span class="participant-tag-v2">${escapeHtml(team.team_tag || "TAG")}</span>
+                  </div>
+
+                  <h3>${escapeHtml(team.team_name || "Unnamed Entry")}</h3>
+
+                  <div class="participant-meta-v2">
+                    <span>Captain</span>
+                    <strong>${escapeHtml(team.captain_name || "TBA")}</strong>
+                  </div>
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `)
+    .join("");
 }
 
 async function initHome() {
@@ -376,7 +479,7 @@ async function initHome() {
   populateHomeModeSelect();
   qs("#homeModeSelect")?.addEventListener("change", async event => {
     selectedHomeMode = event.target.value;
-    if (selectedHomeMode !== "all" && window.setSelectedRegistrationMode) {
+    if (selectedHomeMode !== "all" && typeof window.setSelectedRegistrationMode === "function") {
       setSelectedRegistrationMode(selectedHomeMode);
     }
     await loadSelectedOverview();
