@@ -147,6 +147,7 @@ async function login() {
   showToast("Logged in.", "success");
   await refreshAuth();
   if (window.renderSmartNav) await window.renderSmartNav();
+  window.location.href = "captain.html";
 }
 
 

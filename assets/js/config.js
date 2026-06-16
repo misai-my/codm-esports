@@ -13,7 +13,7 @@ const DEFAULT_TOURNAMENT_SLUG = "codm-v1";
 
 // Registration is now handled outside the site through Google Forms.
 // Paste the public Google Form URL here once final.
-const REGISTRATION_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScfhYYJk2NckttjyZHfSH4GRCMiBYT2jp4dw2z7VKuWB9KBWw/viewform";
+const REGISTRATION_FORM_URL = "";
 
 // Used by login-invite emails and admin instructions.
 const SITE_LOGIN_URL = "https://misai-my.github.io/codm-esports/login.html";

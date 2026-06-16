@@ -3753,3 +3753,148 @@ body.registration-delete-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Simplified Captain Portal
+   ============================================================ */
+.mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.mode-tab {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.045);
+  color: rgba(247,251,255,.82);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.mode-tab.active {
+  border-color: rgba(248,209,92,.42);
+  background: rgba(248,209,92,.13);
+  color: #f8d15c;
+}
+
+.captain-portal-layout {
+  align-items: start;
+}
+
+.captain-entry-list {
+  display: grid;
+  gap: 12px;
+}
+
+.captain-entry-card {
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.03);
+}
+
+.standings-mini-list {
+  display: grid;
+  gap: 8px;
+}
+
+.standings-mini-table {
+  display: grid;
+  gap: 8px;
+}
+
+.standings-mini-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.028);
+}
+
+.standings-mini-row strong {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgba(248,209,92,.10);
+  color: #f8d15c;
+}
+
+.standings-mini-row span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.standings-mini-row em {
+  color: rgba(230,239,255,.65);
+  font-style: normal;
+  font-weight: 850;
+}
+
+.captain-match-card {
+  display: grid;
+  gap: 12px;
+}
+
+.captain-schedule-pill {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 204, 255, .24);
+  background: rgba(96, 204, 255, .08);
+  color: #8bdfff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.captain-match-team {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.028);
+}
+
+.captain-match-team span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.captain-match-team.is-winner {
+  border-color: rgba(50,230,143,.26);
+  background: rgba(50,230,143,.07);
+}
+
+@media (max-width: 760px) {
+  .mode-tabs {
+    display: grid;
+  }
+
+  .mode-tab {
+    width: 100%;
+  }
+
+  .standings-mini-row {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .standings-mini-row em {
+    grid-column: 2;
+  }
+}

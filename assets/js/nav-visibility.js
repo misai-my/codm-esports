@@ -16,9 +16,8 @@
   ];
 
   const USER_LINKS = [
-    ["bracket.html", "Bracket"],
-    ["matches.html", "My Matches"],
-    ["support.html", "FAQ & Support"]
+    ["captain.html", "Captain Portal"],
+    ["support.html", "Support"]
   ];
 
   const ADMIN_LINKS = [
