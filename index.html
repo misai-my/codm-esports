@@ -107,6 +107,17 @@ let tournaments = [];
 let selectedTournament = null;
 let selectedHomeMode = getSelectedRegistrationMode?.() || "all";
 
+
+function safeDiscordInviteUrlForTournament(tournament = null) {
+  if (typeof window.discordInviteUrlForTournament === "function") {
+    return window.discordInviteUrlForTournament(tournament);
+  }
+
+  return normalizeText(tournament?.discord_invite_url)
+    || normalizeText(tournament?.discord_url)
+    || "";
+}
+
 function registrationFormUrl() {
   return window.TOURNAMENT_OS_CONFIG?.REGISTRATION_FORM_URL || "";
 }
@@ -127,7 +138,7 @@ function registrationButtonHtml(t) {
 
 
 function discordButtonHtml(t) {
-  const discordUrl = discordInviteUrlForTournament(t);
+  const discordUrl = safeDiscordInviteUrlForTournament(t);
 
   if (!discordUrl) {
     return `<button class="btn btn-ghost" disabled>Discord TBA</button>`;
@@ -260,7 +271,7 @@ function renderSelectedTournamentPanel() {
     return;
   }
 
-  const discordUrl = discordInviteUrlForTournament(selectedTournament);
+  const discordUrl = safeDiscordInviteUrlForTournament(selectedTournament);
 
   panel.innerHTML = `
     <div class="card selected-tournament-panel">

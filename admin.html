@@ -209,6 +209,17 @@ let currentProfile = null;
 let adminTournaments = [];
 let adminStages = [];
 
+
+function safeDiscordInviteUrlForTournament(tournament = null) {
+  if (typeof window.discordInviteUrlForTournament === "function") {
+    return window.safeDiscordInviteUrlForTournament(tournament);
+  }
+
+  return normalizeText(tournament?.discord_invite_url)
+    || normalizeText(tournament?.discord_url)
+    || "";
+}
+
 function toDateTimeLocal(value) {
   if (!value) return "";
   const d = new Date(value);
@@ -296,13 +307,16 @@ async function loadAdminTournaments() {
   renderSelectedTournament(selected);
   fillTournamentDetails(selected);
   await loadStages();
+  if (qs("#adminTournamentSelect")?.value) {
+    await loadTournamentFromSelection({ save: false });
+  }
 }
 
 function renderSelectedTournament(tournament) {
   if (!tournament) return;
 
   const rulebookUrl = rulebookDocUrlForTournament(tournament);
-  const discordUrl = discordInviteUrlForTournament(tournament);
+  const discordUrl = safeDiscordInviteUrlForTournament(tournament);
   const maxTeams = tournament.max_teams ? `${Number(tournament.max_teams)} max teams` : "Max teams not set";
   const rounds = tournament.round_count || tournament.swiss_round_count || 1;
 
@@ -346,17 +360,31 @@ function fillTournamentDetails(tournament) {
   setText("#tournamentMeta", `${tournament.title} · Admin Workspace`);
 }
 
-async function saveTournamentSelection() {
+
+async function loadTournamentFromSelection({ save = false } = {}) {
   const slug = qs("#adminTournamentSelect").value;
   const tournament = adminTournaments.find(t => t.slug === slug);
-  if (!tournament) return showToast("Select a tournament first.", "error");
 
-  setAdminTournamentSlug(slug);
+  if (!tournament) {
+    return showToast("Select a tournament first.", "error");
+  }
+
+  if (save) setAdminTournamentSlug(slug);
+
   currentTournament = tournament;
-
   renderSelectedTournament(currentTournament);
   fillTournamentDetails(currentTournament);
+
+  qs("#tournamentAdminTools")?.classList.remove("hidden");
+
   await loadStages();
+}
+
+
+async function saveTournamentSelection() {
+  await loadTournamentFromSelection({ save: true });
+
+  if (!currentTournament) return;
 
   showToast(`Admin workspace set to ${currentTournament.title}.`, "success");
 }
