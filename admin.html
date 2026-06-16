@@ -387,25 +387,7 @@ async function loadTournamentFromSelection({ save = false, silent = false } = {}
   await loadStages();
 
   return currentTournament;
-} = {}) {
-  const slug = qs("#adminTournamentSelect").value;
-  const tournament = adminTournaments.find(t => t.slug === slug);
-
-  if (!tournament) {
-    return showToast("Select a tournament first.", "error");
-  }
-
-  if (save) setAdminTournamentSlug(slug);
-
-  currentTournament = tournament;
-  renderSelectedTournament(currentTournament);
-  fillTournamentDetails(currentTournament);
-
-  qs("#tournamentAdminTools")?.classList.remove("hidden");
-
-  await loadStages();
 }
-
 
 async function saveTournamentSelection() {
   const tournament = await loadTournamentFromSelection({ save: true });
