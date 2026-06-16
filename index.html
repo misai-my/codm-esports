@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260616-card-links"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260616-card-links"/>
 </head>
 <body>
 <header class="nav">
@@ -100,8 +100,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/main.js?v=20260616-card-links"></script>
+<script src="assets/js/nav-visibility.js?v=20260616-card-links"></script>
 <script>
 let tournaments = [];
 let selectedTournament = null;
@@ -118,6 +118,29 @@ function safeDiscordInviteUrlForTournament(tournament = null) {
     || "";
 }
 
+
+function openExternalLink(url) {
+  const cleanUrl = normalizeText(url);
+
+  if (!cleanUrl || cleanUrl === "#") {
+    showToast("This link is not configured yet.", "error");
+    return;
+  }
+
+  window.open(cleanUrl, "_blank", "noopener,noreferrer");
+}
+
+function openInternalLink(url) {
+  const cleanUrl = normalizeText(url);
+
+  if (!cleanUrl || cleanUrl === "#") {
+    showToast("This page link is not available yet.", "error");
+    return;
+  }
+
+  window.location.href = cleanUrl;
+}
+
 function registrationFormUrl() {
   return window.TOURNAMENT_OS_CONFIG?.REGISTRATION_FORM_URL || "";
 }
@@ -126,14 +149,21 @@ function registrationButtonHtml(t) {
   const formUrl = registrationFormUrl();
 
   if (!t.registration_open) {
-    return `<button class="btn btn-ghost" disabled>Registration Closed</button>`;
+    return `<button class="btn btn-ghost" type="button" disabled>Registration Closed</button>`;
   }
 
   if (!formUrl) {
-    return `<button class="btn btn-ghost" disabled>Google Form TBA</button>`;
+    return `<button class="btn btn-ghost" type="button" disabled>Google Form TBA</button>`;
   }
 
-  return `<button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}', formUrl)">Open Google Form</button>`;
+  return `<a class="btn btn-ghost" href="${escapeHtml(formUrl)}" target="_blank" rel="noopener">Open Google Form</a>`;
+}
+
+
+
+function rulebookButtonHtml(t) {
+  const url = rulebookPageUrl(t);
+  return `<a class="btn btn-ghost" href="${escapeHtml(url)}">Rulebook</a>`;
 }
 
 
@@ -141,7 +171,7 @@ function discordButtonHtml(t) {
   const discordUrl = safeDiscordInviteUrlForTournament(t);
 
   if (!discordUrl) {
-    return `<button class="btn btn-ghost" disabled>Discord TBA</button>`;
+    return `<button class="btn btn-ghost" type="button" disabled>Discord TBA</button>`;
   }
 
   return `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>`;
@@ -312,9 +342,9 @@ function renderTournamentCards() {
         </div>
         ${renderTournamentStageChips(t)}
         <div class="actions">
-          <button class="btn ${selected ? "btn-success" : "btn-primary"}" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
+          <button class="btn ${selected ? "btn-success" : "btn-primary"}" type="button" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
           ${registrationButtonHtml(t)}
-          <button class="btn btn-ghost" onclick="selectTournament('${escapeHtml(t.slug)}', rulebookPageUrl(t))">Rulebook</button>
+          ${rulebookButtonHtml(t)}
           ${discordButtonHtml(t)}
         </div>
       </article>
@@ -359,7 +389,15 @@ async function selectTournament(slug, redirectTo = null) {
   renderSelectedTournamentPanel();
   await loadSelectedOverview();
   showToast(`Selected ${selectedTournament?.title || slug}.`, "success");
-  if (redirectTo) window.location.href = redirectTo;
+
+  if (redirectTo) {
+    const target = normalizeText(redirectTo);
+    if (/^https?:\/\//i.test(target)) {
+      openExternalLink(target);
+    } else {
+      openInternalLink(target);
+    }
+  }
 }
 
 async function loadSelectedOverview() {
