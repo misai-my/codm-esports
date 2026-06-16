@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Scoring Hub · CODM Tournament OS</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-emblem">M</span>
+      <span class="brand-title">CODM Tournament OS<small>Scoring Hub</small></span>
+    </a>
+    <nav class="nav-links" data-smart-nav>
+      <a class="nav-link" href="admin.html">Admin Hub</a>
+      <a class="nav-link" href="admin_teams.html">Registration Admin</a>
+      <a class="nav-link" href="admin_bracket.html">Bracket Admin</a>
+      <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero" data-hero-bg>
+    <div class="container">
+      <div class="eyebrow">Operations Command</div>
+      <h1 class="h1"><span class="gradient-text">Scoring Hub.</span><br/>All modes, one control room.</h1>
+      <p class="lead">Record Multiplayer series results and Battle Royale Victory, Placement, and Elimination scores using the tournament rule structure.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid grid-two">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Admin Login</div>
+            <h2>Organizer Access</h2>
+          </div>
+        </div>
+        <div id="authStatus" class="auth-status">Checking secure session...</div>
+        <form id="authForm" class="form">
+          <div class="field"><label for="authEmail">Admin Email</label><input id="authEmail" type="email" required/></div>
+          <div class="field"><label for="authPassword">Password</label><input id="authPassword" type="password" required/></div>
+          <div class="actions"><button class="btn btn-primary" type="button" id="loginBtn">Login</button></div>
+        </form>
+      </div>
+
+      <div class="card hidden" id="scoringControls">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Scoring Context</div>
+            <h2>Select Mode</h2>
+          </div>
+        </div>
+        <div class="grid grid-two">
+          <div class="field"><label for="scoreTournament">Tournament</label><select id="scoreTournament"></select></div>
+          <div class="field"><label for="scoreMode">Mode</label><select id="scoreMode"></select></div>
+          <div class="field"><label for="scoreStageKey">Stage / Match Structure</label><select id="scoreStageKey">
+            <option value="qualifiers">Qualifiers</option>
+            <option value="group_stage">Group Stage</option>
+            <option value="playoffs">Playoffs / Finals</option>
+          </select></div>
+          <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="button" id="loadScoringBtn">Load Scoring</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="rulesReference">
+    <div class="container">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Rules Reference</div>
+            <h2 id="rulesTitle">Scoring Rules</h2>
+            <p id="rulesMeta">Select a mode to view structure.</p>
+          </div>
+        </div>
+        <div id="rulesBody" class="scoring-rules-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="mpScoringPanel">
+    <div class="container">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Multiplayer</div>
+            <h2>Series Scoring</h2>
+            <p>Group Stage BO3 series points: 2-0 win = 3, 2-1 win = 2, 1-2 loss = 1, 0-2 loss = 0.</p>
+          </div>
+        </div>
+        <div id="mpMatchesWrap" class="grid grid-two"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="brScoringPanel">
+    <div class="container">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Battle Royale</div>
+            <h2>Victory · Placement · Elimination</h2>
+            <p>Survival points plus elimination points. Victory is automatically detected from placement #1.</p>
+          </div>
+          <button class="btn" type="button" id="refreshBrScoresBtn">Refresh</button>
+        </div>
+
+        <div id="brLobbyTabs" class="mode-tabs"></div>
+        <div id="brScoreTable"></div>
+        <div id="brStandingsWrap" class="section-tight"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/main.js"></script>
+<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/tournament-rules.js"></script>
+<script>
+let currentProfile = null;
+let tournaments = [];
+let currentTournament = null;
+let currentMode = "multiplayer_5v5";
+let currentStageKey = "group_stage";
+let brLobbies = [];
+let selectedLobbyId = null;
+let brEntries = [];
+let brScores = [];
+let teamMap = {};
+
+async function login() {
+  const email = normalizeText(qs("#authEmail").value);
+  const password = qs("#authPassword").value;
+  if (!isEmailValid(email)) return showToast("Enter a valid email.", "error");
+
+  const { error } = await window.sb.auth.signInWithPassword({ email, password });
+  if (error) return showToast(error.message, "error");
+  showToast("Logged in.", "success");
+  await refreshAuth();
+}
+
+async function refreshAuth() {
+  const { data } = await window.sb.auth.getUser();
+  const user = data?.user || null;
+
+  if (!user) {
+    qs("#authStatus").textContent = "Not logged in.";
+    qs("#authStatus").classList.remove("online");
+    qs("#authForm").classList.remove("hidden");
+    qs("#scoringControls").classList.add("hidden");
+    return;
+  }
+
+  currentProfile = await getCurrentProfile();
+  qs("#authStatus").textContent = `Logged in as ${currentProfile.email} · Role: ${currentProfile.role}`;
+  qs("#authStatus").classList.add("online");
+  qs("#authForm").classList.add("hidden");
+
+  if (currentProfile.role !== "admin") {
+    showToast("Admin access required.", "error");
+    return;
+  }
+
+  qs("#scoringControls").classList.remove("hidden");
+  await loadTournaments();
+}
+
+async function loadTournaments() {
+  tournaments = await loadAllTournaments();
+  const select = qs("#scoreTournament");
+  select.innerHTML = tournaments.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join("");
+  currentTournament = tournaments[0] || null;
+
+  qs("#scoreMode").innerHTML = registrationModeOptionsHtml(currentMode);
+  qs("#scoreMode").value = currentMode;
+}
+
+function renderRulesReference() {
+  qs("#rulesReference").classList.remove("hidden");
+  qs("#rulesTitle").textContent = `${registrationModeLabel(currentMode)} Scoring`;
+  qs("#rulesMeta").textContent = isBattleRoyaleMode(currentMode)
+    ? "Battle Royale ranking uses Total Points, Victory count, Elimination Points, then Last Round Survival Rank."
+    : "Multiplayer Group Stage ranking uses Series Points, Series Score, Match Win, then Match Loss.";
+
+  if (isBattleRoyaleMode(currentMode)) {
+    const br = CODM_TOURNAMENT_RULES.battleRoyale;
+    qs("#rulesBody").innerHTML = `
+      <div class="scoring-rule-card"><h3>Placement Points</h3><p>Victory: 10 · 2nd: 6 · 3rd: 5 · 4th: 4 · 5th: 3 · 6th: 2 · 7th-8th: 1</p></div>
+      <div class="scoring-rule-card"><h3>Eliminations</h3><p>1 point per elimination.</p></div>
+      <div class="scoring-rule-card"><h3>Tiebreaker</h3><p>${br.tiebreakers.join(" → ")}</p></div>
+    `;
+    return;
+  }
+
+  const mp = CODM_TOURNAMENT_RULES.multiplayer;
+  qs("#rulesBody").innerHTML = `
+    <div class="scoring-rule-card"><h3>Series Points</h3><p>2-0 Win: 3 · 2-1 Win: 2 · 1-2 Loss: 1 · 0-2 Loss: 0</p></div>
+    <div class="scoring-rule-card"><h3>Series Score</h3><p>Winning a series gives 1 Series Score.</p></div>
+    <div class="scoring-rule-card"><h3>Tiebreaker</h3><p>${mp.tiebreakers.join(" → ")}</p></div>
+  `;
+}
+
+async function loadScoring() {
+  currentTournament = tournaments.find(t => t.id === qs("#scoreTournament").value);
+  currentMode = qs("#scoreMode").value;
+  currentStageKey = qs("#scoreStageKey").value;
+
+  renderRulesReference();
+
+  qs("#mpScoringPanel").classList.toggle("hidden", isBattleRoyaleMode(currentMode));
+  qs("#brScoringPanel").classList.toggle("hidden", !isBattleRoyaleMode(currentMode));
+
+  if (isBattleRoyaleMode(currentMode)) await loadBattleRoyaleScoring();
+  else await loadMultiplayerScoring();
+}
+
+async function loadMultiplayerScoring() {
+  const { data, error } = await window.sb
+    .from("matches")
+    .select("*")
+    .eq("tournament_id", currentTournament.id)
+    .eq("registration_mode", currentMode)
+    .order("round_no", { ascending: true })
+    .order("match_no", { ascending: true });
+
+  if (error) throw error;
+
+  const matches = data || [];
+  const ids = [...new Set(matches.flatMap(m => [m.team_a_id, m.team_b_id]).filter(Boolean))];
+  teamMap = {};
+
+  if (ids.length) {
+    const teams = await window.sb.from("teams").select("id,team_name,team_tag").in("id", ids);
+    if (teams.error) throw teams.error;
+    teamMap = Object.fromEntries((teams.data || []).map(t => [t.id, t]));
+  }
+
+  qs("#mpMatchesWrap").innerHTML = matches.length ? matches.map(match => `
+    <article class="card card-flat">
+      <div class="eyebrow">${escapeHtml(match.round_label || `Round ${match.round_no}`)}</div>
+      <h3>${escapeHtml(teamName(match.team_a_id))} vs ${escapeHtml(teamName(match.team_b_id))}</h3>
+      <p class="small">Current: ${match.team_a_series_score || 0} - ${match.team_b_series_score || 0} · ${escapeHtml(match.status || "scheduled")}</p>
+      <div class="actions">
+        <a class="btn" href="admin_bracket.html">Score in Bracket Admin</a>
+      </div>
+    </article>
+  `).join("") : `<div class="notice">No multiplayer matches generated yet.</div>`;
+}
+
+function teamName(id) {
+  const team = teamMap[id] || brEntries.find(e => e.team_id === id)?.teams;
+  return team ? `${team.team_name} (${team.team_tag})` : "TBD";
+}
+
+async function loadBattleRoyaleScoring() {
+  const { data: lobbies, error: lobbyError } = await window.sb
+    .from("br_lobbies")
+    .select("*")
+    .eq("tournament_id", currentTournament.id)
+    .eq("registration_mode", currentMode)
+    .eq("stage_key", currentStageKey)
+    .order("group_code", { ascending: true })
+    .order("round_no", { ascending: true });
+
+  if (lobbyError) throw lobbyError;
+
+  brLobbies = lobbies || [];
+  selectedLobbyId = selectedLobbyId && brLobbies.some(l => l.id === selectedLobbyId)
+    ? selectedLobbyId
+    : brLobbies[0]?.id || null;
+
+  renderBrLobbyTabs();
+
+  if (!selectedLobbyId) {
+    qs("#brScoreTable").innerHTML = `<div class="notice">No BR lobbies generated yet. Generate and release groups in Bracket Admin first.</div>`;
+    qs("#brStandingsWrap").innerHTML = "";
+    return;
+  }
+
+  await loadBrEntriesAndScores();
+  renderBrScoreTable();
+  await renderBrStandings();
+}
+
+function renderBrLobbyTabs() {
+  qs("#brLobbyTabs").innerHTML = brLobbies.map(lobby => `
+    <button class="mode-tab ${lobby.id === selectedLobbyId ? "active" : ""}" type="button" onclick="selectBrLobby('${lobby.id}')">
+      ${escapeHtml(lobby.group_code)} · R${lobby.round_no} · ${escapeHtml(lobby.map_name)}
+    </button>
+  `).join("");
+}
+
+async function selectBrLobby(lobbyId) {
+  selectedLobbyId = lobbyId;
+  await loadBattleRoyaleScoring();
+}
+
+async function loadBrEntriesAndScores() {
+  const lobby = brLobbies.find(l => l.id === selectedLobbyId);
+  if (!lobby) return;
+
+  const { data: entries, error: entryError } = await window.sb
+    .from("br_group_assignments")
+    .select("*,teams(id,team_name,team_tag,logo_url)")
+    .eq("tournament_id", currentTournament.id)
+    .eq("registration_mode", currentMode)
+    .eq("group_code", lobby.group_code)
+    .order("seed_no", { ascending: true });
+
+  if (entryError) throw entryError;
+
+  brEntries = entries || [];
+  teamMap = Object.fromEntries(brEntries.map(e => [e.team_id, e.teams]));
+
+  const { data: scores, error: scoreError } = await window.sb
+    .from("br_match_scores")
+    .select("*")
+    .eq("lobby_id", selectedLobbyId);
+
+  if (scoreError) throw scoreError;
+
+  brScores = scores || [];
+}
+
+function scoreForTeam(teamId) {
+  return brScores.find(score => score.team_id === teamId) || {};
+}
+
+function renderBrScoreTable() {
+  const lobby = brLobbies.find(l => l.id === selectedLobbyId);
+  if (!lobby) return;
+
+  qs("#brScoreTable").innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Seed</th><th>Entry</th><th>Placement</th><th>Elims</th><th>Victory</th><th>Total</th><th>Action</th></tr></thead>
+        <tbody>
+          ${brEntries.map(entry => {
+            const score = scoreForTeam(entry.team_id);
+            const computed = calculateBattleRoyaleScore({
+              placement: score.placement,
+              eliminations: score.eliminations
+            });
+            return `
+              <tr>
+                <td>${entry.seed_no}</td>
+                <td>${escapeHtml(teamName(entry.team_id))}</td>
+                <td><input id="place-${entry.team_id}" type="number" min="1" max="24" value="${score.placement || ""}"/></td>
+                <td><input id="elim-${entry.team_id}" type="number" min="0" value="${score.eliminations || 0}"/></td>
+                <td>${score.victory || computed.victory ? "Victory" : "-"}</td>
+                <td>${score.total_points ?? computed.total_points ?? 0}</td>
+                <td><button class="btn btn-primary" type="button" onclick="saveBrScore('${entry.team_id}')">Save</button></td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function saveBrScore(teamId) {
+  const placement = Number(qs(`#place-${teamId}`).value);
+  const eliminations = Number(qs(`#elim-${teamId}`).value || 0);
+
+  if (!Number.isInteger(placement) || placement < 1) {
+    return showToast("Placement must be 1 or higher.", "error");
+  }
+
+  if (!Number.isInteger(eliminations) || eliminations < 0) {
+    return showToast("Eliminations must be 0 or higher.", "error");
+  }
+
+  const computed = calculateBattleRoyaleScore({ placement, eliminations });
+
+  const { error } = await window.sb
+    .from("br_match_scores")
+    .upsert([{
+      lobby_id: selectedLobbyId,
+      tournament_id: currentTournament.id,
+      registration_mode: currentMode,
+      team_id: teamId,
+      placement,
+      eliminations,
+      victory: computed.victory,
+      survival_points: computed.survival_points,
+      elimination_points: computed.elimination_points,
+      total_points: computed.total_points
+    }], { onConflict: "lobby_id,team_id" });
+
+  if (error) return showToast(error.message, "error");
+
+  showToast("BR score saved.", "success");
+  await loadBattleRoyaleScoring();
+}
+
+async function renderBrStandings() {
+  const { data, error } = await window.sb
+    .from("br_match_scores")
+    .select("team_id,total_points,elimination_points,victory,placement,br_lobbies(round_no)")
+    .eq("tournament_id", currentTournament.id)
+    .eq("registration_mode", currentMode);
+
+  if (error) throw error;
+
+  const totals = {};
+
+  (data || []).forEach(row => {
+    totals[row.team_id] ||= {
+      team_id: row.team_id,
+      points: 0,
+      elims: 0,
+      victories: 0,
+      lastPlacement: 999,
+      lastRound: 0
+    };
+
+    totals[row.team_id].points += Number(row.total_points || 0);
+    totals[row.team_id].elims += Number(row.elimination_points || 0);
+    totals[row.team_id].victories += row.victory ? 1 : 0;
+
+    const round = Number(row.br_lobbies?.round_no || 0);
+    if (round >= totals[row.team_id].lastRound) {
+      totals[row.team_id].lastRound = round;
+      totals[row.team_id].lastPlacement = Number(row.placement || 999);
+    }
+  });
+
+  const rows = Object.values(totals).sort((a, b) =>
+    b.points - a.points
+    || b.victories - a.victories
+    || b.elims - a.elims
+    || a.lastPlacement - b.lastPlacement
+  );
+
+  qs("#brStandingsWrap").innerHTML = `
+    <div class="section-heading"><div><div class="eyebrow">Live BR Ranking</div><h2>Computed Standings</h2></div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Entry</th><th>Total</th><th>Victory</th><th>Elim Pts</th><th>Last Placement</th></tr></thead>
+      <tbody>
+        ${rows.map((row, index) => `
+          <tr><td>${index + 1}</td><td>${escapeHtml(teamName(row.team_id))}</td><td>${row.points}</td><td>${row.victories}</td><td>${row.elims}</td><td>${row.lastPlacement}</td></tr>
+        `).join("")}
+      </tbody>
+    </table></div>
+  `;
+}
+
+async function init() {
+  qs("#loginBtn").addEventListener("click", login);
+  qs("#loadScoringBtn").addEventListener("click", () => loadScoring().catch(err => {
+    console.error(err);
+    showToast(err.message || "Failed to load scoring.", "error");
+  }));
+  qs("#refreshBrScoresBtn")?.addEventListener("click", () => loadBattleRoyaleScoring().catch(err => {
+    console.error(err);
+    showToast(err.message || "Failed to refresh BR scores.", "error");
+  }));
+
+  await refreshAuth();
+  window.sb.auth.onAuthStateChange(() => refreshAuth());
+}
+
+init().catch(err => {
+  console.error(err);
+  showToast(err.message || "Failed to initialize Scoring Hub.", "error");
+});
+</script>
+<script src="assets/js/premium-copy.js"></script>
+</body>
+</html>

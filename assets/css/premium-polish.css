@@ -4716,3 +4716,66 @@ body.registration-delete-open {
     padding-right: 12px;
   }
 }
+
+
+/* ============================================================
+   Multiple / Battle Royale Bracket + Scoring Hub
+   ============================================================ */
+.br-admin-card,
+.scoring-rule-card {
+  border-color: rgba(96,204,255,.16) !important;
+}
+
+.br-round-preview,
+.br-assignment-list {
+  margin-top: 16px;
+}
+
+.br-round-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.br-round-chip,
+.scoring-rule-card {
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+  color: rgba(230,239,255,.78);
+  font-weight: 850;
+}
+
+.scoring-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 14px;
+}
+
+.scoring-rule-card h3 {
+  margin: 0 0 8px;
+  color: rgba(247,251,255,.95);
+}
+
+.scoring-rule-card p {
+  margin: 0;
+  color: rgba(230,239,255,.72);
+  line-height: 1.5;
+}
+
+.br-mode-seed-panel {
+  border-color: rgba(96,204,255,.18) !important;
+}
+
+.br-assignment-list select,
+#brScoreTable input {
+  width: 100%;
+  min-width: 88px;
+}
+
+@media (max-width: 900px) {
+  .scoring-rules-grid {
+    grid-template-columns: 1fr;
+  }
+}

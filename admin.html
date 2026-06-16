@@ -146,6 +146,7 @@
               <option value="single_elimination">Single Elimination</option>
               <option value="double_elimination">Double Elimination</option>
               <option value="swiss">Swiss</option>
+              <option value="multiple">Multiple</option>
             </select>
           </div>
           <div class="field">
@@ -184,7 +185,7 @@
             </div>
             <div class="field">
               <label for="newStageOrder">Order</label>
-              <input id="newStageOrder" type="number" min="1" placeholder="5"/>
+              <input id="newStageOrder" type="number" min="1" value="1" placeholder="1"/>
             </div>
           </div>
           <div class="actions">
@@ -203,6 +204,7 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/tournament-rules.js"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -446,26 +448,49 @@ async function saveTournamentDetails(event) {
 
 async function ensureDefaultStages() {
   if (!currentTournament) return;
-  try {
-    await window.sb.rpc("ensure_default_tournament_stages", { p_tournament_id: currentTournament.id });
-  } catch (err) {
-    console.warn("Default stage RPC skipped:", err);
-  }
+
+  const defaultStages = [
+    { stage_name: "Qualifiers", stage_order: 1 },
+    { stage_name: "Group Stage", stage_order: 2 },
+    { stage_name: "Playoffs", stage_order: 3 },
+    { stage_name: "Grand Finals", stage_order: 4 }
+  ];
+
+  const existingNames = new Set(adminStages.map(stage => String(stage.stage_name || "").toLowerCase()));
+
+  const rows = defaultStages
+    .filter(stage => !existingNames.has(stage.stage_name.toLowerCase()))
+    .map(stage => ({
+      tournament_id: currentTournament.id,
+      stage_name: stage.stage_name,
+      stage_order: stage.stage_order,
+      is_active: true
+    }));
+
+  if (!rows.length) return;
+
+  const { error } = await window.sb
+    .from("tournament_stages")
+    .insert(rows);
+
+  if (error) throw error;
 }
 
 async function loadStages() {
-  if (!currentTournament) return;
+  if (!currentTournament) {
+    adminStages = [];
+    renderStages();
+    return;
+  }
 
   const { data, error } = await window.sb
     .from("tournament_stages")
     .select("*")
     .eq("tournament_id", currentTournament.id)
+    .eq("is_active", true)
     .order("stage_order", { ascending: true });
 
-  if (error) {
-    qs("#stageList").innerHTML = `<div class="notice">Run the tournament dates/stages SQL to enable stage management.</div>`;
-    return;
-  }
+  if (error) throw error;
 
   adminStages = data || [];
   renderStages();
@@ -542,21 +567,20 @@ async function deleteStage(stageId) {
   const stage = adminStages.find(s => s.id === stageId);
   if (!stage) return showToast("Stage not found.", "error");
 
-  const confirmation = prompt(
-    `Delete stage "${stage.stage_name}"?\\n\\nType DELETE to confirm.`
-  );
-
+  const confirmation = prompt(`Delete stage "${stage.stage_name}"?\n\nType DELETE to confirm.`);
   if (confirmation !== "DELETE") return;
 
   const { error } = await window.sb
     .from("tournament_stages")
-    .delete()
+    .update({ is_active: false })
     .eq("id", stageId);
 
   if (error) return showToast(error.message || "Failed to delete stage.", "error");
 
-  showToast("Stage deleted.", "success");
-  await loadStages();
+  adminStages = adminStages.filter(s => s.id !== stageId);
+  renderStages();
+
+  showToast("Stage deleted from the active stage list.", "success");
 }
 
 async function saveStage(stageId) {
@@ -603,7 +627,7 @@ async function addCustomStage() {
   if (!currentTournament) return showToast("Select a tournament first.", "error");
 
   const stageName = normalizeText(qs("#newStageName").value);
-  const stageOrder = Number(qs("#newStageOrder").value || (adminStages.length + 1));
+  const stageOrder = Number(qs("#newStageOrder").value || 1);
 
   if (!stageName) return showToast("Stage name is required.", "error");
 
@@ -619,7 +643,7 @@ async function addCustomStage() {
   if (error) return showToast(error.message, "error");
 
   qs("#newStageName").value = "";
-  qs("#newStageOrder").value = "";
+  qs("#newStageOrder").value = "1";
 
   showToast("Stage added.", "success");
   await loadStages();

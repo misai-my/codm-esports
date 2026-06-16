@@ -24,6 +24,7 @@
     ["admin.html", "Admin Hub"],
     ["admin_teams.html", "Registration Admin"],
     ["admin_bracket.html", "Bracket Admin"],
+    ["admin_scoring.html", "Scoring Hub"],
     ["admin_veto.html", "Map Veto Admin"],
     ["admin_tickets.html", "Ticket Admin"]
   ];

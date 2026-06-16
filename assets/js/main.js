@@ -194,7 +194,12 @@ async function loadDefaultTournament() {
 }
 function statusBadge(status) { return `<span class="badge badge-${escapeHtml(status)}">${escapeHtml(status)}</span>`; }
 function bracketTypeLabel(type) {
-  return ({ single_elimination:"Single Elimination", double_elimination:"Double Elimination", swiss:"Swiss" })[type] || type || "Single Elimination";
+  return ({
+    single_elimination: "Single Elimination",
+    double_elimination: "Double Elimination",
+    swiss: "Swiss",
+    multiple: "Multiple"
+  })[type] || type || "Single Elimination";
 }
 function teamLogoHtml(team, size = "md") {
   const tag = normalizeText(team?.team_tag || team?.tag || "?").slice(0, 3).toUpperCase();
