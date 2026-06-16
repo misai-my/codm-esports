@@ -212,7 +212,7 @@ let adminStages = [];
 
 function safeDiscordInviteUrlForTournament(tournament = null) {
   if (typeof window.discordInviteUrlForTournament === "function") {
-    return window.safeDiscordInviteUrlForTournament(tournament);
+    return window.discordInviteUrlForTournament(tournament);
   }
 
   return normalizeText(tournament?.discord_invite_url)
@@ -288,28 +288,29 @@ async function loadAdminTournaments() {
   if (error) throw error;
 
   adminTournaments = data || [];
+
   const select = qs("#adminTournamentSelect");
   const selectedSlug = adminTournamentSelectedSlug();
+
+  if (!select) return;
 
   if (!adminTournaments.length) {
     select.innerHTML = `<option value="">No tournaments found</option>`;
     qs("#selectedTournamentCard").innerHTML = `<div class="notice">No tournaments available yet.</div>`;
+    qs("#tournamentAdminTools")?.classList.add("hidden");
     return;
   }
 
+  const selected = adminTournaments.find(t => t.slug === selectedSlug)
+    || adminTournaments[0];
+
   select.innerHTML = adminTournaments
-    .map(t => `<option value="${escapeHtml(t.slug)}" ${t.slug === selectedSlug ? "selected" : ""}>${escapeHtml(t.title)} · ${escapeHtml(t.status || "draft")}</option>`)
+    .map(t => `<option value="${escapeHtml(t.slug)}" ${t.slug === selected.slug ? "selected" : ""}>${escapeHtml(t.title)} · ${escapeHtml(t.status || "draft")}</option>`)
     .join("");
 
-  const selected = adminTournaments.find(t => t.slug === select.value) || adminTournaments[0];
   select.value = selected.slug;
-  currentTournament = selected;
-  renderSelectedTournament(selected);
-  fillTournamentDetails(selected);
-  await loadStages();
-  if (qs("#adminTournamentSelect")?.value) {
-    await loadTournamentFromSelection({ save: false });
-  }
+
+  await loadTournamentFromSelection({ save: false, silent: true });
 }
 
 function renderSelectedTournament(tournament) {
@@ -361,7 +362,32 @@ function fillTournamentDetails(tournament) {
 }
 
 
-async function loadTournamentFromSelection({ save = false } = {}) {
+async function loadTournamentFromSelection({ save = false, silent = false } = {}) {
+  const select = qs("#adminTournamentSelect");
+  const slug = select?.value;
+  const tournament = adminTournaments.find(t => t.slug === slug)
+    || adminTournaments[0]
+    || null;
+
+  if (!tournament) {
+    if (!silent) showToast("Select a tournament first.", "error");
+    return null;
+  }
+
+  if (save) setAdminTournamentSlug(tournament.slug);
+
+  currentTournament = tournament;
+  if (select) select.value = tournament.slug;
+
+  renderSelectedTournament(currentTournament);
+  fillTournamentDetails(currentTournament);
+
+  qs("#tournamentAdminTools")?.classList.remove("hidden");
+
+  await loadStages();
+
+  return currentTournament;
+} = {}) {
   const slug = qs("#adminTournamentSelect").value;
   const tournament = adminTournaments.find(t => t.slug === slug);
 
@@ -382,11 +408,11 @@ async function loadTournamentFromSelection({ save = false } = {}) {
 
 
 async function saveTournamentSelection() {
-  await loadTournamentFromSelection({ save: true });
+  const tournament = await loadTournamentFromSelection({ save: true });
 
-  if (!currentTournament) return;
+  if (!tournament) return;
 
-  showToast(`Admin workspace set to ${currentTournament.title}.`, "success");
+  showToast(`Admin workspace set to ${tournament.title}.`, "success");
 }
 
 async function saveTournamentDetails(event) {
@@ -663,6 +689,12 @@ async function init() {
 
   qs("#loginBtn").addEventListener("click", login);
   qs("#saveTournamentBtn").addEventListener("click", saveTournamentSelection);
+  qs("#adminTournamentSelect")?.addEventListener("change", () => {
+    loadTournamentFromSelection({ save: false }).catch(err => {
+      console.error(err);
+      showToast(err.message || "Failed to load selected tournament.", "error");
+    });
+  });
   qs("#tournamentDetailsForm").addEventListener("submit", saveTournamentDetails);
   qs("#addStageBtn").addEventListener("click", addCustomStage);
   qs("#defaultStagesBtn").addEventListener("click", createDefaultsAndReload);

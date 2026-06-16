@@ -1082,7 +1082,12 @@ async function assignTeamStage(teamId) {
     await loadRegistrations();
   } catch (err) {
     console.error(err);
-    showToast(err.message || "Failed to assign stage.", "error");
+    const message = String(err.message || "Failed to assign stage.");
+    if (message.includes("registration_change_logs_change_type_check")) {
+      showToast("Stage assignment needs the updated stage change-log SQL. Run supabase_stage_change_log_constraint_fix.sql.", "error");
+    } else {
+      showToast(message, "error");
+    }
   }
 }
 
@@ -1104,7 +1109,12 @@ async function promoteTeamStage(teamId) {
     await loadRegistrations();
   } catch (err) {
     console.error(err);
-    showToast(err.message || "Failed to promote team.", "error");
+    const message = String(err.message || "Failed to promote team.");
+    if (message.includes("registration_change_logs_change_type_check")) {
+      showToast("Stage promotion needs the updated stage change-log SQL. Run supabase_stage_change_log_constraint_fix.sql.", "error");
+    } else {
+      showToast(message, "error");
+    }
   }
 }
 
