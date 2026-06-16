@@ -18,6 +18,7 @@
       <a class="nav-link" href="index.html">Home</a>
       <a class="nav-link" href="index.html#tournaments">Tournament</a>
       <a class="nav-link" href="rules.html">Rulebook</a>
+      <a id="loginNavFallback" class="nav-link" href="login.html">Login</a>
       <button id="signOutBtn" class="nav-button hidden" onclick="signOut()">Sign Out</button>
     </nav>
   </div>
@@ -26,128 +27,78 @@
 <main>
   <section class="page-hero" data-hero-bg>
     <div class="container">
-      <div class="eyebrow">Official Rulebook</div>
-      <h1 class="h1"><span class="gradient-text">Rules first.</span><br/>Compete clean.</h1>
-      <p class="lead">Public rulebook for eligibility, match format, map pool, veto procedure, lobby settings, match reporting, and competitive conduct.</p>
+      <div class="eyebrow">Official Rulebook Viewer</div>
+      <h1 class="h1"><span class="gradient-text">CG 2026 S2 Rulebook.</span><br/>Open, review, and compete clean.</h1>
+      <p class="lead">The official rulebook is now embedded from Google Docs. Players can read it inside the site or open the Google file to use the document outline.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="#rulebook">Read Rulebook</a>
-        <a class="btn" href="support.html">FAQ & Support</a>
+        <a class="btn btn-primary" href="#rulebook-viewer">Open Viewer</a>
+        <a class="btn" id="openRulebookDocHero" href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk" target="_blank" rel="noopener">Open File Outline</a>
+        <a class="btn btn-ghost" id="rulebookRegistrationLinkHero" href="https://forms.gle/HQjA95BXGNANQSz8A" target="_blank" rel="noopener">Open Registration Form</a>
       </div>
     </div>
   </section>
 
-  <section class="section" id="rulebook">
+  <section class="section" id="rulebook-viewer">
     <div class="container">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Competition Rules</div>
-          <h2>Rulebook Index</h2>
-          <p>This public rulebook is the reference for players and captains. Admin announcements and official rulings may update or override sections during live operations.</p>
-        </div>
-      </div>
+      <div class="rulebook-viewer-shell">
+        <aside class="card rulebook-outline-card">
+          <div class="eyebrow">File Outline</div>
+          <h2>Rulebook Tools</h2>
+          <p class="small">Use the embedded viewer for quick reading. Use the Google Docs file button when you need the native clickable document outline.</p>
 
-      <div class="rules-layout">
-        <aside class="card rules-toc">
-          <div class="eyebrow">Contents</div>
-          <a href="#overview">Overview</a>
-          <a href="#eligibility">Eligibility</a>
-          <a href="#formats">Match Formats</a>
-          <a href="#map-pool">Map Pool</a>
-          <a href="#veto-rules">Map Veto</a>
-          <a href="#lobby-settings">Lobby Settings</a>
-          <a href="#match-reporting">Reporting</a>
-          <a href="#conduct">Conduct</a>
+          <div class="rulebook-outline-actions">
+            <button class="rulebook-outline-link active" id="cleanViewerBtn" type="button">
+              Clean Embedded Viewer
+            </button>
+            <button class="rulebook-outline-link" id="docsLayoutBtn" type="button">
+              Google Docs Layout
+            </button>
+            <a class="rulebook-outline-link" id="openRulebookDoc" href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk" target="_blank" rel="noopener">
+              Open File Outline in Google Docs
+            </a>
+            <a class="rulebook-outline-link" id="openRulebookPopout" href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing" target="_blank" rel="noopener">
+              Open Viewer in New Tab
+            </a>
+            <a class="rulebook-outline-link" id="rulebookRegistrationLink" href="https://forms.gle/HQjA95BXGNANQSz8A" target="_blank" rel="noopener">
+              Registration Form
+            </a>
+            <a class="rulebook-outline-link" href="support.html">
+              Support / Questions
+            </a>
+          </div>
+
+          <div class="rulebook-viewer-note">
+            <strong>Note:</strong> If Google Docs blocks the embedded outline inside the iframe, click <b>Open File Outline in Google Docs</b>. The full Google Docs outline remains clickable there.
+          </div>
         </aside>
 
-        <div class="grid">
-          <article class="card rules-section" id="overview">
-            <div class="eyebrow">General</div>
-            <h3>Rule Acceptance</h3>
-            <p>By registering, checking in, joining a match lobby, or participating in an official series, teams and players confirm that they understand and agree to the tournament rules, admin rulings, match procedures, and conduct expectations.</p>
-            <ul>
-              <li>Admins may issue final rulings for cases not clearly covered by the rulebook.</li>
-              <li>Rule updates may be announced through the tournament platform or official Discord.</li>
-              <li>Teams are responsible for reading updates before their scheduled matches.</li>
-            </ul>
-          </article>
-
-          <article class="card rules-section" id="eligibility">
-            <div class="eyebrow">Registration</div>
-            <h3>Team & Player Eligibility</h3>
-            <ul>
-              <li>Each team must submit an official roster with five main players and allowed substitutes.</li>
-              <li>Players may not register under multiple teams in the same tournament.</li>
-              <li>Captain contact details must be accurate for match coordination and admin rulings.</li>
-              <li>Admins may request verification for player identity, Discord account, or CODM UID.</li>
-            </ul>
-          </article>
-
-          <article class="card rules-section" id="formats">
-            <div class="eyebrow">Series Flow</div>
-            <h3>Match Formats</h3>
-            <div class="rules-format-grid">
-              <div class="card card-flat"><strong>BO3</strong><span>Hardpoint → Search and Destroy → Control</span></div>
-              <div class="card card-flat"><strong>BO5</strong><span>Hardpoint → Search and Destroy → Control → Hardpoint → Search and Destroy</span></div>
-              <div class="card card-flat"><strong>GF BO7</strong><span>Grand Finals may include a one-map advantage for the upper-bracket team.</span></div>
+        <section class="card rulebook-frame-card">
+          <div class="section-heading rulebook-frame-heading">
+            <div>
+              <div class="eyebrow">Embedded Document</div>
+              <h2 id="rulebookViewerTitle">Clean Embedded Viewer</h2>
+              <p id="rulebookViewerMeta">Loaded from the official Google Docs rulebook.</p>
             </div>
-          </article>
-
-          <article class="card rules-section" id="map-pool">
-            <div class="eyebrow">Competitive Maps</div>
-            <h3>Official Map Pool</h3>
-            <div class="rules-map-grid">
-              <div class="card card-flat"><h4>Hardpoint</h4><ul><li>Summit</li><li>Apocalypse</li><li>Hacienda</li><li>Slums</li><li>Combine</li></ul></div>
-              <div class="card card-flat"><h4>Search and Destroy</h4><ul><li>Tunisia</li><li>Firing Range</li><li>Kurohana Metropolis</li><li>Standoff</li><li>Coastal</li></ul></div>
-              <div class="card card-flat"><h4>Control</h4><ul><li>Raid</li><li>Takeoff</li><li>Crossfire</li></ul></div>
+            <div class="actions">
+              <a class="btn btn-ghost" id="rulebookOpenActive" href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing" target="_blank" rel="noopener">Open Active View</a>
             </div>
-          </article>
+          </div>
 
-          <article class="card rules-section" id="veto-rules">
-            <div class="eyebrow">Map Veto</div>
-            <h3>Veto Procedure</h3>
-            <ul>
-              <li>Teams must join the assigned Discord match channel when called by admin.</li>
-              <li>Captains must confirm attendance in the veto room.</li>
-              <li>Admin selects which captain calls heads or tails for the coin toss.</li>
-              <li>The coin toss winner chooses Team 1 or Team 2. Team 1 starts veto selection.</li>
-              <li>Each map ban, map pick, or side selection has a visible countdown timer.</li>
-              <li>If a team becomes unresponsive, admin may randomize the current action.</li>
-              <li>First call is final once locked in the veto room.</li>
-            </ul>
-          </article>
+          <div class="rulebook-iframe-wrap">
+            <iframe
+              id="rulebookFrame"
+              title="Official CODM Rulebook"
+              src="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing"
+              loading="lazy"
+              allowfullscreen
+            ></iframe>
+          </div>
 
-          <article class="card rules-section" id="lobby-settings">
-            <div class="eyebrow">Game Setup</div>
-            <h3>Lobby & Mode Settings</h3>
-            <div class="rules-format-grid">
-              <div class="card card-flat"><strong>Hardpoint</strong><span>Score limit 250 · Time limit 600 seconds.</span></div>
-              <div class="card card-flat"><strong>Search and Destroy</strong><span>Round time 120 seconds. Round win limit and overtime rules follow tournament admin settings.</span></div>
-              <div class="card card-flat"><strong>Control</strong><span>Round score limit 3 · Round time 90 seconds.</span></div>
-            </div>
-          </article>
-
-          <article class="card rules-section" id="match-reporting">
-            <div class="eyebrow">Results</div>
-            <h3>Match Reporting & Disputes</h3>
-            <ul>
-              <li>Captains must submit score reports through the My Matches page when required.</li>
-              <li>Admins review reports before official scores are locked.</li>
-              <li>Disputes must include clear evidence such as screenshots, VODs, room results, or admin logs.</li>
-              <li>Late, incomplete, or abusive disputes may be rejected.</li>
-            </ul>
-          </article>
-
-          <article class="card rules-section" id="conduct">
-            <div class="eyebrow">Integrity</div>
-            <h3>Conduct & Penalties</h3>
-            <ul>
-              <li>Teams must maintain professional conduct toward opponents, admins, and broadcast staff.</li>
-              <li>Cheating, account sharing, exploit abuse, ghosting, or intentional disconnection may lead to penalties.</li>
-              <li>Penalties may include warnings, map loss, match loss, roster disqualification, or tournament removal.</li>
-              <li>Admin decisions are final for live tournament operations.</li>
-            </ul>
-          </article>
-        </div>
+          <div class="rulebook-fallback">
+            If the document does not load, open the file directly:
+            <a href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk" target="_blank" rel="noopener">Google Docs Rulebook</a>
+          </div>
+        </section>
       </div>
     </div>
   </section>
@@ -159,6 +110,83 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/nav-visibility.js"></script>
+<script>
+const fallbackRulebookDocUrl = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
+const fallbackRulebookPreviewUrl = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing";
+const fallbackRulebookDocsLayoutUrl = "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
+const fallbackRegistrationFormUrl = "https://forms.gle/HQjA95BXGNANQSz8A";
+
+function rulebookConfig() {
+  return window.TOURNAMENT_OS_CONFIG || {};
+}
+
+function setRulebookButtonState(activeButtonId) {
+  ["cleanViewerBtn", "docsLayoutBtn"].forEach(id => {
+    const button = qs("#" + id);
+    if (button) button.classList.toggle("active", id === activeButtonId);
+  });
+}
+
+function setRulebookFrame(mode) {
+  const cfg = rulebookConfig();
+  const frame = qs("#rulebookFrame");
+  const title = qs("#rulebookViewerTitle");
+  const meta = qs("#rulebookViewerMeta");
+  const openActive = qs("#rulebookOpenActive");
+
+  const previewUrl = cfg.RULEBOOK_PREVIEW_URL || fallbackRulebookPreviewUrl;
+  const docsUrl = cfg.RULEBOOK_DOCS_OUTLINE_URL || cfg.RULEBOOK_DOC_URL || fallbackRulebookDocsLayoutUrl;
+
+  if (!frame || !title || !meta || !openActive) return;
+
+  if (mode === "docs") {
+    frame.src = docsUrl;
+    title.textContent = "Google Docs Layout";
+    meta.textContent = "Use this view for the native Google Docs layout. If the outline is blocked in the iframe, open it in a new tab.";
+    openActive.href = docsUrl;
+    setRulebookButtonState("docsLayoutBtn");
+    return;
+  }
+
+  frame.src = previewUrl;
+  title.textContent = "Clean Embedded Viewer";
+  meta.textContent = "Loaded from the official Google Docs rulebook.";
+  openActive.href = previewUrl;
+  setRulebookButtonState("cleanViewerBtn");
+}
+
+function applyRulebookLinks() {
+  const cfg = rulebookConfig();
+  const docUrl = cfg.RULEBOOK_DOC_URL || fallbackRulebookDocUrl;
+  const previewUrl = cfg.RULEBOOK_PREVIEW_URL || fallbackRulebookPreviewUrl;
+  const registrationUrl = cfg.REGISTRATION_FORM_URL || fallbackRegistrationFormUrl;
+
+  const links = {
+    "#openRulebookDocHero": docUrl,
+    "#openRulebookDoc": docUrl,
+    "#openRulebookPopout": previewUrl,
+    "#rulebookRegistrationLinkHero": registrationUrl,
+    "#rulebookRegistrationLink": registrationUrl
+  };
+
+  Object.entries(links).forEach(([selector, url]) => {
+    const link = qs(selector);
+    if (!link) return;
+    link.href = url;
+  });
+}
+
+function initRulebookViewer() {
+  applyRulebookLinks();
+
+  qs("#cleanViewerBtn")?.addEventListener("click", () => setRulebookFrame("clean"));
+  qs("#docsLayoutBtn")?.addEventListener("click", () => setRulebookFrame("docs"));
+
+  setRulebookFrame("clean");
+}
+
+initRulebookViewer();
+</script>
 <script src="assets/js/premium-copy.js"></script>
 </body>
 </html>
