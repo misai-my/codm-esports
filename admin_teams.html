@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-approvals-responsive"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-approvals-responsive"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-table-actions-fit"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-table-actions-fit"/>
 </head>
 <body>
 <header class="nav">
@@ -164,9 +164,9 @@
         <div id="teamChangeRequestsWrap" class="team-change-request-grid"></div>
       </section>
 
-      <div class="card">
-        <div class="table-wrap">
-          <table>
+      <div class="card registration-table-card">
+        <div class="table-wrap registration-table-wrap">
+          <table id="registrationsTable" class="registrations-table">
             <thead>
               <tr>
                 <th>Status</th>
@@ -299,8 +299,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-approvals-responsive"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-approvals-responsive"></script>
+<script src="assets/js/main.js?v=20260617-admin-table-actions-fit"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-admin-table-actions-fit"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;

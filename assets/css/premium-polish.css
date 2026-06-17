@@ -6340,3 +6340,165 @@ body.registration-delete-open {
     justify-self: start;
   }
 }
+
+
+/* ============================================================
+   Registration Admin Table Actions Fit Fix
+   ============================================================ */
+.registration-table-card {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+.registration-table-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+
+.registrations-table {
+  width: 100% !important;
+  min-width: 1180px !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+.registrations-table th,
+.registrations-table td {
+  box-sizing: border-box !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+.registrations-table th:nth-child(1),
+.registrations-table td:nth-child(1) {
+  width: 120px !important;
+}
+
+.registrations-table th:nth-child(2),
+.registrations-table td:nth-child(2) {
+  width: 175px !important;
+}
+
+.registrations-table th:nth-child(3),
+.registrations-table td:nth-child(3) {
+  width: 105px !important;
+}
+
+.registrations-table th:nth-child(4),
+.registrations-table td:nth-child(4) {
+  width: 215px !important;
+}
+
+.registrations-table th:nth-child(5),
+.registrations-table td:nth-child(5) {
+  width: 270px !important;
+}
+
+.registrations-table th:nth-child(6),
+.registrations-table td:nth-child(6) {
+  width: 210px !important;
+}
+
+.registrations-table th:nth-child(7),
+.registrations-table td:nth-child(7) {
+  width: 185px !important;
+  min-width: 185px !important;
+  padding-right: 16px !important;
+}
+
+.registrations-table .table-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.registrations-table .table-actions .btn {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 40px !important;
+  padding: 9px 10px !important;
+  border-radius: 13px !important;
+  white-space: normal !important;
+  text-align: center !important;
+  line-height: 1.15 !important;
+  font-size: 12px !important;
+}
+
+.registrations-table .table-actions .small {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.35 !important;
+}
+
+.registrations-table .players-list {
+  margin-top: 0 !important;
+  padding-left: 18px !important;
+}
+
+.registrations-table .players-list li {
+  overflow-wrap: anywhere !important;
+}
+
+.registrations-table select {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.registrations-table .stage-control,
+.registrations-table .stage-actions {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Desktop: keep the table inside the card and let columns breathe. */
+@media (min-width: 1280px) {
+  .registrations-table {
+    min-width: 100% !important;
+  }
+}
+
+/* Tablet/mobile: horizontal scroll instead of clipping the action column. */
+@media (max-width: 1279px) {
+  .registration-table-wrap::after {
+    content: "Swipe sideways to view all columns";
+    display: block;
+    padding: 8px 4px 0;
+    color: rgba(230,239,255,.46);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .03em;
+  }
+}
+
+/* Smaller phones: use a wider virtual table so actions are still complete. */
+@media (max-width: 720px) {
+  .registrations-table {
+    min-width: 1080px !important;
+  }
+
+  .registrations-table th,
+  .registrations-table td {
+    padding: 12px !important;
+  }
+
+  .registrations-table th:nth-child(7),
+  .registrations-table td:nth-child(7) {
+    width: 165px !important;
+    min-width: 165px !important;
+  }
+
+  .registrations-table .table-actions .btn {
+    min-height: 38px !important;
+    padding: 8px 9px !important;
+    font-size: 11px !important;
+  }
+}
