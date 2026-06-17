@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-announcement-new-priority"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-announcement-new-priority"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-captain-preview"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-captain-preview"/>
 </head>
 <body class="captain-compact-page">
 <header class="nav">
@@ -55,6 +55,7 @@
 
   <section class="section captain-compact-section hidden" id="captainPortal">
     <div class="container">
+      <div id="adminPreviewBanner" class="admin-preview-banner hidden"></div>
       <div class="captain-topline">
         <div>
           <div class="eyebrow">Captain Portal</div>
@@ -236,12 +237,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-announcement-new-priority"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-announcement-new-priority"></script>
+<script src="assets/js/main.js?v=20260617-admin-captain-preview"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-admin-captain-preview"></script>
 <script>
 let currentUser = null;
+let currentProfile = null;
 let currentTournament = null;
 let approvedTeams = [];
+let adminPreviewTeamId = "";
+let isAdminCaptainPreview = false;
 let selectedMode = "";
 let modeMatches = [];
 let teamMap = {};
@@ -250,6 +254,60 @@ let announcements = [];
 let announcementIndex = 0;
 let editState = null;
 let deleteState = null;
+
+
+function adminPreviewTeamIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return normalizeText(params.get("admin_team_id") || params.get("preview_team_id"));
+}
+
+async function loadCurrentProfileSafe() {
+  if (!currentUser) return null;
+
+  try {
+    const { data, error } = await window.sb
+      .from("profiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data || null;
+  } catch (err) {
+    console.warn("Could not load profile for captain preview:", err);
+    return null;
+  }
+}
+
+function isAdminProfile(profile) {
+  return String(profile?.role || "").toLowerCase() === "admin";
+}
+
+function renderAdminPreviewBanner() {
+  const banner = qs("#adminPreviewBanner");
+  if (!banner) return;
+
+  if (!isAdminCaptainPreview) {
+    banner.classList.add("hidden");
+    banner.innerHTML = "";
+    return;
+  }
+
+  const team = approvedTeams[0];
+
+  banner.classList.remove("hidden");
+  banner.innerHTML = `
+    <div>
+      <strong>Admin Preview</strong>
+      <span>
+        Viewing captain portal as ${escapeHtml(team?.captain_name || team?.captain_email || "captain")}
+        ${team ? `· ${escapeHtml(team.team_name)} (${escapeHtml(team.team_tag)}) · ${escapeHtml(team.status || "status")}` : ""}
+      </span>
+    </div>
+    <a class="btn btn-ghost btn-small" href="admin_teams.html?tournament=${encodeURIComponent(currentTournament?.slug || "")}">Back to Registration Admin</a>
+  `;
+}
+
 
 function uniqById(items) {
   const map = new Map();
@@ -473,10 +531,14 @@ function renderAuthGate() {
   const status = qs("#captainAuthStatus");
   const actions = qs("#captainAuthActions");
 
+  renderAdminPreviewBanner();
+
   if (!currentUser) {
     gate.classList.remove("hidden");
     portal.classList.add("hidden");
-    status.textContent = "Login is required. Access is issued after your registration is approved.";
+    status.textContent = adminPreviewTeamId
+      ? "Admin preview requires an admin login."
+      : "Login is required. Access is issued after your registration is approved.";
     actions.innerHTML = `
       <a class="btn btn-primary" href="login.html">Login</a>
       <a class="btn btn-ghost" href="support.html">Need Help?</a>
@@ -484,12 +546,25 @@ function renderAuthGate() {
     return;
   }
 
+  if (adminPreviewTeamId && !isAdminCaptainPreview) {
+    gate.classList.remove("hidden");
+    portal.classList.add("hidden");
+    status.textContent = "Admin preview is only available to accounts with admin role.";
+    actions.innerHTML = `
+      <a class="btn btn-primary" href="admin.html">Admin Login</a>
+      <a class="btn btn-ghost" href="captain.html">Open My Captain Portal</a>
+    `;
+    return;
+  }
+
   if (!approvedTeams.length) {
     gate.classList.remove("hidden");
     portal.classList.add("hidden");
-    status.textContent = "No approved registration is linked to this account yet.";
+    status.textContent = adminPreviewTeamId
+      ? "No registration was found for this captain preview."
+      : "No approved registration is linked to this account yet.";
     actions.innerHTML = `
-      <a class="btn btn-primary" href="support.html">Contact Support</a>
+      <a class="btn btn-primary" href="${adminPreviewTeamId ? "admin_teams.html" : "support.html"}">${adminPreviewTeamId ? "Back to Registration Admin" : "Contact Support"}</a>
       <a class="btn btn-ghost" href="rules.html">Rulebook</a>
     `;
     return;
@@ -523,6 +598,16 @@ function renderModeTabs() {
 function renderSummary() {
   const teams = currentModeTeams();
 
+  if (isAdminCaptainPreview) {
+    const team = approvedTeams[0];
+    qs("#portalTitle").textContent = team ? `${team.team_name} Captain View` : "Captain Preview";
+    qs("#portalMeta").textContent = team
+      ? `${registrationModeLabel(team.registration_mode)} · Status: ${team.status || "N/A"} · ${currentTournament.title}`
+      : `${currentTournament.title} · Admin Preview`;
+    renderAdminPreviewBanner();
+    return;
+  }
+
   qs("#portalTitle").textContent = registrationModeLabel(selectedMode);
   qs("#portalMeta").textContent = `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"} · ${teams.length} approved entry${teams.length === 1 ? "" : "ies"}`;
 }
@@ -530,6 +615,19 @@ function renderSummary() {
 function renderCaptainTeamActions(team) {
   const pendingEdit = requestForTeam(team.id, "edit");
   const pendingDelete = requestForTeam(team.id, "delete");
+
+  if (isAdminCaptainPreview) {
+    return `
+      <div class="captain-management-box admin-preview-readonly compact-actions-box">
+        <strong>Preview Only</strong>
+        <p class="small">Admin preview shows this captain portal in read-only mode. Captain edit/delete actions are disabled here.</p>
+        <div class="actions">
+          <a class="btn btn-ghost btn-small" href="admin_teams.html?tournament=${encodeURIComponent(currentTournament?.slug || "")}">Back to Admin</a>
+          <a class="btn btn-ghost btn-small" href="rules.html?tournament=${encodeURIComponent(currentTournament?.slug || "")}">Rulebook</a>
+        </div>
+      </div>
+    `;
+  }
 
   if (currentTournament.registration_open) {
     const editUrl = googleFormEditUrl(team);
@@ -670,6 +768,48 @@ function renderMatches() {
   nextWrap.innerHTML = matchCard(next, true);
   listWrap.innerHTML = modeMatches.map(match => matchCard(match, false)).join("");
 }
+
+async function loadAdminPreviewTeam(teamId) {
+  const selectQuery = "id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,registration_source,google_form_edit_url,registration_edit_url,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order)";
+
+  const { data, error } = await window.sb
+    .from("teams")
+    .select(selectQuery)
+    .eq("id", teamId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data) {
+    approvedTeams = [];
+    captainRequests = [];
+    return;
+  }
+
+  approvedTeams = [data];
+
+  // If the previewed team belongs to another tournament, switch the page context.
+  if (data.tournament_id && data.tournament_id !== currentTournament.id) {
+    const tournamentQuery = await window.sb
+      .from("tournaments")
+      .select("*")
+      .eq("id", data.tournament_id)
+      .maybeSingle();
+
+    if (tournamentQuery.error) throw tournamentQuery.error;
+    if (tournamentQuery.data) {
+      currentTournament = tournamentQuery.data;
+      if (currentTournament.slug) setSelectedTournamentSlug(currentTournament.slug);
+    }
+  }
+
+  selectedMode = data.registration_mode || "";
+  if (selectedMode) setSelectedRegistrationMode(selectedMode);
+
+  await loadCaptainRequests();
+}
+
 
 async function loadApprovedRegistrations() {
   const selectQuery = "id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,google_form_edit_url,registration_edit_url,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order)";
@@ -967,11 +1107,16 @@ async function refreshCaptainPortal() {
   try {
     const session = await getSession();
     currentUser = session?.user || null;
+    adminPreviewTeamId = adminPreviewTeamIdFromUrl();
+    currentProfile = currentUser ? await loadCurrentProfileSafe() : null;
+    isAdminCaptainPreview = !!adminPreviewTeamId && isAdminProfile(currentProfile);
     currentTournament = await loadDefaultTournament();
 
     await loadAnnouncements();
 
-    if (currentUser) {
+    if (isAdminCaptainPreview) {
+      await loadAdminPreviewTeam(adminPreviewTeamId);
+    } else if (currentUser && !adminPreviewTeamId) {
       await loadApprovedRegistrations();
     } else {
       approvedTeams = [];
@@ -1003,6 +1148,6 @@ async function init() {
 
 init();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-force-short-tagline"></script>
+<script src="assets/js/premium-copy.js?v=20260617-admin-captain-preview"></script>
 </body>
 </html>

@@ -6233,3 +6233,64 @@ body.registration-delete-open {
     font-size: 11px !important;
   }
 }
+
+
+/* ============================================================
+   Admin Captain Preview
+   ============================================================ */
+.admin-preview-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(248,209,92,.28);
+  background:
+    radial-gradient(circle at 0 0, rgba(248,209,92,.16), transparent 12rem),
+    rgba(248,209,92,.055);
+}
+
+.admin-preview-banner > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-preview-banner strong {
+  color: #f8d15c;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.admin-preview-banner span {
+  color: rgba(230,239,255,.78);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-preview-readonly {
+  border-color: rgba(96,204,255,.22) !important;
+  background:
+    radial-gradient(circle at 0 0, rgba(96,204,255,.12), transparent 14rem),
+    rgba(96,204,255,.045) !important;
+}
+
+.registrations-table .table-actions a.btn {
+  text-decoration: none !important;
+}
+
+@media (max-width: 720px) {
+  .admin-preview-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-preview-banner .btn {
+    width: 100%;
+  }
+}
