@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rulebook · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-force-short-tagline"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-force-short-tagline"/>
 </head>
 <body>
 <header class="nav">
@@ -52,7 +52,7 @@
 
           <div class="rulebook-outline-actions">
             <a class="rulebook-outline-link" id="openRulebookDoc" href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk" target="_blank" rel="noopener">
-              Open Google Docs Outline
+              View Document
             </a>
             <a class="rulebook-outline-link" id="rulebookRegistrationLink" href="https://forms.gle/HQjA95BXGNANQSz8A" target="_blank" rel="noopener">
               Registration Form
@@ -69,12 +69,14 @@
               <div class="eyebrow">Tournament Rulebook Official</div>
               <h2 id="rulebookViewerTitle">Loading Tournament...</h2>
               <p id="rulebookViewerMeta">Loading rulebook viewer...</p>
+              <p class="rulebook-view-mode-note">Viewer is forced to tablet/desktop layout.</p>
             </div>
           </div>
 
-          <div class="rulebook-iframe-wrap">
+          <div class="rulebook-iframe-wrap rulebook-forced-desktop-wrap">
             <iframe
               id="rulebookFrame"
+              class="rulebook-force-desktop-frame"
               title="Official CODM Rulebook"
               src="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing"
               loading="lazy"
@@ -83,7 +85,16 @@
           </div>
 
           <div class="rulebook-fallback">
-            If the document does not load, open the Google Docs outline from the button on the left.
+            <p>If the document does not load, please click ‘View Document’ button</p>
+            <a
+              class="btn btn-ghost btn-small rulebook-fallback-btn"
+              id="rulebookFallbackDocButton"
+              href="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk"
+              target="_blank"
+              rel="noopener"
+            >
+              View Document
+            </a>
           </div>
         </section>
       </div>
@@ -95,8 +106,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/main.js?v=20260617-force-short-tagline"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-force-short-tagline"></script>
 <script>
 let rulebookTournaments = [];
 let selectedRulebookTournament = null;
@@ -132,6 +143,7 @@ function applyRulebookLinks(tournament) {
 
   qs("#rulebookFrame").src = previewUrl;
   qs("#openRulebookDoc").href = docUrl;
+  qs("#rulebookFallbackDocButton").href = docUrl;
   qs("#rulebookRegistrationLink").href = registrationUrl;
   qs("#rulebookRegistrationLinkHero").href = registrationUrl;
   qs("#rulebookViewerTitle").textContent = tournament?.title || "Tournament Rulebook";
@@ -201,6 +213,6 @@ async function initRulebookViewer() {
 
 initRulebookViewer();
 </script>
-<script src="assets/js/premium-copy.js"></script>
+<script src="assets/js/premium-copy.js?v=20260617-force-short-tagline"></script>
 </body>
 </html>
