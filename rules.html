@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rulebook · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-scaled-desktop"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-scaled-desktop"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-true-desktop"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-true-desktop"/>
 </head>
 <body>
 <header class="nav">
@@ -69,12 +69,19 @@
               <div class="eyebrow">Tournament Rulebook Official</div>
               <h2 id="rulebookViewerTitle">Loading Tournament...</h2>
               <p id="rulebookViewerMeta">Loading rulebook viewer...</p>
+              <p class="rulebook-view-mode-note">Desktop website mode is forced for cleaner rulebook alignment.</p>
+              <div class="rulebook-desktop-controls">
+                <span class="rulebook-desktop-badge" id="rulebookDesktopModeBadge">Desktop Mode</span>
+                <button class="btn btn-ghost btn-small" type="button" id="rulebookZoomOutBtn">−</button>
+                <button class="btn btn-ghost btn-small" type="button" id="rulebookZoomInBtn">+</button>
+                <button class="btn btn-ghost btn-small" type="button" id="rulebookFitBtn">Fit</button>
+              </div>
               <p class="rulebook-view-mode-note">Desktop/tablet preview is forced for cleaner rulebook alignment.</p>
             </div>
           </div>
 
           <div class="rulebook-iframe-wrap rulebook-forced-desktop-wrap" id="rulebookDesktopViewport">
-            <div class="rulebook-desktop-scale-stage" id="rulebookDesktopStage">
+            <div class="rulebook-desktop-scale-stage rulebook-desktop-browser" id="rulebookDesktopStage">
               <iframe
               id="rulebookFrame"
               class="rulebook-force-desktop-frame"
@@ -108,11 +115,48 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-rulebook-scaled-desktop"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-rulebook-scaled-desktop"></script>
+<script src="assets/js/main.js?v=20260617-rulebook-true-desktop"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-rulebook-true-desktop"></script>
 <script>
 let rulebookTournaments = [];
 let selectedRulebookTournament = null;
+
+
+
+let rulebookDesktopScale = null;
+let rulebookDocUrl = "";
+
+function rulebookDesktopUrlFromDocUrl(docUrl) {
+  const cleanUrl = normalizeText(docUrl);
+
+  const docIdMatch = cleanUrl.match(/\/document\/d\/([^/]+)/);
+  if (!docIdMatch) return cleanUrl;
+
+  const docId = docIdMatch[1];
+
+  // This is the closest available "desktop website" view for Google Docs inside an iframe.
+  // It avoids the narrow mobile-style table of contents used by the preview renderer on phones.
+  return `https://docs.google.com/document/d/${docId}/edit?usp=sharing&rm=minimal&chrome=false`;
+}
+
+function rulebookPreviewUrlFromDocUrlForced(docUrl) {
+  const desktopUrl = rulebookDesktopUrlFromDocUrl(docUrl);
+  return desktopUrl || rulebookPreviewUrlFromDocUrl(docUrl);
+}
+
+function clampRulebookScale(value) {
+  return Math.max(0.34, Math.min(1.05, Number(value) || 1));
+}
+
+function setRulebookManualScale(value) {
+  rulebookDesktopScale = clampRulebookScale(value);
+  updateRulebookDesktopScale();
+}
+
+function openRulebookInDesktopTab() {
+  const url = rulebookDocUrl || qs("#openRulebookDoc")?.href || "";
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+}
 
 
 function updateRulebookDesktopScale() {
@@ -122,10 +166,11 @@ function updateRulebookDesktopScale() {
 
   if (!viewport || !stage || !frame) return;
 
-  const desktopWidth = 1024;
-  const desktopHeight = 1320;
+  const desktopWidth = 1280;
+  const desktopHeight = 1500;
   const availableWidth = Math.max(280, viewport.clientWidth || desktopWidth);
-  const scale = Math.min(1, availableWidth / desktopWidth);
+  const fitScale = Math.min(1, availableWidth / desktopWidth);
+  const scale = clampRulebookScale(rulebookDesktopScale || fitScale);
 
   stage.style.setProperty("--rulebook-scale", String(scale));
   stage.style.width = `${desktopWidth}px`;
@@ -136,6 +181,9 @@ function updateRulebookDesktopScale() {
 
   viewport.style.height = `${Math.ceil(desktopHeight * scale)}px`;
   viewport.style.minHeight = `${Math.ceil(desktopHeight * scale)}px`;
+
+  const badge = qs("#rulebookDesktopModeBadge");
+  if (badge) badge.textContent = `Desktop Mode · ${Math.round(scale * 100)}%`;
 }
 
 
@@ -165,7 +213,8 @@ function fallbackRulebookTournament() {
 
 function applyRulebookLinks(tournament) {
   const docUrl = rulebookDocUrlForTournament(tournament) || "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
-  const previewUrl = rulebookPreviewUrlFromDocUrl(docUrl);
+  rulebookDocUrl = docUrl;
+  const previewUrl = rulebookPreviewUrlFromDocUrlForced(docUrl);
   const registrationUrl = normalizeText(tournament?.registration_form_url) || cfg.REGISTRATION_FORM_URL || "https://forms.gle/HQjA95BXGNANQSz8A";
 
   qs("#rulebookFrame").src = previewUrl;
@@ -241,6 +290,6 @@ async function initRulebookViewer() {
 
 initRulebookViewer();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-rulebook-scaled-desktop"></script>
+<script src="assets/js/premium-copy.js?v=20260617-rulebook-true-desktop"></script>
 </body>
 </html>
