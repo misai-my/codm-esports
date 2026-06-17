@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-captain-preview"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-captain-preview"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-google-form-edit-flow"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-google-form-edit-flow"/>
 </head>
 <body class="captain-compact-page">
 <header class="nav">
@@ -237,8 +237,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-admin-captain-preview"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-admin-captain-preview"></script>
+<script src="assets/js/main.js?v=20260617-google-form-edit-flow"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-google-form-edit-flow"></script>
 <script>
 let currentUser = null;
 let currentProfile = null;
@@ -562,7 +562,7 @@ function renderAuthGate() {
     portal.classList.add("hidden");
     status.textContent = adminPreviewTeamId
       ? "No registration was found for this captain preview."
-      : "No approved registration is linked to this account yet.";
+      : "No active registration is linked to this account yet.";
     actions.innerHTML = `
       <a class="btn btn-primary" href="${adminPreviewTeamId ? "admin_teams.html" : "support.html"}">${adminPreviewTeamId ? "Back to Registration Admin" : "Contact Support"}</a>
       <a class="btn btn-ghost" href="rules.html">Rulebook</a>
@@ -609,7 +609,7 @@ function renderSummary() {
   }
 
   qs("#portalTitle").textContent = registrationModeLabel(selectedMode);
-  qs("#portalMeta").textContent = `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"} · ${teams.length} approved entry${teams.length === 1 ? "" : "ies"}`;
+  qs("#portalMeta").textContent = `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"} · ${teams.length} linked registration${teams.length === 1 ? "" : "s"}`;
 }
 
 function renderCaptainTeamActions(team) {
@@ -659,6 +659,24 @@ function renderCaptainTeamActions(team) {
   `;
 }
 
+
+function captainGoogleFormPendingNotice(team) {
+  if (!team.google_form_pending_changes && !team.google_form_change_summary) return "";
+
+  const fields = Array.isArray(team.google_form_last_changed_fields)
+    ? team.google_form_last_changed_fields.join(", ")
+    : (team.google_form_change_summary || "");
+
+  return `
+    <div class="captain-pending-review-box">
+      <strong>Pending Admin Review</strong>
+      <p class="small">Your Google Form update was received. Changed fields: ${escapeHtml(fields || "registration details")}.</p>
+      ${team.admin_notes ? `<p class="small">${escapeHtml(team.admin_notes)}</p>` : ""}
+    </div>
+  `;
+}
+
+
 function renderApprovedEntries() {
   const teams = currentModeTeams();
   const wrap = qs("#approvedEntries");
@@ -684,11 +702,13 @@ function renderApprovedEntries() {
           ${teamLogoHtml(team, "md")}
           <div>
             ${registrationModeChip(team.registration_mode)}
+            ${statusBadge(team.status || "pending")}
             <h3>${escapeHtml(team.team_name)} <span class="small">(${escapeHtml(team.team_tag)})</span></h3>
             <div class="small">Captain: ${escapeHtml(team.captain_name || currentUser.email)}</div>
           </div>
         </div>
 
+        ${captainGoogleFormPendingNotice(team)}
         ${renderCaptainTeamActions(team)}
 
         <details class="captain-details">
@@ -812,13 +832,15 @@ async function loadAdminPreviewTeam(teamId) {
 
 
 async function loadApprovedRegistrations() {
-  const selectQuery = "id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,google_form_edit_url,registration_edit_url,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order)";
+  const selectQuery = "id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,google_form_pending_changes,google_form_last_changed_fields,google_form_change_summary,google_form_last_change_at,admin_notes,google_form_edit_url,registration_edit_url,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order)";
+
+  const allowedStatuses = ["approved", "pending", "waitlisted"];
 
   const byUser = await window.sb
     .from("teams")
     .select(selectQuery)
     .eq("tournament_id", currentTournament.id)
-    .eq("status", "approved")
+    .in("status", allowedStatuses)
     .is("deleted_at", null)
     .eq("captain_user_id", currentUser.id);
 
@@ -831,7 +853,7 @@ async function loadApprovedRegistrations() {
       .from("teams")
       .select(selectQuery)
       .eq("tournament_id", currentTournament.id)
-      .eq("status", "approved")
+      .in("status", allowedStatuses)
       .is("deleted_at", null)
       .ilike("captain_email", currentUser.email);
 
@@ -1148,6 +1170,6 @@ async function init() {
 
 init();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-admin-captain-preview"></script>
+<script src="assets/js/premium-copy.js?v=20260617-google-form-edit-flow"></script>
 </body>
 </html>

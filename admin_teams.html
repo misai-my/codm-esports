@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-captain-preview"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-captain-preview"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-google-form-edit-flow"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-google-form-edit-flow"/>
 </head>
 <body>
 <header class="nav">
@@ -155,7 +155,7 @@
       <section class="card section-tight" id="captainChangeRequestsSection">
         <div class="section-heading">
           <div>
-            <div class="eyebrow">Captain Requests</div>
+            <div class="eyebrow">Captain Requests Official</div>
             <h2>Edit / Delete Approvals</h2>
             <p>Review captain-submitted edit and deletion requests after registration closes.</p>
           </div>
@@ -299,8 +299,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-admin-captain-preview"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-admin-captain-preview"></script>
+<script src="assets/js/main.js?v=20260617-google-form-edit-flow"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-google-form-edit-flow"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -596,7 +596,7 @@ function renderStageControl() {
 async function loadRegistrations() {
   const { data, error } = await window.sb
     .from("teams")
-    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,registration_mode,game_mode,registration_source,login_invite_status,login_invite_sent_at,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
+    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,registration_mode,game_mode,registration_source,google_form_pending_changes,google_form_last_changed_fields,google_form_change_summary,google_form_last_change_at,google_form_row_number,login_invite_status,login_invite_sent_at,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
     .eq("tournament_id", currentTournament.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -619,19 +619,45 @@ function teamMatchesSearch(team, search) {
     team.registration_mode,
     team.game_mode,
     currentStageName(team),
+    team.google_form_change_summary,
+    ...(team.google_form_last_changed_fields || []),
     ...(team.team_players || []).flatMap(p => [p.ign, p.uid, p.player_id, p.role])
   ].join(" ").toLowerCase();
 
   return haystack.includes(search.toLowerCase());
 }
 
+
+function googleFormChangeNotice(team) {
+  if (!team.google_form_pending_changes && !team.google_form_change_summary) return "";
+
+  const fields = Array.isArray(team.google_form_last_changed_fields)
+    ? team.google_form_last_changed_fields.join(", ")
+    : (team.google_form_change_summary || "");
+
+  const changedAt = team.google_form_last_change_at
+    ? new Date(team.google_form_last_change_at).toLocaleString()
+    : "";
+
+  return `
+    <div class="google-form-change-alert">
+      <strong>Pending approval</strong>
+      <span>Changed: ${escapeHtml(fields || "Google Form response")}</span>
+      ${changedAt ? `<small>${escapeHtml(changedAt)}</small>` : ""}
+    </div>
+  `;
+}
+
+
 function renderAdminChangeLogs(team) {
+  const googleNotice = googleFormChangeNotice(team);
   const logs = [...(team.registration_change_logs || [])]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  if (!logs.length) return `<div class="small">No change history.</div>`;
+  if (!logs.length) return `${googleNotice}<div class="small">No change history.</div>`;
 
   return `
+    ${googleNotice}
     <details class="change-log-box">
       <summary>Change History (${logs.length})</summary>
       <div class="change-log-list">
@@ -730,13 +756,17 @@ function renderAdminTable() {
 
     return `
       <tr>
-        <td>${statusBadge(team.status)}</td>
+        <td>
+          ${statusBadge(team.status)}
+          ${team.google_form_pending_changes ? `<div class="status-review-note">Google Form changed</div>` : ""}
+        </td>
         <td>
           <div class="team-card">
             ${teamLogoHtml(team, "sm")}
             <div>
               <strong>${escapeHtml(team.team_name)}</strong>
               <div class="small">${escapeHtml(team.team_tag)}</div>
+              ${team.admin_notes ? `<div class="admin-notes-inline">${escapeHtml(team.admin_notes)}</div>` : ""}
             </div>
           </div>
         </td>
@@ -1600,6 +1630,6 @@ init().catch(err => {
 });
 </script>
 <script src="assets/js/admin-veto-nav.js"></script>
-<script src="assets/js/premium-copy.js?v=20260617-force-short-tagline"></script>
+<script src="assets/js/premium-copy.js?v=20260617-google-form-edit-flow"></script>
 </body>
 </html>

@@ -6294,3 +6294,143 @@ body.registration-delete-open {
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   Google Form Edit Flow + Responsive Captain Requests
+   ============================================================ */
+.status-review-note {
+  margin-top: 7px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255,209,102,.10);
+  color: rgba(255,223,139,.96);
+  font-size: 10px;
+  font-weight: 1000;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.google-form-change-alert,
+.captain-pending-review-box {
+  margin: 9px 0;
+  padding: 10px 11px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,209,102,.24);
+  background:
+    radial-gradient(circle at 0 0, rgba(255,209,102,.12), transparent 12rem),
+    rgba(255,209,102,.045);
+  overflow-wrap: anywhere;
+}
+
+.google-form-change-alert strong,
+.captain-pending-review-box strong {
+  display: block;
+  color: rgba(255,223,139,.98);
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.google-form-change-alert span,
+.google-form-change-alert small,
+.captain-pending-review-box p {
+  display: block;
+  margin-top: 4px;
+  color: rgba(230,239,255,.76);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.admin-notes-inline {
+  margin-top: 8px;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: rgba(255,209,102,.065);
+  color: rgba(255,223,139,.92);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#captainChangeRequestsSection {
+  overflow: hidden !important;
+}
+
+#teamChangeRequestsWrap.team-change-request-grid,
+#teamChangeRequestsWrap {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)) !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.team-change-request-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+.team-change-request-card .team-card {
+  grid-template-columns: 46px minmax(0, 1fr) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.team-change-request-card .team-card > div,
+.team-change-request-card h3,
+.team-change-request-card p,
+.request-change-summary,
+.request-change-summary p,
+.change-log-item,
+.change-log-item p {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.request-change-summary {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)) !important;
+  gap: 8px !important;
+  overflow: visible !important;
+}
+
+.team-change-request-card .actions {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.team-change-request-card .actions .btn {
+  width: 100% !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+}
+
+@media (max-width: 620px) {
+  #teamChangeRequestsWrap.team-change-request-grid,
+  #teamChangeRequestsWrap {
+    grid-template-columns: 1fr !important;
+  }
+
+  .team-change-request-card .team-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .team-change-request-card .actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .request-change-summary {
+    grid-template-columns: 1fr !important;
+  }
+}
