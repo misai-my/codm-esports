@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-table-actions-fit"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-table-actions-fit"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-captain-preview"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-captain-preview"/>
 </head>
 <body>
 <header class="nav">
@@ -299,8 +299,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-admin-table-actions-fit"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-admin-table-actions-fit"></script>
+<script src="assets/js/main.js?v=20260617-admin-captain-preview"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-admin-captain-preview"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -664,6 +664,16 @@ function stageSelectHtml(team) {
   `;
 }
 
+
+function captainPreviewUrl(teamId) {
+  const slug = currentTournament?.slug || getSelectedTournamentSlug?.() || cfg.DEFAULT_TOURNAMENT_SLUG || "";
+  const params = new URLSearchParams();
+  if (slug) params.set("tournament", slug);
+  params.set("admin_team_id", teamId);
+  return `captain.html?${params.toString()}`;
+}
+
+
 function renderAdminTable() {
   const status = qs("#statusFilter").value;
   const stageFilter = qs("#stageFilter").value;
@@ -747,6 +757,7 @@ function renderAdminTable() {
         <td>${stageSelectHtml(team)}</td>
         <td>
           <div class="table-actions">
+            <a class="btn btn-ghost" href="${captainPreviewUrl(team.id)}" target="_blank" rel="noopener">View Captain</a>
             <button class="btn btn-success" onclick="approveTeamAndSendLogin('${team.id}')">Approve + Login</button>
             <button class="btn btn-warning" onclick="setTeamStatus('${team.id}','waitlisted')">Waitlist</button>
             <button class="btn btn-danger" onclick="setTeamStatus('${team.id}','rejected')">Reject</button>
