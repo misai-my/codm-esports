@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-login-buttons"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-login-buttons"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-edge-error-detail"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-edge-error-detail"/>
 </head>
 <body>
 <header class="nav">
@@ -259,8 +259,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-admin-login-buttons"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-admin-login-buttons"></script>
+<script src="assets/js/main.js?v=20260617-edge-error-detail"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-edge-error-detail"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -1079,24 +1079,97 @@ async function setTeamStatus(teamId, status, options = {}) {
   }
 }
 
+function functionUrl(functionName) {
+  const baseUrl = cfg?.SUPABASE_URL || window.TOURNAMENT_OS_CONFIG?.SUPABASE_URL || "";
+  return `${baseUrl.replace(/\/$/, "")}/functions/v1/${functionName}`;
+}
+
 function edgeInviteErrorMessage(err) {
   const message = String(err?.message || err || "Failed to send login invite.");
 
   if (
     message.includes("FunctionsFetchError") ||
     message.includes("Failed to fetch") ||
+    message.includes("NetworkError")
+  ) {
+    return "Could not reach the send-approved-login Edge Function. Check that it is deployed and CORS is allowed.";
+  }
+
+  if (
     message.includes("not found") ||
     message.includes("404") ||
     message.includes("send-approved-login")
   ) {
-    return "Login invite function is not reachable. Deploy the Supabase Edge Function: supabase/functions/send-approved-login, then set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SITE_LOGIN_URL secrets.";
+    return "send-approved-login Edge Function was not found. Deploy supabase/functions/send-approved-login first.";
   }
 
   if (message.includes("Missing Supabase function secrets")) {
     return "The send-approved-login Edge Function is deployed, but its secrets are missing. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SITE_LOGIN_URL.";
   }
 
+  if (message.includes("Admin access required")) {
+    return "The Edge Function rejected this account. Confirm your profile role is admin in the profiles table.";
+  }
+
+  if (message.includes("Invalid admin session") || message.includes("Missing admin authorization")) {
+    return "Your admin login session was rejected by the Edge Function. Sign out, log in again, then retry.";
+  }
+
+  if (message.includes("Only approved registrations")) {
+    return "Only approved teams can receive captain login. Click Approve + Login or approve the team first.";
+  }
+
+  if (message.includes("Captain email is missing")) {
+    return "Captain email is missing. Add a captain email before sending login.";
+  }
+
+  if (message.includes("Unable to validate email address")) {
+    return "Supabase could not validate the captain email. Check the captain email spelling, then retry.";
+  }
+
+  if (message.toLowerCase().includes("redirect")) {
+    return "The Edge Function failed because SITE_LOGIN_URL is not allowed in Supabase Auth redirect URLs. Add the login URL to Authentication > URL Configuration > Redirect URLs.";
+  }
+
   return message;
+}
+
+async function invokeSendApprovedLogin(teamId) {
+  const session = await getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error("Missing admin session. Log in again, then retry.");
+  }
+
+  const response = await fetch(functionUrl("send-approved-login"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      "apikey": cfg.SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({ team_id: teamId })
+  });
+
+  const raw = await response.text();
+  let payload = {};
+
+  try {
+    payload = raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    payload = { error: raw };
+  }
+
+  if (!response.ok || payload?.ok === false) {
+    const message = payload?.error || payload?.message || `Edge Function returned ${response.status}: ${response.statusText}`;
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload;
 }
 
 async function sendApprovedLoginInvite(teamId, options = {}) {
@@ -1113,12 +1186,7 @@ async function sendApprovedLoginInvite(teamId, options = {}) {
       throw new Error("Captain email is missing. Add a captain email before sending login.");
     }
 
-    const { data, error } = await window.sb.functions.invoke("send-approved-login", {
-      body: { team_id: teamId }
-    });
-
-    if (error) throw error;
-    if (data?.ok === false) throw new Error(data.error || "Failed to send login invite.");
+    const data = await invokeSendApprovedLogin(teamId);
 
     if (!silent) showToast(data?.message || "Login invite processed.", "success");
     if (reload) await loadRegistrations();
