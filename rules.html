@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rulebook · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-remove-desktop-controls"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-remove-desktop-controls"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-responsive-viewer"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-responsive-viewer"/>
 </head>
 <body>
 <header class="nav">
@@ -72,20 +72,15 @@
             </div>
           </div>
 
-          <div class="rulebook-iframe-wrap rulebook-forced-desktop-wrap" id="rulebookDesktopViewport">
-            <div class="rulebook-desktop-scale-stage rulebook-desktop-browser" id="rulebookDesktopStage">
-              <iframe
+          <div class="rulebook-iframe-wrap">
+            <iframe
               id="rulebookFrame"
-              class="rulebook-force-desktop-frame"
               title="Official CODM Rulebook"
               src="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing"
               loading="lazy"
               allowfullscreen
-              ></iframe>
-            </div>
-          </div>
-
-          <div class="rulebook-fallback">
+            ></iframe>
+          </div><div class="rulebook-fallback">
             <p>If the document does not load, please click ‘View Document’ button</p>
             <a
               class="btn btn-ghost btn-small rulebook-fallback-btn"
@@ -107,73 +102,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-rulebook-remove-desktop-controls"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-rulebook-remove-desktop-controls"></script>
+<script src="assets/js/main.js?v=20260617-rulebook-responsive-viewer"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-rulebook-responsive-viewer"></script>
 <script>
 let rulebookTournaments = [];
 let selectedRulebookTournament = null;
 
-
-
-let rulebookDesktopScale = null;
-let rulebookDocUrl = "";
-
-function rulebookDesktopUrlFromDocUrl(docUrl) {
-  const cleanUrl = normalizeText(docUrl);
-
-  const docIdMatch = cleanUrl.match(/\/document\/d\/([^/]+)/);
-  if (!docIdMatch) return cleanUrl;
-
-  const docId = docIdMatch[1];
-
-  // This is the closest available "desktop website" view for Google Docs inside an iframe.
-  // It avoids the narrow mobile-style table of contents used by the preview renderer on phones.
-  return `https://docs.google.com/document/d/${docId}/edit?usp=sharing&rm=minimal&chrome=false`;
-}
-
-function rulebookPreviewUrlFromDocUrlForced(docUrl) {
-  const desktopUrl = rulebookDesktopUrlFromDocUrl(docUrl);
-  return desktopUrl || rulebookPreviewUrlFromDocUrl(docUrl);
-}
-
-function clampRulebookScale(value) {
-  return Math.max(0.34, Math.min(1.05, Number(value) || 1));
-}
-
-function setRulebookManualScale(value) {
-  rulebookDesktopScale = clampRulebookScale(value);
-  updateRulebookDesktopScale();
-}
-
-function openRulebookInDesktopTab() {
-  const url = rulebookDocUrl || qs("#openRulebookDoc")?.href || "";
-  if (url) window.open(url, "_blank", "noopener,noreferrer");
-}
-
-
-function updateRulebookDesktopScale() {
-  const viewport = qs("#rulebookDesktopViewport");
-  const stage = qs("#rulebookDesktopStage");
-  const frame = qs("#rulebookFrame");
-
-  if (!viewport || !stage || !frame) return;
-
-  const desktopWidth = 1280;
-  const desktopHeight = 1500;
-  const availableWidth = Math.max(280, viewport.clientWidth || desktopWidth);
-  const fitScale = Math.min(1, availableWidth / desktopWidth);
-  const scale = clampRulebookScale(rulebookDesktopScale || fitScale);
-
-  stage.style.setProperty("--rulebook-scale", String(scale));
-  stage.style.width = `${desktopWidth}px`;
-  stage.style.height = `${desktopHeight}px`;
-
-  frame.style.width = `${desktopWidth}px`;
-  frame.style.height = `${desktopHeight}px`;
-
-  viewport.style.height = `${Math.ceil(desktopHeight * scale)}px`;
-  viewport.style.minHeight = `${Math.ceil(desktopHeight * scale)}px`;
-}
 
 
 function tournamentSlugFromUrl() {
@@ -202,8 +136,7 @@ function fallbackRulebookTournament() {
 
 function applyRulebookLinks(tournament) {
   const docUrl = rulebookDocUrlForTournament(tournament) || "https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/edit?usp=drivesdk";
-  rulebookDocUrl = docUrl;
-  const previewUrl = rulebookPreviewUrlFromDocUrlForced(docUrl);
+  const previewUrl = rulebookPreviewUrlFromDocUrl(docUrl);
   const registrationUrl = normalizeText(tournament?.registration_form_url) || cfg.REGISTRATION_FORM_URL || "https://forms.gle/HQjA95BXGNANQSz8A";
 
   qs("#rulebookFrame").src = previewUrl;
@@ -213,7 +146,6 @@ function applyRulebookLinks(tournament) {
   qs("#rulebookRegistrationLinkHero").href = registrationUrl;
   qs("#rulebookViewerTitle").textContent = tournament?.title || "Tournament Rulebook";
   qs("#rulebookViewerMeta").textContent = "Official tournament rulebook viewer.";
-  updateRulebookDesktopScale();
 }
 
 function renderTournamentSelect() {
@@ -279,6 +211,6 @@ async function initRulebookViewer() {
 
 initRulebookViewer();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-rulebook-remove-desktop-controls"></script>
+<script src="assets/js/premium-copy.js?v=20260617-rulebook-responsive-viewer"></script>
 </body>
 </html>

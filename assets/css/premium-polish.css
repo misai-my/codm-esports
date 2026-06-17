@@ -6251,3 +6251,92 @@ body.registration-delete-open {
 .rulebook-view-mode-note {
   display: none !important;
 }
+
+
+/* ============================================================
+   Rulebook Responsive Viewer Revert
+   ============================================================ */
+.rulebook-iframe-wrap {
+  width: 100% !important;
+  height: clamp(640px, 78vh, 920px) !important;
+  min-height: 640px !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+}
+
+.rulebook-iframe-wrap iframe,
+#rulebookFrame {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  border: 0 !important;
+  display: block !important;
+  transform: none !important;
+}
+
+.rulebook-desktop-scale-stage,
+.rulebook-desktop-browser,
+.rulebook-forced-desktop-wrap {
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+.rulebook-desktop-controls,
+.rulebook-view-mode-note,
+.rulebook-desktop-badge {
+  display: none !important;
+}
+
+.rulebook-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rulebook-fallback p {
+  margin: 0;
+}
+
+.rulebook-fallback-btn {
+  min-height: 34px !important;
+  padding: 7px 11px !important;
+  border-radius: 11px !important;
+  font-size: 11px !important;
+  margin: 0 !important;
+}
+
+@media (min-width: 1180px) {
+  .rulebook-iframe-wrap {
+    height: min(82vh, 980px) !important;
+    min-height: 720px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .rulebook-frame-card {
+    padding: 14px !important;
+  }
+
+  .rulebook-iframe-wrap {
+    height: 70vh !important;
+    min-height: 520px !important;
+    border-radius: 15px !important;
+  }
+
+  .rulebook-fallback {
+    align-items: stretch;
+  }
+
+  .rulebook-fallback-btn {
+    width: auto !important;
+    justify-self: start;
+  }
+}
