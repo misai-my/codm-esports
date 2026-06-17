@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-captain-compact-announcements"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-captain-compact-announcements"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-announcement-new-priority"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-announcement-new-priority"/>
 </head>
 <body class="captain-compact-page">
 <header class="nav">
@@ -236,8 +236,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-captain-compact-announcements"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-captain-compact-announcements"></script>
+<script src="assets/js/main.js?v=20260617-announcement-new-priority"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-announcement-new-priority"></script>
 <script>
 let currentUser = null;
 let currentTournament = null;
@@ -297,6 +297,93 @@ function googleFormEditUrl(team) {
     || "";
 }
 
+
+function announcementSeenKey() {
+  const tournamentKey = currentTournament?.id || currentTournament?.slug || "global";
+  return `codm:seen_announcements:${tournamentKey}`;
+}
+
+function getSeenAnnouncementIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(announcementSeenKey()) || "[]"));
+  } catch (err) {
+    return new Set();
+  }
+}
+
+function saveSeenAnnouncementIds(ids) {
+  localStorage.setItem(announcementSeenKey(), JSON.stringify([...ids]));
+}
+
+function isAnnouncementNew(item) {
+  if (!item?.id) return false;
+  return !getSeenAnnouncementIds().has(item.id);
+}
+
+function unreadAnnouncementCount() {
+  const seen = getSeenAnnouncementIds();
+  return announcements.filter(item => item?.id && !seen.has(item.id)).length;
+}
+
+function priorityWeight(priority) {
+  const key = String(priority || "Info").toLowerCase();
+  if (key === "urgent") return 0;
+  if (key === "important") return 1;
+  return 2;
+}
+
+function sortAnnouncements(list) {
+  const seen = getSeenAnnouncementIds();
+
+  return [...(list || [])].sort((a, b) => {
+    const aNew = a?.id && !seen.has(a.id) ? 0 : 1;
+    const bNew = b?.id && !seen.has(b.id) ? 0 : 1;
+
+    return priorityWeight(a.priority) - priorityWeight(b.priority)
+      || aNew - bNew
+      || new Date(b.published_at || b.created_at || 0) - new Date(a.published_at || a.created_at || 0);
+  });
+}
+
+function markAnnouncementSeen(item) {
+  if (!item?.id) return;
+  const seen = getSeenAnnouncementIds();
+  if (seen.has(item.id)) return;
+
+  seen.add(item.id);
+  saveSeenAnnouncementIds(seen);
+
+  // Re-render after a short delay so captains can actually see the NEW marker first.
+  window.clearTimeout(window.__announcementSeenTimer);
+  window.__announcementSeenTimer = window.setTimeout(() => {
+    renderAnnouncements();
+  }, 1800);
+}
+
+function announcementDotsHtml() {
+  if (!announcements.length) return "";
+
+  return `
+    <div class="announce-dots" aria-label="Announcement position">
+      ${announcements.map((item, index) => `
+        <button
+          type="button"
+          class="announce-dot ${index === announcementIndex ? "active" : ""} ${isAnnouncementNew(item) ? "is-new" : ""}"
+          onclick="goToAnnouncement(${index})"
+          aria-label="View announcement ${index + 1}"
+        ></button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function goToAnnouncement(index) {
+  if (!announcements.length) return;
+  announcementIndex = Math.max(0, Math.min(index, announcements.length - 1));
+  renderAnnouncements();
+}
+
+
 function currentAnnouncement() {
   if (!announcements.length) return null;
   if (announcementIndex < 0) announcementIndex = announcements.length - 1;
@@ -321,16 +408,27 @@ function renderAnnouncements() {
   }
 
   const count = announcements.length;
+  const isNew = isAnnouncementNew(item);
+  const unread = unreadAnnouncementCount();
+  const priority = item.priority || "Info";
+  const priorityClass = String(priority).toLowerCase();
+
   card.innerHTML = `
-    <div class="announce-content">
+    <div class="announce-content announce-${escapeHtml(priorityClass)}">
       <div class="announce-meta">
-        <span class="announce-priority">${escapeHtml(item.priority || "Info")}</span>
-        <span>${announcementIndex + 1}/${count}</span>
+        <span class="announce-badges">
+          <span class="announce-priority">${escapeHtml(priority)}</span>
+          ${isNew ? `<span class="announce-new-badge">NEW</span>` : ""}
+        </span>
+        <span>${announcementIndex + 1}/${count}${unread ? ` · ${unread} new` : ""}</span>
       </div>
       <h2>${escapeHtml(item.title || "Announcement")}</h2>
       <p>${escapeHtml(item.body || "")}</p>
+      ${announcementDotsHtml()}
     </div>
   `;
+
+  markAnnouncementSeen(item);
 }
 
 function nextAnnouncement() {
@@ -362,7 +460,7 @@ async function loadAnnouncements() {
     console.warn("Announcements unavailable:", error);
     announcements = [];
   } else {
-    announcements = data || [];
+    announcements = sortAnnouncements(data || []);
   }
 
   announcementIndex = 0;

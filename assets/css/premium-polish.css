@@ -5743,3 +5743,248 @@ body.registration-delete-open {
     font-size: 15px;
   }
 }
+
+
+/* ============================================================
+   Registration Admin - Edit/Delete Approvals Responsive Fix
+   ============================================================ */
+#teamChangeRequestsWrap,
+.team-change-request-list,
+.team-change-request-card,
+.request-change-summary,
+.request-card-top,
+.request-card-actions,
+.team-change-request-card .team-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#teamChangeRequestsWrap {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  overflow: visible;
+}
+
+.team-change-request-card {
+  width: 100%;
+  overflow: hidden;
+  padding: clamp(14px, 2vw, 20px);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+    rgba(8,14,28,.70);
+}
+
+.team-change-request-card.is-delete {
+  border-color: rgba(255,70,103,.22);
+  background:
+    radial-gradient(circle at 0 0, rgba(255,70,103,.10), transparent 15rem),
+    linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+    rgba(8,14,28,.70);
+}
+
+.request-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-change-request-card .team-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.team-change-request-card .team-card h3,
+.team-change-request-card .team-card .small,
+.team-change-request-card p,
+.request-change-summary p,
+.request-change-summary b,
+.request-change-summary strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.request-change-summary {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.075);
+  overflow: hidden;
+}
+
+.request-change-summary p {
+  margin: 0;
+  line-height: 1.42;
+}
+
+.team-change-request-card .actions,
+.team-change-request-card .request-actions,
+.request-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.team-change-request-card .actions .btn,
+.team-change-request-card .request-actions .btn,
+.request-card-actions .btn {
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+
+.team-change-request-card pre,
+.team-change-request-card code {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  #teamChangeRequestsWrap {
+    gap: 12px;
+  }
+
+  .team-change-request-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .team-change-request-card .team-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .team-change-request-card .team-logo,
+  .team-change-request-card .team-logo-sm {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 13px !important;
+  }
+
+  .request-change-summary {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 620px) {
+  .team-change-request-card {
+    padding: 12px;
+  }
+
+  .team-change-request-card .team-card {
+    grid-template-columns: 1fr;
+  }
+
+  .team-change-request-card .team-card .team-logo,
+  .team-change-request-card .team-card .team-logo-sm,
+  .team-change-request-card .team-card .team-logo-fallback {
+    display: none !important;
+  }
+
+  .request-card-top {
+    justify-content: flex-start;
+  }
+
+  .team-change-request-card .actions,
+  .team-change-request-card .request-actions,
+  .request-card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .team-change-request-card .actions .btn,
+  .team-change-request-card .request-actions .btn,
+  .request-card-actions .btn {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  .request-change-summary {
+    padding: 9px;
+  }
+
+  .request-change-summary p {
+    font-size: 12px;
+  }
+}
+
+/* Prevent the parent admin cards from clipping dynamic approval content. */
+#announcementAdminSection,
+#teamChangeRequestsWrap,
+#teamChangeRequestsWrap .card,
+.card:has(#teamChangeRequestsWrap) {
+  overflow: visible;
+}
+
+@supports not selector(:has(*)) {
+  .card {
+    overflow: visible;
+  }
+}
+
+
+/* ============================================================
+   Index Region + Registration Pill Cleanup
+   ============================================================ */
+.hero-registration-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 6px 0 0;
+  padding: 9px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,209,92,.28);
+  background: rgba(248,209,92,.09);
+  color: #f8d15c;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.region-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 9px;
+  border: 1px solid rgba(96,204,255,.28);
+  background: rgba(96,204,255,.08);
+  color: rgba(182,235,255,.92);
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .hero-registration-pill {
+    margin-top: 8px !important;
+    padding: 7px 10px !important;
+    font-size: 9px !important;
+    letter-spacing: .055em !important;
+  }
+
+  .hero .actions {
+    margin-top: 10px !important;
+  }
+
+  .region-chip {
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+}

@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-prize-discord-gate"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-prize-discord-gate"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-remove-rulebook-callout"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-remove-rulebook-callout"/>
 </head>
 <body>
 <header class="nav">
@@ -30,16 +30,12 @@
       <div>
         <div class="eyebrow">CODM Competition Portal</div>
         <h1><span class="gradient-text">Choose your event.</span><br/>Lock your squad.</h1>
-        <p class="lead">A reusable tournament hub for Call of Duty: Mobile events — select the tournament you are joining, then open the official Google Form, review the rulebook, use the Captain Portal, track matches, and contact support.</p>
+        <p class="lead">A premium competition hub built for elite Call of Duty: Mobile events</p>
+        <div class="hero-registration-pill" id="registrationHeroStatus">Registration: Loading...</div>
+
         <div class="actions">
           <a class="btn btn-primary" href="#tournaments">Select Tournament</a>
           <a class="btn btn-ghost" href="rules.html">Open Rulebook</a>
-        </div>
-
-        <div class="grid grid-three section-tight hero-kpi-strip">
-          <div class="card card-flat kpi"><div class="kpi-value" id="approvedCount">0</div><div class="kpi-label">Participating Teams</div></div>
-          <div class="card card-flat kpi"><div class="kpi-value" id="bracketType">-</div><div class="kpi-label">Selected Format</div></div>
-          <div class="card card-flat kpi"><div class="kpi-value" id="registrationStatus">-</div><div class="kpi-label">Registration</div></div>
         </div>
       </div>
       <div class="hero-card">
@@ -62,21 +58,7 @@
       <div id="tournamentCards" class="grid grid-three"></div>
     </div>
   </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="card rulebook-user-callout">
-        <div>
-          <div class="eyebrow">Player Resource</div>
-          <h2>Official Rulebook & Support</h2>
-          <p>Review formats, map pools, veto flow, Discord coordination, FAQ, and submit questions to admins before match day.</p>
-        </div>
-        <a class="btn btn-primary" href="rules.html">View Rulebook</a>
-      </div>
-    </div>
-  </section>
-
-  <section id="teams" class="section">
+<section id="teams" class="section">
     <div class="container">
       <div class="section-heading participating-heading">
         <div>
@@ -100,8 +82,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-prize-discord-gate"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-prize-discord-gate"></script>
+<script src="assets/js/main.js?v=20260617-remove-rulebook-callout"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-remove-rulebook-callout"></script>
 <script>
 let tournaments = [];
 let selectedTournament = null;
@@ -120,6 +102,16 @@ function safeDiscordInviteUrlForTournament(tournament = null) {
     || "";
 }
 
+
+
+
+function tournamentRegion(tournament) {
+  return normalizeText(tournament?.region) || "SMP";
+}
+
+function regionChipHtml(tournament) {
+  return `<span class="region-chip">Region: ${escapeHtml(tournamentRegion(tournament))}</span>`;
+}
 
 
 function prizePoolIsVisible(tournament) {
@@ -420,6 +412,7 @@ function renderTournamentCards() {
         <h3>${escapeHtml(t.title)}</h3>
         <p>${escapeHtml(t.game || "Call of Duty: Mobile")} · ${escapeHtml(t.format || "BO5")} · ${escapeHtml(bracketTypeLabel(t.bracket_type))}</p>
         <div class="tournament-card-meta">
+          ${regionChipHtml(t)}
           <span>${escapeHtml(tournamentDateRange(t))}</span>
           <span>Registration: ${t.registration_open ? "Open" : "Closed"}</span>
         </div>
@@ -452,6 +445,7 @@ function renderSelectedTournamentPanel() {
         <h3>${escapeHtml(selectedTournament.title)}</h3>
         <p>${escapeHtml(selectedTournament.game || "Call of Duty: Mobile")} · ${escapeHtml(selectedTournament.format || "MULTI")} · ${escapeHtml(bracketTypeLabel(selectedTournament.bracket_type))}</p>
         <div class="tournament-card-meta">
+          ${regionChipHtml(selectedTournament)}
           <span>${escapeHtml(tournamentDateRange(selectedTournament))}</span>
           <span>Registration: ${selectedTournament.registration_open ? "Open" : "Closed"}</span>
           ${selectedTournament.max_teams ? `<span>Max Teams: ${escapeHtml(selectedTournament.max_teams)}</span>` : ""}
@@ -498,6 +492,7 @@ async function loadSelectedOverview() {
     bracketTypeLabel(selectedTournament.bracket_type).replace(" Elimination", "")
   );
   setText("#registrationStatus", tournamentStatusText(selectedTournament));
+  setText("#registrationHeroStatus", `Registration: ${tournamentStatusText(selectedTournament)}`);
 
   const mode = selectedHomeMode || "all";
 
