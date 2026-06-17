@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rulebook · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-force-short-tagline"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-force-short-tagline"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-scaled-desktop"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-scaled-desktop"/>
 </head>
 <body>
 <header class="nav">
@@ -69,19 +69,21 @@
               <div class="eyebrow">Tournament Rulebook Official</div>
               <h2 id="rulebookViewerTitle">Loading Tournament...</h2>
               <p id="rulebookViewerMeta">Loading rulebook viewer...</p>
-              <p class="rulebook-view-mode-note">Viewer is forced to tablet/desktop layout.</p>
+              <p class="rulebook-view-mode-note">Desktop/tablet preview is forced for cleaner rulebook alignment.</p>
             </div>
           </div>
 
-          <div class="rulebook-iframe-wrap rulebook-forced-desktop-wrap">
-            <iframe
+          <div class="rulebook-iframe-wrap rulebook-forced-desktop-wrap" id="rulebookDesktopViewport">
+            <div class="rulebook-desktop-scale-stage" id="rulebookDesktopStage">
+              <iframe
               id="rulebookFrame"
               class="rulebook-force-desktop-frame"
               title="Official CODM Rulebook"
               src="https://docs.google.com/document/d/1hpJPhy6sgMaQy_zUnnN32-BB2NjgAT9Soz7_4RZXt78/preview?usp=sharing"
               loading="lazy"
               allowfullscreen
-            ></iframe>
+              ></iframe>
+            </div>
           </div>
 
           <div class="rulebook-fallback">
@@ -106,11 +108,36 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-force-short-tagline"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-force-short-tagline"></script>
+<script src="assets/js/main.js?v=20260617-rulebook-scaled-desktop"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-rulebook-scaled-desktop"></script>
 <script>
 let rulebookTournaments = [];
 let selectedRulebookTournament = null;
+
+
+function updateRulebookDesktopScale() {
+  const viewport = qs("#rulebookDesktopViewport");
+  const stage = qs("#rulebookDesktopStage");
+  const frame = qs("#rulebookFrame");
+
+  if (!viewport || !stage || !frame) return;
+
+  const desktopWidth = 1024;
+  const desktopHeight = 1320;
+  const availableWidth = Math.max(280, viewport.clientWidth || desktopWidth);
+  const scale = Math.min(1, availableWidth / desktopWidth);
+
+  stage.style.setProperty("--rulebook-scale", String(scale));
+  stage.style.width = `${desktopWidth}px`;
+  stage.style.height = `${desktopHeight}px`;
+
+  frame.style.width = `${desktopWidth}px`;
+  frame.style.height = `${desktopHeight}px`;
+
+  viewport.style.height = `${Math.ceil(desktopHeight * scale)}px`;
+  viewport.style.minHeight = `${Math.ceil(desktopHeight * scale)}px`;
+}
+
 
 function tournamentSlugFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -148,6 +175,7 @@ function applyRulebookLinks(tournament) {
   qs("#rulebookRegistrationLinkHero").href = registrationUrl;
   qs("#rulebookViewerTitle").textContent = tournament?.title || "Tournament Rulebook";
   qs("#rulebookViewerMeta").textContent = "Official tournament rulebook viewer.";
+  updateRulebookDesktopScale();
 }
 
 function renderTournamentSelect() {
@@ -213,6 +241,6 @@ async function initRulebookViewer() {
 
 initRulebookViewer();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-force-short-tagline"></script>
+<script src="assets/js/premium-copy.js?v=20260617-rulebook-scaled-desktop"></script>
 </body>
 </html>
