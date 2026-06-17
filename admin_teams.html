@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-admin-login-buttons"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-admin-login-buttons"/>
 </head>
 <body>
 <header class="nav">
@@ -259,8 +259,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/main.js?v=20260617-admin-login-buttons"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-admin-login-buttons"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -1020,28 +1020,57 @@ function bindCaptainEditorValidation() {
   });
 }
 
-async function setTeamStatus(teamId, status) {
+async function updateRegistrationStatusBestEffort(teamId, status) {
+  const basePayload = {
+    status,
+    reviewed_at: new Date().toISOString()
+  };
+
+  const payloadWithReviewer = currentProfile?.id
+    ? { ...basePayload, reviewed_by: currentProfile.id }
+    : basePayload;
+
+  let result = await window.sb
+    .from("registrations")
+    .update(payloadWithReviewer)
+    .eq("team_id", teamId);
+
+  if (!result.error) return true;
+
+  const message = String(result.error.message || "");
+
+  if (
+    message.includes("reviewed_by") ||
+    message.includes("column") ||
+    result.error.code === "42703"
+  ) {
+    result = await window.sb
+      .from("registrations")
+      .update(basePayload)
+      .eq("team_id", teamId);
+
+    if (!result.error) return true;
+  }
+
+  console.warn("Registration status update skipped:", result.error);
+  return false;
+}
+
+async function setTeamStatus(teamId, status, options = {}) {
+  const { silent = false, reload = true } = options;
+
   try {
     const { error: teamError } = await window.sb
       .from("teams")
-      .update({ status })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq("id", teamId);
 
     if (teamError) throw teamError;
 
-    const { error: regError } = await window.sb
-      .from("registrations")
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: currentProfile.id
-      })
-      .eq("team_id", teamId);
+    await updateRegistrationStatusBestEffort(teamId, status);
 
-    if (regError) throw regError;
-
-    showToast(`Team marked as ${status}.`, "success");
-    await loadRegistrations();
+    if (!silent) showToast(`Team marked as ${status}.`, "success");
+    if (reload) await loadRegistrations();
     return true;
   } catch (err) {
     console.error(err);
@@ -1050,8 +1079,40 @@ async function setTeamStatus(teamId, status) {
   }
 }
 
-async function sendApprovedLoginInvite(teamId) {
+function edgeInviteErrorMessage(err) {
+  const message = String(err?.message || err || "Failed to send login invite.");
+
+  if (
+    message.includes("FunctionsFetchError") ||
+    message.includes("Failed to fetch") ||
+    message.includes("not found") ||
+    message.includes("404") ||
+    message.includes("send-approved-login")
+  ) {
+    return "Login invite function is not reachable. Deploy the Supabase Edge Function: supabase/functions/send-approved-login, then set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SITE_LOGIN_URL secrets.";
+  }
+
+  if (message.includes("Missing Supabase function secrets")) {
+    return "The send-approved-login Edge Function is deployed, but its secrets are missing. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SITE_LOGIN_URL.";
+  }
+
+  return message;
+}
+
+async function sendApprovedLoginInvite(teamId, options = {}) {
+  const { reload = true, silent = false } = options;
+
   try {
+    const team = allTeams.find(item => item.id === teamId);
+
+    if (team && team.status !== "approved") {
+      throw new Error("Only approved teams can receive a captain login invite. Click Approve + Login first.");
+    }
+
+    if (team && !normalizeText(team.captain_email)) {
+      throw new Error("Captain email is missing. Add a captain email before sending login.");
+    }
+
     const { data, error } = await window.sb.functions.invoke("send-approved-login", {
       body: { team_id: teamId }
     });
@@ -1059,20 +1120,56 @@ async function sendApprovedLoginInvite(teamId) {
     if (error) throw error;
     if (data?.ok === false) throw new Error(data.error || "Failed to send login invite.");
 
-    showToast(data?.message || "Login invite processed.", "success");
-    await loadRegistrations();
+    if (!silent) showToast(data?.message || "Login invite processed.", "success");
+    if (reload) await loadRegistrations();
+    return true;
   } catch (err) {
     console.error(err);
-    showToast(err.message || "Failed to send login invite.", "error");
+    showToast(edgeInviteErrorMessage(err), "error");
+    return false;
   }
 }
 
 async function approveTeamAndSendLogin(teamId) {
-  const ok = await setTeamStatus(teamId, "approved");
-  if (!ok) return;
+  const team = allTeams.find(item => item.id === teamId);
+  const label = team ? `${team.team_name} (${team.team_tag})` : "this team";
 
-  await sendApprovedLoginInvite(teamId);
+  if (!confirm(`Approve ${label} and send captain login access?`)) return;
+
+  const actionButtons = [...document.querySelectorAll(`button[onclick*="${teamId}"]`)];
+  actionButtons.forEach(button => {
+    button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    if (button.textContent.includes("Approve")) button.textContent = "Approving...";
+    if (button.textContent.includes("Login")) button.textContent = "Sending...";
+  });
+
+  try {
+    const approved = await setTeamStatus(teamId, "approved", { silent: true, reload: false });
+
+    if (!approved) return;
+
+    await loadRegistrations();
+
+    const sent = await sendApprovedLoginInvite(teamId, { reload: true, silent: true });
+
+    if (sent) {
+      showToast("Team approved and captain login access processed.", "success");
+    } else {
+      showToast("Team approved, but login invite could not be sent. Check the Edge Function setup.", "error");
+    }
+  } finally {
+    actionButtons.forEach(button => {
+      button.disabled = false;
+      if (button.dataset.originalText) button.textContent = button.dataset.originalText;
+    });
+  }
 }
+
+
+window.setTeamStatus = setTeamStatus;
+window.sendApprovedLoginInvite = sendApprovedLoginInvite;
+window.approveTeamAndSendLogin = approveTeamAndSendLogin;
 
 async function assignTeamStage(teamId) {
   const stageId = qs(`#stageSelect-${teamId}`)?.value;
