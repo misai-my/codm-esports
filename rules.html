@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rulebook · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-true-desktop"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-true-desktop"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-rulebook-remove-desktop-controls"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-rulebook-remove-desktop-controls"/>
 </head>
 <body>
 <header class="nav">
@@ -69,14 +69,6 @@
               <div class="eyebrow">Tournament Rulebook Official</div>
               <h2 id="rulebookViewerTitle">Loading Tournament...</h2>
               <p id="rulebookViewerMeta">Loading rulebook viewer...</p>
-              <p class="rulebook-view-mode-note">Desktop website mode is forced for cleaner rulebook alignment.</p>
-              <div class="rulebook-desktop-controls">
-                <span class="rulebook-desktop-badge" id="rulebookDesktopModeBadge">Desktop Mode</span>
-                <button class="btn btn-ghost btn-small" type="button" id="rulebookZoomOutBtn">−</button>
-                <button class="btn btn-ghost btn-small" type="button" id="rulebookZoomInBtn">+</button>
-                <button class="btn btn-ghost btn-small" type="button" id="rulebookFitBtn">Fit</button>
-              </div>
-              <p class="rulebook-view-mode-note">Desktop/tablet preview is forced for cleaner rulebook alignment.</p>
             </div>
           </div>
 
@@ -115,8 +107,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-rulebook-true-desktop"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-rulebook-true-desktop"></script>
+<script src="assets/js/main.js?v=20260617-rulebook-remove-desktop-controls"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-rulebook-remove-desktop-controls"></script>
 <script>
 let rulebookTournaments = [];
 let selectedRulebookTournament = null;
@@ -181,9 +173,6 @@ function updateRulebookDesktopScale() {
 
   viewport.style.height = `${Math.ceil(desktopHeight * scale)}px`;
   viewport.style.minHeight = `${Math.ceil(desktopHeight * scale)}px`;
-
-  const badge = qs("#rulebookDesktopModeBadge");
-  if (badge) badge.textContent = `Desktop Mode · ${Math.round(scale * 100)}%`;
 }
 
 
@@ -290,6 +279,6 @@ async function initRulebookViewer() {
 
 initRulebookViewer();
 </script>
-<script src="assets/js/premium-copy.js?v=20260617-rulebook-true-desktop"></script>
+<script src="assets/js/premium-copy.js?v=20260617-rulebook-remove-desktop-controls"></script>
 </body>
 </html>

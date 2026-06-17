@@ -5973,3 +5973,12 @@ body.registration-delete-open {
     font-size: 9px;
   }
 }
+
+
+/* ============================================================
+   Rulebook Desktop Controls Removed
+   ============================================================ */
+.rulebook-desktop-controls,
+.rulebook-view-mode-note {
+  display: none !important;
+}
