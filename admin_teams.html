@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Registration Admin · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-edge-error-detail"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-edge-error-detail"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-captain-announcements"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-captain-announcements"/>
 </head>
 <body>
 <header class="nav">
@@ -100,6 +100,46 @@
   <section class="section hidden" id="adminPanel">
     <div class="container">
       <div id="registrationControl" class="section-tight"></div>
+
+      <section class="card section-tight" id="announcementAdminSection">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Announcements</div>
+            <h2>Captain Message Board</h2>
+            <p>Create short announcements that appear at the top of the Captain Portal.</p>
+          </div>
+          <button class="btn" type="button" id="refreshAnnouncementsBtn">Refresh</button>
+        </div>
+
+        <form id="announcementForm" class="announcement-admin-form">
+          <div class="grid grid-two">
+            <div class="field">
+              <label for="announcementTitle">Title</label>
+              <input id="announcementTitle" maxlength="80" placeholder="Example: Lobby check-in starts at 6 PM" required/>
+            </div>
+            <div class="field">
+              <label for="announcementPriority">Priority</label>
+              <select id="announcementPriority">
+                <option value="Info">Info</option>
+                <option value="Important">Important</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="announcementBody">Message</label>
+            <textarea id="announcementBody" rows="2" maxlength="280" placeholder="Keep it short. Captains will see this in a compact carousel." required></textarea>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Post Announcement</button>
+            <span class="small">Tip: one or two short lines work best on mobile.</span>
+          </div>
+        </form>
+
+        <div id="announcementAdminList" class="announcement-admin-list"></div>
+      </section>
       <div id="stageControl" class="section-tight"></div>
 
       <div class="section-heading">
@@ -259,8 +299,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-edge-error-detail"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-edge-error-detail"></script>
+<script src="assets/js/main.js?v=20260617-captain-announcements"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-captain-announcements"></script>
 <script>
 let currentTournament = null;
 let currentProfile = null;
@@ -398,6 +438,7 @@ async function changeTeamAdminTournament() {
   renderRegistrationControl();
   renderStageControl();
   await loadRegistrations();
+  await loadAdminAnnouncements();
 
   showToast(`Registration Admin switched to ${currentTournament.title}.`, "success");
 }
@@ -464,6 +505,7 @@ async function refreshAdminAuth() {
   renderRegistrationControl();
   renderStageControl();
   await loadRegistrations();
+  await loadAdminAnnouncements();
 }
 
 function renderRegistrationControl() {
@@ -1293,6 +1335,121 @@ async function promoteTeamStage(teamId) {
 }
 
 
+
+let adminAnnouncements = [];
+
+async function loadAdminAnnouncements() {
+  const wrap = qs("#announcementAdminList");
+  if (!wrap || !currentTournament) return;
+
+  const { data, error } = await window.sb
+    .from("tournament_announcements")
+    .select("*")
+    .eq("tournament_id", currentTournament.id)
+    .order("priority_order", { ascending: true })
+    .order("published_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.warn("Could not load announcements:", error);
+    wrap.innerHTML = `<div class="notice">Run supabase_tournament_announcements.sql to enable announcements.</div>`;
+    return;
+  }
+
+  adminAnnouncements = data || [];
+  renderAdminAnnouncements();
+}
+
+function renderAdminAnnouncements() {
+  const wrap = qs("#announcementAdminList");
+  if (!wrap) return;
+
+  if (!adminAnnouncements.length) {
+    wrap.innerHTML = `<div class="notice compact-notice">No announcements yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = adminAnnouncements.map(item => `
+    <article class="announcement-admin-item ${item.is_published ? "" : "is-muted"}">
+      <div>
+        <div class="announce-meta">
+          <span class="announce-priority">${escapeHtml(item.priority || "Info")}</span>
+          <span>${item.is_published ? "Published" : "Hidden"}</span>
+        </div>
+        <strong>${escapeHtml(item.title)}</strong>
+        <p class="small">${escapeHtml(item.body)}</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-small" type="button" onclick="toggleAnnouncement('${item.id}', ${item.is_published ? "false" : "true"})">
+          ${item.is_published ? "Hide" : "Publish"}
+        </button>
+        <button class="btn btn-danger btn-small" type="button" onclick="deleteAnnouncement('${item.id}')">Delete</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function createAnnouncement(event) {
+  event.preventDefault();
+  if (!currentTournament) return showToast("Select a tournament first.", "error");
+
+  const title = normalizeText(qs("#announcementTitle")?.value);
+  const body = normalizeText(qs("#announcementBody")?.value);
+  const priority = qs("#announcementPriority")?.value || "Info";
+
+  if (!title || !body) return showToast("Announcement title and message are required.", "error");
+
+  const { error } = await window.sb
+    .from("tournament_announcements")
+    .insert({
+      tournament_id: currentTournament.id,
+      title,
+      body,
+      priority,
+      is_published: true,
+      published_at: new Date().toISOString(),
+      created_by: currentProfile?.id || null,
+      updated_by: currentProfile?.id || null
+    });
+
+  if (error) return showToast(error.message || "Failed to post announcement.", "error");
+
+  qs("#announcementForm").reset();
+  showToast("Announcement posted.", "success");
+  await loadAdminAnnouncements();
+}
+
+async function toggleAnnouncement(id, isPublished) {
+  const { error } = await window.sb
+    .from("tournament_announcements")
+    .update({
+      is_published: !!isPublished,
+      published_at: isPublished ? new Date().toISOString() : undefined,
+      updated_by: currentProfile?.id || null
+    })
+    .eq("id", id);
+
+  if (error) return showToast(error.message || "Failed to update announcement.", "error");
+
+  showToast(isPublished ? "Announcement published." : "Announcement hidden.", "success");
+  await loadAdminAnnouncements();
+}
+
+async function deleteAnnouncement(id) {
+  if (!confirm("Delete this announcement?")) return;
+
+  const { error } = await window.sb
+    .from("tournament_announcements")
+    .delete()
+    .eq("id", id);
+
+  if (error) return showToast(error.message || "Failed to delete announcement.", "error");
+
+  showToast("Announcement deleted.", "success");
+  await loadAdminAnnouncements();
+}
+
+
 let teamChangeRequests = [];
 
 async function loadTeamChangeRequests() {
@@ -1384,6 +1541,9 @@ function renderTeamChangeRequests() {
   }).join("");
 }
 
+window.toggleAnnouncement = toggleAnnouncement;
+window.deleteAnnouncement = deleteAnnouncement;
+
 async function reviewTeamChangeRequest(requestId, action) {
   const request = teamChangeRequests.find(item => item.id === requestId);
   if (!request) return showToast("Request not found.", "error");
@@ -1411,6 +1571,8 @@ async function init() {
   qs("#loginBtn").addEventListener("click", login);
   qs("#teamAdminTournamentSelect").addEventListener("change", changeTeamAdminTournament);
   qs("#refreshBtn").addEventListener("click", loadRegistrations);
+  qs("#announcementForm")?.addEventListener("submit", createAnnouncement);
+  qs("#refreshAnnouncementsBtn")?.addEventListener("click", loadAdminAnnouncements);
   qs("#refreshRequestsBtn")?.addEventListener("click", loadTeamChangeRequests);
   qs("#statusFilter").addEventListener("change", renderAdminTable);
   qs("#stageFilter").addEventListener("change", renderAdminTable);

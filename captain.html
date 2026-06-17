@@ -4,10 +4,10 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-remove-id-minimum"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-remove-id-minimum"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-captain-compact-announcements"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-captain-compact-announcements"/>
 </head>
-<body>
+<body class="captain-compact-page">
 <header class="nav">
   <div class="container nav-inner">
     <a class="brand" href="index.html">
@@ -24,28 +24,26 @@
   </div>
 </header>
 
-<main>
-  <section class="page-hero" data-hero-bg>
+<main class="captain-compact-main">
+  <section class="captain-announce-strip">
     <div class="container">
-      <div class="eyebrow">Captain Workspace</div>
-      <h1 class="h1"><span class="gradient-text">One portal.</span><br/>Matches, requests, and support.</h1>
-      <p class="lead">Your available tournament access is based on your approved registration mode. Team edits and delete requests are tracked for admin review.</p>
-      <div class="actions">
-        <a class="btn btn-primary" href="support.html">Support</a>
-        <a class="btn btn-ghost" href="rules.html">Rulebook</a>
+      <div class="captain-announcement-board" id="captainAnnouncementBoard">
+        <button class="announce-nav" type="button" onclick="prevAnnouncement()" aria-label="Previous announcement">‹</button>
+        <article class="announce-card" id="announcementCard">
+          <div class="announce-empty">Loading announcements...</div>
+        </article>
+        <button class="announce-nav" type="button" onclick="nextAnnouncement()" aria-label="Next announcement">›</button>
       </div>
     </div>
   </section>
 
-  <section class="section" id="authGate">
+  <section class="section captain-compact-section" id="authGate">
     <div class="container">
-      <div class="card">
-        <div class="section-heading">
-          <div>
-            <div class="eyebrow">Account</div>
-            <h2>Captain Access</h2>
-            <p id="captainAuthStatus">Checking login status...</p>
-          </div>
+      <div class="card captain-mini-card">
+        <div>
+          <div class="eyebrow">Captain Access</div>
+          <h1>Captain Portal</h1>
+          <p id="captainAuthStatus">Checking login status...</p>
         </div>
         <div class="actions" id="captainAuthActions">
           <a class="btn btn-primary" href="login.html">Login</a>
@@ -55,53 +53,45 @@
     </div>
   </section>
 
-  <section class="section hidden" id="captainPortal">
+  <section class="section captain-compact-section hidden" id="captainPortal">
     <div class="container">
-      <div class="section-heading">
+      <div class="captain-topline">
         <div>
-          <div class="eyebrow">Approved Registration</div>
-          <h2 id="portalTitle">Captain Portal</h2>
-          <p id="portalMeta">Loading approved tournament access...</p>
+          <div class="eyebrow">Captain Portal</div>
+          <h1 id="portalTitle">Your Entry</h1>
+          <p id="portalMeta">Loading...</p>
         </div>
-        <button class="btn" id="refreshPortalBtn" type="button">Refresh</button>
+        <button class="btn btn-ghost btn-small" id="refreshPortalBtn" type="button">Refresh</button>
       </div>
 
-      <div id="modeTabs" class="mode-tabs"></div>
+      <div id="modeTabs" class="mode-tabs compact-mode-tabs"></div>
 
-      <div class="grid grid-three" id="captainSummary"></div>
-
-      <div class="grid grid-two captain-portal-layout">
-        <section class="card">
-          <div class="section-heading">
-            <div>
-              <div class="eyebrow">Your Entry</div>
-              <h2>Approved Team / Player</h2>
-            </div>
-          </div>
-          <div id="approvedEntries" class="captain-entry-list"></div>
+      <div class="captain-mobile-stack">
+        <section class="card captain-focus-card">
+          <div id="approvedEntries" class="captain-entry-list compact-entry-list"></div>
         </section>
 
-        <section class="card">
-          <div class="section-heading">
+        <section class="card captain-quick-card">
+          <div class="section-heading compact-heading">
             <div>
-              <div class="eyebrow">Change History</div>
-              <h2>Edit / Delete Requests</h2>
+              <div class="eyebrow">Next Match</div>
+              <h2>Schedule</h2>
             </div>
+            <a class="btn btn-ghost btn-small" href="support.html">Support</a>
           </div>
-          <div id="captainRequests" class="captain-request-list"></div>
+          <div id="captainNextMatch" class="captain-next-match"></div>
+
+          <details class="captain-details">
+            <summary>All Posted Matches</summary>
+            <div id="captainMatches" class="compact-match-list"></div>
+          </details>
+
+          <details class="captain-details">
+            <summary>Request History</summary>
+            <div id="captainRequests" class="captain-request-list"></div>
+          </details>
         </section>
       </div>
-
-      <section class="card section-tight">
-        <div class="section-heading">
-          <div>
-            <div class="eyebrow">Assigned Matches</div>
-            <h2>Schedule & Veto Access</h2>
-            <p>Matches appear after admins schedule and post them.</p>
-          </div>
-        </div>
-        <div id="captainMatches" class="grid grid-two"></div>
-      </section>
     </div>
   </section>
 </main>
@@ -246,17 +236,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-remove-id-minimum"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-remove-id-minimum"></script>
+<script src="assets/js/main.js?v=20260617-captain-compact-announcements"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-captain-compact-announcements"></script>
 <script>
 let currentUser = null;
 let currentTournament = null;
 let approvedTeams = [];
 let selectedMode = "";
 let modeMatches = [];
-let modeStandings = [];
 let teamMap = {};
 let captainRequests = [];
+let announcements = [];
+let announcementIndex = 0;
 let editState = null;
 let deleteState = null;
 
@@ -291,15 +282,6 @@ function resultText(match) {
   return `Winner: ${teamName(match.winner_team_id)}`;
 }
 
-function teamLine(teamId, score, winner) {
-  return `
-    <div class="captain-match-team ${winner ? "is-winner" : ""}">
-      <span>${escapeHtml(teamName(teamId))}</span>
-      <strong>${score ?? 0}</strong>
-    </div>
-  `;
-}
-
 function requestForTeam(teamId, type = null) {
   return captainRequests.find(req =>
     req.team_id === teamId
@@ -315,6 +297,78 @@ function googleFormEditUrl(team) {
     || "";
 }
 
+function currentAnnouncement() {
+  if (!announcements.length) return null;
+  if (announcementIndex < 0) announcementIndex = announcements.length - 1;
+  if (announcementIndex >= announcements.length) announcementIndex = 0;
+  return announcements[announcementIndex];
+}
+
+function renderAnnouncements() {
+  const card = qs("#announcementCard");
+  if (!card) return;
+
+  const item = currentAnnouncement();
+
+  if (!item) {
+    card.innerHTML = `
+      <div class="announce-empty">
+        <strong>No announcements yet.</strong>
+        <span>Admin messages will appear here.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const count = announcements.length;
+  card.innerHTML = `
+    <div class="announce-content">
+      <div class="announce-meta">
+        <span class="announce-priority">${escapeHtml(item.priority || "Info")}</span>
+        <span>${announcementIndex + 1}/${count}</span>
+      </div>
+      <h2>${escapeHtml(item.title || "Announcement")}</h2>
+      <p>${escapeHtml(item.body || "")}</p>
+    </div>
+  `;
+}
+
+function nextAnnouncement() {
+  if (!announcements.length) return;
+  announcementIndex = (announcementIndex + 1) % announcements.length;
+  renderAnnouncements();
+}
+
+function prevAnnouncement() {
+  if (!announcements.length) return;
+  announcementIndex = (announcementIndex - 1 + announcements.length) % announcements.length;
+  renderAnnouncements();
+}
+
+async function loadAnnouncements() {
+  if (!currentTournament) return;
+
+  const { data, error } = await window.sb
+    .from("tournament_announcements")
+    .select("*")
+    .eq("tournament_id", currentTournament.id)
+    .eq("is_published", true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order("priority_order", { ascending: true })
+    .order("published_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.warn("Announcements unavailable:", error);
+    announcements = [];
+  } else {
+    announcements = data || [];
+  }
+
+  announcementIndex = 0;
+  renderAnnouncements();
+}
+
 function renderAuthGate() {
   const gate = qs("#authGate");
   const portal = qs("#captainPortal");
@@ -324,7 +378,7 @@ function renderAuthGate() {
   if (!currentUser) {
     gate.classList.remove("hidden");
     portal.classList.add("hidden");
-    status.textContent = "Login is required. Access is issued only after an approved registration.";
+    status.textContent = "Login is required. Access is issued after your registration is approved.";
     actions.innerHTML = `
       <a class="btn btn-primary" href="login.html">Login</a>
       <a class="btn btn-ghost" href="support.html">Need Help?</a>
@@ -335,10 +389,10 @@ function renderAuthGate() {
   if (!approvedTeams.length) {
     gate.classList.remove("hidden");
     portal.classList.add("hidden");
-    status.textContent = "No approved registration is linked to this account yet. If you were approved, check your invite email or contact support.";
+    status.textContent = "No approved registration is linked to this account yet.";
     actions.innerHTML = `
       <a class="btn btn-primary" href="support.html">Contact Support</a>
-      <a class="btn btn-ghost" href="rules.html">Open Rulebook</a>
+      <a class="btn btn-ghost" href="rules.html">Rulebook</a>
     `;
     return;
   }
@@ -370,18 +424,9 @@ function renderModeTabs() {
 
 function renderSummary() {
   const teams = currentModeTeams();
-  const nextMatch = modeMatches
-    .filter(match => match.match_start_at)
-    .sort((a, b) => new Date(a.match_start_at) - new Date(b.match_start_at))[0];
 
   qs("#portalTitle").textContent = registrationModeLabel(selectedMode);
   qs("#portalMeta").textContent = `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"} · ${teams.length} approved entry${teams.length === 1 ? "" : "ies"}`;
-
-  qs("#captainSummary").innerHTML = `
-    <div class="card card-flat kpi"><div class="kpi-value">${teams.length}</div><div class="kpi-label">Approved Entries</div></div>
-    <div class="card card-flat kpi"><div class="kpi-value">${modeMatches.length}</div><div class="kpi-label">Posted Matches</div></div>
-    <div class="card card-flat kpi"><div class="kpi-value">${nextMatch ? visibleDateTime(nextMatch.match_start_at) : "TBD"}</div><div class="kpi-label">Next Match</div></div>
-  `;
 }
 
 function renderCaptainTeamActions(team) {
@@ -393,26 +438,26 @@ function renderCaptainTeamActions(team) {
     const hasEditUrl = !!normalizeText(team.google_form_edit_url || team.registration_edit_url);
 
     return `
-      <div class="captain-management-box is-open">
-        <strong>Registration is open</strong>
-        <p class="small">${hasEditUrl ? "Use your Google Forms edit response link for changes." : "Edit response URL is not captured yet. This opens the official Google Form."}</p>
+      <div class="captain-management-box is-open compact-actions-box">
+        <strong>Registration Open</strong>
+        <p class="small">${hasEditUrl ? "Use your Google Forms edit response link." : "No edit-response URL captured yet. Opening the official Google Form."}</p>
         <div class="actions">
-          <a class="btn btn-primary" href="${escapeHtml(editUrl)}" target="_blank" rel="noopener">${hasEditUrl ? "Edit Google Form Response" : "Open Google Form"}</a>
-          <a class="btn btn-ghost" href="support.html">Need Help?</a>
+          <a class="btn btn-primary btn-small" href="${escapeHtml(editUrl)}" target="_blank" rel="noopener">${hasEditUrl ? "Edit Google Form Response" : "Open Google Form"}</a>
+          <a class="btn btn-ghost btn-small" href="rules.html">Rulebook</a>
         </div>
       </div>
     `;
   }
 
   return `
-    <div class="captain-management-box">
-      <strong>Registration is closed</strong>
-      <p class="small">Submit edit/delete requests here. Admin approval is required before changes become official.</p>
-      ${pendingEdit ? `<div class="request-pill">Edit request pending</div>` : ""}
-      ${pendingDelete ? `<div class="request-pill danger">Delete request pending</div>` : ""}
+    <div class="captain-management-box compact-actions-box">
+      <strong>Registration Closed</strong>
+      <p class="small">Edits and deletion need admin approval.</p>
+      ${pendingEdit ? `<div class="request-pill">Edit pending</div>` : ""}
+      ${pendingDelete ? `<div class="request-pill danger">Delete pending</div>` : ""}
       <div class="actions">
-        <button class="btn btn-primary" type="button" onclick="openTeamEditRequest('${team.id}')" ${pendingEdit || pendingDelete ? "disabled" : ""}>Request Edit</button>
-        <button class="btn btn-danger" type="button" onclick="openTeamDeleteRequest('${team.id}')" ${pendingDelete ? "disabled" : ""}>Request Delete</button>
+        <button class="btn btn-primary btn-small" type="button" onclick="openTeamEditRequest('${team.id}')" ${pendingEdit || pendingDelete ? "disabled" : ""}>Request Edit</button>
+        <button class="btn btn-danger btn-small" type="button" onclick="openTeamDeleteRequest('${team.id}')" ${pendingDelete ? "disabled" : ""}>Request Delete</button>
       </div>
     </div>
   `;
@@ -438,7 +483,7 @@ function renderApprovedEntries() {
       `).join("");
 
     return `
-      <article class="captain-entry-card">
+      <article class="captain-entry-card compact-captain-entry">
         <div class="team-card">
           ${teamLogoHtml(team, "md")}
           <div>
@@ -447,8 +492,13 @@ function renderApprovedEntries() {
             <div class="small">Captain: ${escapeHtml(team.captain_name || currentUser.email)}</div>
           </div>
         </div>
-        <ol class="players-list">${players}</ol>
+
         ${renderCaptainTeamActions(team)}
+
+        <details class="captain-details">
+          <summary>Roster (${(team.team_players || []).length})</summary>
+          <ol class="players-list">${players}</ol>
+        </details>
       </article>
     `;
   }).join("");
@@ -459,61 +509,37 @@ function renderCaptainRequests() {
   const relevant = captainRequests.filter(req => currentModeTeams().some(team => team.id === req.team_id));
 
   if (!relevant.length) {
-    wrap.innerHTML = `<div class="notice">No edit or delete requests yet.</div>`;
+    wrap.innerHTML = `<div class="notice compact-notice">No edit/delete request history.</div>`;
     return;
   }
 
   wrap.innerHTML = relevant.map(req => {
     const team = approvedTeams.find(t => t.id === req.team_id);
     return `
-      <article class="captain-request-card">
+      <article class="captain-request-card compact-request-card">
         <div class="request-card-top">
           ${statusBadge(req.status)}
           <strong>${escapeHtml(String(req.request_type || "").toUpperCase())}</strong>
         </div>
-        <h3>${escapeHtml(team?.team_name || req.teams?.team_name || "Team")}</h3>
+        <p class="small">${escapeHtml(team?.team_name || req.teams?.team_name || "Team")} · ${new Date(req.created_at).toLocaleString()}</p>
         <p class="small">${escapeHtml(req.reason || "No reason provided.")}</p>
-        <p class="small">Submitted: ${new Date(req.created_at).toLocaleString()}</p>
-        ${req.reviewed_at ? `<p class="small">Reviewed: ${new Date(req.reviewed_at).toLocaleString()}</p>` : ""}
-        ${req.admin_notes ? `<p class="small"><b>Admin Notes:</b> ${escapeHtml(req.admin_notes)}</p>` : ""}
       </article>
     `;
   }).join("");
 }
 
-function renderStandings() {
-  const wrap = qs("#modeStandings");
-
-  if (!wrap) return;
-
-  if (!modeStandings.length) {
-    wrap.innerHTML = `<div class="notice">Standings will appear once admins generate the bracket or standings for this mode.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = `
-    <div class="standings-mini-table">
-      ${modeStandings.map((row, index) => `
-        <div class="standings-mini-row">
-          <strong>${index + 1}</strong>
-          <span>${escapeHtml(teamName(row.team_id))}</span>
-          <em>${Number(row.points || 0)} pts</em>
-        </div>
-      `).join("")}
+function teamLine(teamId, score, winner) {
+  return `
+    <div class="captain-match-team ${winner ? "is-winner" : ""}">
+      <span>${escapeHtml(teamName(teamId))}</span>
+      <strong>${score ?? 0}</strong>
     </div>
   `;
 }
 
-function renderMatches() {
-  const wrap = qs("#captainMatches");
-
-  if (!modeMatches.length) {
-    wrap.innerHTML = `<div class="notice">No posted matches for your approved ${escapeHtml(registrationModeLabel(selectedMode))} entry yet.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = modeMatches.map(match => `
-    <article class="card card-flat captain-match-card">
+function matchCard(match, compact = false) {
+  return `
+    <article class="${compact ? "captain-next-match-card" : "captain-compact-match"}">
       <div class="match-card-top">
         ${statusBadge(match.status || "scheduled")}
         <span class="small">${escapeHtml(match.round_label || `Round ${match.round_no || ""}`)} · Match ${escapeHtml(match.match_no || "")}</span>
@@ -523,11 +549,28 @@ function renderMatches() {
       ${teamLine(match.team_b_id, match.team_b_series_score, match.winner_team_id === match.team_b_id)}
       <p class="small">${escapeHtml(resultText(match))}</p>
       <div class="actions">
-        <a class="btn btn-primary" href="veto.html?match_id=${encodeURIComponent(match.id)}">Open Veto Room</a>
-        <a class="btn btn-ghost" href="support.html">Need Help</a>
+        <a class="btn btn-primary btn-small" href="veto.html?match_id=${encodeURIComponent(match.id)}">Open Veto</a>
       </div>
     </article>
-  `).join("");
+  `;
+}
+
+function renderMatches() {
+  const nextWrap = qs("#captainNextMatch");
+  const listWrap = qs("#captainMatches");
+
+  if (!modeMatches.length) {
+    nextWrap.innerHTML = `<div class="notice compact-notice">No posted matches yet.</div>`;
+    listWrap.innerHTML = `<div class="notice compact-notice">No posted matches yet.</div>`;
+    return;
+  }
+
+  const next = [...modeMatches]
+    .filter(match => match.match_start_at)
+    .sort((a, b) => new Date(a.match_start_at) - new Date(b.match_start_at))[0] || modeMatches[0];
+
+  nextWrap.innerHTML = matchCard(next, true);
+  listWrap.innerHTML = modeMatches.map(match => matchCard(match, false)).join("");
 }
 
 async function loadApprovedRegistrations() {
@@ -609,7 +652,6 @@ async function buildTeamMap(ids) {
 async function loadModeData() {
   if (!selectedMode) {
     modeMatches = [];
-    modeStandings = [];
     teamMap = {};
     return;
   }
@@ -633,22 +675,7 @@ async function loadModeData() {
     teamIds.includes(match.team_b_id)
   );
 
-  const standingsQuery = await window.sb
-    .from("tournament_standings")
-    .select("*")
-    .eq("tournament_id", currentTournament.id)
-    .eq("registration_mode", selectedMode)
-    .order("points", { ascending: false })
-    .order("wins", { ascending: false })
-    .order("map_diff", { ascending: false })
-    .order("seed", { ascending: true });
-
-  modeStandings = standingsQuery.error ? [] : standingsQuery.data || [];
-
-  await buildTeamMap([
-    ...modeMatches.flatMap(match => [match.team_a_id, match.team_b_id, match.winner_team_id]),
-    ...modeStandings.map(row => row.team_id)
-  ]);
+  await buildTeamMap(modeMatches.flatMap(match => [match.team_a_id, match.team_b_id, match.winner_team_id]));
 }
 
 async function renderPortal() {
@@ -660,7 +687,6 @@ async function renderPortal() {
   renderSummary();
   renderApprovedEntries();
   renderCaptainRequests();
-  renderStandings();
   renderMatches();
 }
 
@@ -748,7 +774,7 @@ async function submitTeamEditRequest(event) {
     players
   };
 
-  const { data, error } = await window.sb.rpc("captain_submit_team_edit_request", {
+  const { error } = await window.sb.rpc("captain_submit_team_edit_request", {
     p_team_id: editState.id,
     p_requested_changes: requestedChanges,
     p_reason: reason
@@ -823,7 +849,7 @@ async function submitTeamDeleteRequest(event) {
     final_confirmed: qs("#deleteFinalConfirm").checked
   };
 
-  const { data, error } = await window.sb.rpc("captain_submit_team_delete_request", {
+  const { error } = await window.sb.rpc("captain_submit_team_delete_request", {
     p_team_id: deleteState.id,
     p_reason: normalizeText(qs("#deleteRequestReason").value),
     p_validation: validation
@@ -844,6 +870,8 @@ async function refreshCaptainPortal() {
     const session = await getSession();
     currentUser = session?.user || null;
     currentTournament = await loadDefaultTournament();
+
+    await loadAnnouncements();
 
     if (currentUser) {
       await loadApprovedRegistrations();

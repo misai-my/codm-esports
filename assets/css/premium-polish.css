@@ -4877,3 +4877,258 @@ body.registration-delete-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Compact Captain Portal + Announcement Board
+   ============================================================ */
+.captain-compact-page main.captain-compact-main {
+  padding-top: 0;
+}
+
+.captain-announce-strip {
+  padding: 14px 0 4px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 74, 116, .14), transparent 35%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+}
+
+.captain-announcement-board {
+  display: grid;
+  grid-template-columns: 38px 1fr 38px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.announce-nav {
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.86);
+  font-size: 24px;
+  font-weight: 900;
+  cursor: pointer;
+  min-height: 74px;
+}
+
+.announce-nav:hover {
+  background: rgba(255,255,255,.08);
+}
+
+.announce-card {
+  min-height: 74px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  background: rgba(13, 16, 28, .78);
+  box-shadow: 0 18px 42px rgba(0,0,0,.22);
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.announce-content h2 {
+  margin: 3px 0 4px;
+  font-size: clamp(16px, 2.5vw, 20px);
+  line-height: 1.1;
+}
+
+.announce-content p,
+.announce-empty span {
+  margin: 0;
+  color: rgba(230,239,255,.74);
+  font-size: 13px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.announce-empty {
+  display: grid;
+  gap: 4px;
+  color: rgba(255,255,255,.86);
+}
+
+.announce-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(230,239,255,.58);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+}
+
+.announce-priority {
+  color: #ff4f7d;
+}
+
+.captain-compact-section {
+  padding-top: 12px;
+}
+
+.captain-topline,
+.captain-mini-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.captain-topline h1,
+.captain-mini-card h1 {
+  margin: 0;
+  font-size: clamp(22px, 4vw, 34px);
+}
+
+.captain-topline p,
+.captain-mini-card p {
+  margin: 4px 0 0;
+  color: rgba(230,239,255,.70);
+}
+
+.compact-mode-tabs {
+  margin: 14px 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  padding-bottom: 4px;
+}
+
+.compact-mode-tabs .mode-tab {
+  white-space: nowrap;
+  padding: 9px 12px;
+}
+
+.captain-mobile-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.captain-focus-card,
+.captain-quick-card {
+  padding: 14px;
+}
+
+.compact-captain-entry {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.compact-actions-box {
+  margin: 12px 0;
+}
+
+.compact-heading {
+  margin-bottom: 10px;
+}
+
+.captain-next-match-card,
+.captain-compact-match {
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,.032);
+}
+
+.compact-match-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.captain-details {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 10px;
+}
+
+.captain-details > summary {
+  cursor: pointer;
+  color: rgba(230,239,255,.86);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+
+.compact-request-card {
+  padding: 10px;
+}
+
+.compact-notice {
+  padding: 10px;
+  font-size: 13px;
+}
+
+.announcement-admin-form {
+  display: grid;
+  gap: 10px;
+}
+
+.announcement-admin-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.announcement-admin-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(255,255,255,.032);
+}
+
+.announcement-admin-item.is-muted {
+  opacity: .62;
+}
+
+.btn-small {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .captain-announcement-board {
+    grid-template-columns: 34px 1fr 34px;
+  }
+
+  .announce-card {
+    min-height: 68px;
+    padding: 10px 12px;
+  }
+
+  .announce-nav {
+    min-height: 68px;
+  }
+
+  .captain-topline,
+  .captain-mini-card {
+    align-items: flex-start;
+  }
+
+  .captain-mobile-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .captain-focus-card,
+  .captain-quick-card {
+    padding: 12px;
+  }
+
+  .captain-entry-card .team-card {
+    align-items: center;
+  }
+
+  .announcement-admin-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
