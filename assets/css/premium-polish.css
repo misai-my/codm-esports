@@ -5132,3 +5132,281 @@ body.registration-delete-open {
     flex-direction: column;
   }
 }
+
+
+/* ============================================================
+   Mobile Portrait Home Layout Fix
+   ============================================================ */
+
+/* Remove the large hero image box so the event details own the space. */
+.hero-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.hero-card {
+  display: none !important;
+}
+
+/* Keep the top three dashboard blocks in one row on mobile portrait. */
+.hero-kpi-strip {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch;
+}
+
+.hero-kpi-strip .kpi {
+  min-width: 0;
+  padding: 14px 12px !important;
+  border-radius: 18px !important;
+  border-left-width: 3px !important;
+}
+
+.hero-kpi-strip .kpi-value {
+  font-size: clamp(18px, 7vw, 34px) !important;
+  line-height: 1 !important;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.hero-kpi-strip .kpi-label {
+  font-size: 9px !important;
+  line-height: 1.18 !important;
+  letter-spacing: .06em !important;
+  overflow-wrap: anywhere;
+}
+
+/* Keep selected tournament details readable and avoid cut-off text. */
+.selected-tournament-panel {
+  min-width: 0;
+}
+
+.selected-tournament-panel > div:first-child,
+.tournament-select-card,
+.tournament-select-card p,
+.tournament-card-meta,
+.tournament-stage-chips {
+  min-width: 0;
+}
+
+.selected-tournament-panel h3,
+.tournament-select-card h3,
+.selected-tournament-panel p,
+.tournament-select-card p {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.tournament-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tournament-card-meta span,
+.tournament-stage-chips span,
+.mode-chip {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Prevent tournament actions from cutting off on narrow widths. */
+.tournament-select-card .actions,
+.selected-tournament-panel .actions {
+  gap: 8px !important;
+}
+
+.tournament-select-card .actions .btn,
+.selected-tournament-panel .actions .btn {
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+
+/* Mobile portrait: participating teams should browse sideways, not stack vertically. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .hero {
+    padding-top: 34px;
+    padding-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 13vw, 56px) !important;
+  }
+
+  .hero .lead {
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  .hero > .container,
+  .hero-grid > div:first-child {
+    min-width: 0;
+  }
+
+  .hero-kpi-strip {
+    margin-top: 14px;
+    padding-top: 12px !important;
+  }
+
+  .participating-heading {
+    gap: 12px;
+  }
+
+  .participating-mode-header {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  .participating-card-grid {
+    display: flex !important;
+    grid-template-columns: none !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 12px !important;
+    padding: 2px 4px 14px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .participating-card-grid::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .participating-card-grid::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.20);
+    border-radius: 999px;
+  }
+
+  .participant-card-v2 {
+    flex: 0 0 min(84vw, 340px);
+    min-width: min(84vw, 340px);
+    min-height: auto !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    padding: 15px !important;
+    border-radius: 20px !important;
+    scroll-snap-align: start;
+  }
+
+  .participant-logo-wrap-v2 {
+    display: none !important;
+  }
+
+  .participant-content-v2 {
+    padding-right: 0 !important;
+  }
+
+  .participant-rank {
+    top: 10px !important;
+    right: 12px !important;
+    font-size: 24px !important;
+    opacity: .85;
+  }
+
+  .participant-topline-v2 {
+    padding-right: 34px;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .participant-card-v2 h3 {
+    font-size: 17px !important;
+    line-height: 1.18 !important;
+  }
+
+  .participant-meta-v2 {
+    margin-top: 8px !important;
+  }
+
+  .participant-meta-v2 strong {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .selected-tournament-panel {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 16px !important;
+  }
+
+  .selected-tournament-panel .actions,
+  .tournament-select-card .actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 14px !important;
+  }
+
+  .selected-tournament-panel .actions .btn,
+  .tournament-select-card .actions .btn {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 9px;
+    font-size: 12px;
+  }
+
+  #tournamentCards.grid-three {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tournament-select-card {
+    padding: 17px !important;
+  }
+}
+
+/* Phone landscape and tablets: keep normal grid behavior but give text more room. */
+@media (max-width: 980px) and (orientation: landscape) {
+  .hero {
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+
+  .hero-kpi-strip {
+    max-width: 720px;
+  }
+
+  .participating-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .participant-card-v2 {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+    min-height: 132px !important;
+    padding: 15px !important;
+  }
+
+  .participant-logo-wrap-v2 {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .participant-logo-wrap-v2 .team-logo-lg {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .participant-content-v2 {
+    padding-right: 6px !important;
+  }
+}
+
+/* Very narrow screens still keep the three KPI blocks side-by-side. */
+@media (max-width: 390px) and (orientation: portrait) {
+  .hero-kpi-strip {
+    gap: 7px !important;
+  }
+
+  .hero-kpi-strip .kpi {
+    padding: 11px 8px !important;
+  }
+
+  .hero-kpi-strip .kpi-value {
+    font-size: 20px !important;
+  }
+
+  .hero-kpi-strip .kpi-label {
+    font-size: 8px !important;
+  }
+}
