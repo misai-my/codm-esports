@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-captain-workflow-verified"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-captain-workflow-verified"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-remove-id-minimum"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-remove-id-minimum"/>
 </head>
 <body>
 <header class="nav">
@@ -246,8 +246,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-captain-workflow-verified"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-captain-workflow-verified"></script>
+<script src="assets/js/main.js?v=20260617-remove-id-minimum"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-remove-id-minimum"></script>
 <script>
 let currentUser = null;
 let currentTournament = null;
@@ -680,11 +680,11 @@ function playerInputsHtml(players) {
       </div>
       <div class="field">
         <label>UID</label>
-        <input data-player-field="uid" value="${escapeHtml(player.uid || "")}" minlength="19" required/>
+        <input data-player-field="uid" value="${escapeHtml(player.uid || "")}" required/>
       </div>
       <div class="field">
         <label>PlayerID / Open ID</label>
-        <input data-player-field="player_id" value="${escapeHtml(player.player_id || "")}" minlength="19" required/>
+        <input data-player-field="player_id" value="${escapeHtml(player.player_id || "")}" required/>
       </div>
     </div>
   `).join("");
@@ -733,8 +733,8 @@ async function submitTeamEditRequest(event) {
   const reason = normalizeText(qs("#editRequestReason").value);
 
   for (const player of players) {
-    if (!player.ign || player.uid.length < 19 || player.player_id.length < 19) {
-      qs("#editRequestStatus").textContent = "Every player needs IGN, UID minimum 19 digits, and PlayerID minimum 19 digits.";
+    if (!player.ign || !player.uid || !player.player_id) {
+      qs("#editRequestStatus").textContent = "Every player needs IGN, UID, and PlayerID/Open ID.";
       return;
     }
   }
