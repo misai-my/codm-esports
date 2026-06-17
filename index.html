@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=20260617-mobile-tagline-blocks-smaller"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-mobile-tagline-blocks-smaller"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-prize-discord-gate"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-prize-discord-gate"/>
 </head>
 <body>
 <header class="nav">
@@ -100,12 +100,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js?v=20260617-mobile-tagline-blocks-smaller"></script>
-<script src="assets/js/nav-visibility.js?v=20260617-mobile-tagline-blocks-smaller"></script>
+<script src="assets/js/main.js?v=20260617-prize-discord-gate"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-prize-discord-gate"></script>
 <script>
 let tournaments = [];
 let selectedTournament = null;
 let selectedHomeMode = getSelectedRegistrationMode?.() || "all";
+let indexUser = null;
+let canShowDiscord = false;
 
 
 function safeDiscordInviteUrlForTournament(tournament = null) {
@@ -116,6 +118,87 @@ function safeDiscordInviteUrlForTournament(tournament = null) {
   return normalizeText(tournament?.discord_invite_url)
     || normalizeText(tournament?.discord_url)
     || "";
+}
+
+
+
+function prizePoolIsVisible(tournament) {
+  return !!(
+    tournament
+    && tournament.prize_pool_enabled
+    && normalizeText(tournament.prize_pool_amount)
+  );
+}
+
+function prizePoolPublicHtml(tournament, compact = false) {
+  if (!prizePoolIsVisible(tournament)) return "";
+
+  const label = normalizeText(tournament.prize_pool_label) || "Prize Pool";
+  const amount = normalizeText(tournament.prize_pool_amount);
+  const breakdown = normalizeText(tournament.prize_pool_breakdown);
+  const notes = normalizeText(tournament.prize_pool_notes);
+
+  return `
+    <div class="${compact ? "prize-pool-chip" : "prize-pool-feature"}">
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(amount)}</strong>
+      </div>
+      ${compact ? "" : `
+        ${breakdown ? `<p>${escapeHtml(breakdown)}</p>` : ""}
+        ${notes ? `<small>${escapeHtml(notes)}</small>` : ""}
+      `}
+    </div>
+  `;
+}
+
+async function refreshDiscordAccess() {
+  canShowDiscord = false;
+  indexUser = null;
+
+  const session = await getSession();
+  indexUser = session?.user || null;
+
+  if (!indexUser || !selectedTournament?.id) return false;
+
+  const selectQuery = "id,captain_user_id,captain_email,status,deleted_at";
+
+  const byUser = await window.sb
+    .from("teams")
+    .select(selectQuery)
+    .eq("tournament_id", selectedTournament.id)
+    .eq("status", "approved")
+    .is("deleted_at", null)
+    .eq("captain_user_id", indexUser.id)
+    .limit(1);
+
+  if (byUser.error) {
+    console.warn("Could not check approved captain by user:", byUser.error);
+  }
+
+  if ((byUser.data || []).length) {
+    canShowDiscord = true;
+    return true;
+  }
+
+  if (indexUser.email) {
+    const byEmail = await window.sb
+      .from("teams")
+      .select(selectQuery)
+      .eq("tournament_id", selectedTournament.id)
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .ilike("captain_email", indexUser.email)
+      .limit(1);
+
+    if (byEmail.error) {
+      console.warn("Could not check approved captain by email:", byEmail.error);
+    }
+
+    canShowDiscord = (byEmail.data || []).length > 0;
+  }
+
+  return canShowDiscord;
 }
 
 
@@ -170,8 +253,8 @@ function rulebookButtonHtml(t) {
 function discordButtonHtml(t) {
   const discordUrl = safeDiscordInviteUrlForTournament(t);
 
-  if (!discordUrl) {
-    return `<button class="btn btn-ghost" type="button" disabled>Discord TBA</button>`;
+  if (!canShowDiscord || !discordUrl) {
+    return "";
   }
 
   return `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>`;
@@ -341,6 +424,7 @@ function renderTournamentCards() {
           <span>Registration: ${t.registration_open ? "Open" : "Closed"}</span>
         </div>
         ${renderTournamentStageChips(t)}
+        ${prizePoolPublicHtml(t, true)}
         <div class="actions">
           <button class="btn ${selected ? "btn-success" : "btn-primary"}" type="button" onclick="selectTournament('${escapeHtml(t.slug)}')">${selected ? "Selected" : "Select"}</button>
           ${registrationButtonHtml(t)}
@@ -373,10 +457,11 @@ function renderSelectedTournamentPanel() {
           ${selectedTournament.max_teams ? `<span>Max Teams: ${escapeHtml(selectedTournament.max_teams)}</span>` : ""}
         </div>
         ${renderTournamentStageChips(selectedTournament)}
+        ${prizePoolPublicHtml(selectedTournament)}
       </div>
       <div class="actions">
         <a class="btn" href="captain.html">Captain Portal</a>
-        ${discordUrl ? `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>` : ""}
+        ${canShowDiscord && discordUrl ? `<a class="btn btn-ghost" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener">Join Discord</a>` : ""}
       </div>
     </div>
   `;
@@ -385,6 +470,7 @@ function renderSelectedTournamentPanel() {
 async function selectTournament(slug, redirectTo = null) {
   setSelectedTournamentSlug(slug);
   selectedTournament = tournaments.find(t => t.slug === slug) || null;
+  await refreshDiscordAccess();
   renderTournamentCards();
   renderSelectedTournamentPanel();
   await loadSelectedOverview();
@@ -514,6 +600,8 @@ async function initHome() {
 
   if (selectedTournament?.slug) setSelectedTournamentSlug(selectedTournament.slug);
 
+  await refreshDiscordAccess();
+
   populateHomeModeSelect();
   qs("#homeModeSelect")?.addEventListener("change", async event => {
     selectedHomeMode = event.target.value;
@@ -532,6 +620,12 @@ async function initHome() {
     qs("#approvedTeams").innerHTML = `<div class="notice">No tournament records found.</div>`;
   }
 }
+
+window.sb.auth.onAuthStateChange(async () => {
+  await refreshDiscordAccess();
+  renderTournamentCards();
+  renderSelectedTournamentPanel();
+});
 
 initHome().catch(err => {
   console.error(err);

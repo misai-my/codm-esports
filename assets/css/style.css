@@ -5381,3 +5381,96 @@ body.registration-delete-open {
     font-size: 7px !important;
   }
 }
+
+
+/* ============================================================
+   Prize Pool Feature + Approved Captain Discord Gate
+   ============================================================ */
+.prize-pool-feature {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(248,209,92,.28);
+  background:
+    radial-gradient(circle at 0 0, rgba(248,209,92,.16), transparent 12rem),
+    rgba(248,209,92,.055);
+}
+
+.prize-pool-feature span,
+.prize-pool-chip span {
+  display: block;
+  color: rgba(248,209,92,.86);
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.prize-pool-feature strong {
+  display: block;
+  margin-top: 3px;
+  color: rgba(247,251,255,.98);
+  font-size: clamp(22px, 4vw, 34px);
+  line-height: 1;
+  letter-spacing: -.04em;
+  overflow-wrap: anywhere;
+}
+
+.prize-pool-feature p {
+  margin: 8px 0 0;
+  color: rgba(230,239,255,.78);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.prize-pool-feature small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(230,239,255,.56);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.prize-pool-chip {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(248,209,92,.24);
+  background: rgba(248,209,92,.07);
+}
+
+.prize-pool-chip strong {
+  display: block;
+  margin-top: 3px;
+  color: rgba(247,251,255,.95);
+  font-size: 18px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .prize-pool-feature {
+    margin-top: 10px;
+    padding: 11px;
+    border-radius: 15px;
+  }
+
+  .prize-pool-feature strong {
+    font-size: 20px !important;
+  }
+
+  .prize-pool-feature p {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .prize-pool-chip {
+    padding: 9px 10px;
+  }
+
+  .prize-pool-chip strong {
+    font-size: 15px;
+  }
+}
