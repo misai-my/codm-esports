@@ -112,6 +112,18 @@
 
       <div id="summaryCards" class="grid grid-four section-tight"></div>
 
+      <section class="card section-tight" id="captainChangeRequestsSection">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Captain Requests</div>
+            <h2>Edit / Delete Approvals</h2>
+            <p>Review captain-submitted edit and deletion requests after registration closes.</p>
+          </div>
+          <button class="btn" type="button" id="refreshRequestsBtn">Refresh Requests</button>
+        </div>
+        <div id="teamChangeRequestsWrap" class="team-change-request-grid"></div>
+      </section>
+
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -542,14 +554,16 @@ function renderStageControl() {
 async function loadRegistrations() {
   const { data, error } = await window.sb
     .from("teams")
-    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,registration_mode,game_mode,registration_source,login_invite_status,login_invite_sent_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
+    .select(`id,tournament_id,team_name,team_tag,logo_url,captain_name,captain_email,captain_discord_id,status,admin_notes,created_at,registration_mode,game_mode,registration_source,login_invite_status,login_invite_sent_at,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order),registration_change_logs(id,change_type,summary,created_at),team_stage_assignments(id,stage_id,is_active,assigned_at,tournament_stages(id,stage_name,stage_order))`)
     .eq("tournament_id", currentTournament.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
   allTeams = data || [];
   renderAdminTable();
+  await loadTeamChangeRequests();
 }
 
 function teamMatchesSearch(team, search) {
@@ -1113,12 +1127,126 @@ async function promoteTeamStage(teamId) {
   }
 }
 
+
+let teamChangeRequests = [];
+
+async function loadTeamChangeRequests() {
+  const wrap = qs("#teamChangeRequestsWrap");
+  if (!wrap || !currentTournament) return;
+
+  const { data, error } = await window.sb
+    .from("captain_team_change_requests")
+    .select("*,teams(id,team_name,team_tag,captain_email,registration_mode,logo_url)")
+    .eq("tournament_id", currentTournament.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Could not load captain change requests:", error);
+    wrap.innerHTML = `<div class="notice">Run supabase_captain_change_requests.sql to enable captain edit/delete approvals.</div>`;
+    return;
+  }
+
+  teamChangeRequests = data || [];
+  renderTeamChangeRequests();
+}
+
+function requestStatusPill(status) {
+  return statusBadge(status || "pending");
+}
+
+function requestChangesSummary(request) {
+  if (request.request_type === "delete") {
+    return `<p class="small">${escapeHtml(request.reason || "Deletion requested.")}</p>`;
+  }
+
+  const changes = request.requested_changes || {};
+  const players = Array.isArray(changes.players) ? changes.players : [];
+
+  return `
+    <div class="request-change-summary">
+      <p><b>Team Name:</b> ${escapeHtml(changes.team_name || "No change")}</p>
+      <p><b>Team Tag:</b> ${escapeHtml(changes.team_tag || "No change")}</p>
+      <p><b>Captain:</b> ${escapeHtml(changes.captain_name || "No change")} · ${escapeHtml(changes.captain_discord_id || "No Discord")}</p>
+      <p><b>Players:</b> ${players.length ? players.map(p => escapeHtml(p.ign || "Player")).join(", ") : "No roster payload"}</p>
+    </div>
+  `;
+}
+
+function renderTeamChangeRequests() {
+  const wrap = qs("#teamChangeRequestsWrap");
+  if (!wrap) return;
+
+  if (!teamChangeRequests.length) {
+    wrap.innerHTML = `<div class="notice">No captain edit/delete requests yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = teamChangeRequests.map(request => {
+    const team = request.teams || {};
+    const pending = request.status === "pending";
+
+    return `
+      <article class="team-change-request-card ${request.request_type === "delete" ? "is-delete" : ""}">
+        <div class="request-card-top">
+          ${requestStatusPill(request.status)}
+          <strong>${escapeHtml(String(request.request_type || "").toUpperCase())}</strong>
+        </div>
+
+        <div class="team-card">
+          ${teamLogoHtml(team, "sm")}
+          <div>
+            <h3>${escapeHtml(team.team_name || "Team")}</h3>
+            <div class="small">${escapeHtml(team.team_tag || "")} · ${escapeHtml(registrationModeLabel(team.registration_mode))}</div>
+            <div class="small">${escapeHtml(team.captain_email || "")}</div>
+          </div>
+        </div>
+
+        <p class="small"><b>Reason:</b> ${escapeHtml(request.reason || "No reason provided.")}</p>
+        ${requestChangesSummary(request)}
+        <p class="small">Submitted: ${new Date(request.created_at).toLocaleString()}</p>
+        ${request.reviewed_at ? `<p class="small">Reviewed: ${new Date(request.reviewed_at).toLocaleString()}</p>` : ""}
+        ${request.admin_notes ? `<p class="small"><b>Admin Notes:</b> ${escapeHtml(request.admin_notes)}</p>` : ""}
+
+        ${pending ? `
+          <div class="actions">
+            <button class="btn btn-success" type="button" onclick="reviewTeamChangeRequest('${request.id}','approve')">Approve</button>
+            <button class="btn btn-danger" type="button" onclick="reviewTeamChangeRequest('${request.id}','deny')">Deny</button>
+            <button class="btn" type="button" onclick="reviewTeamChangeRequest('${request.id}','ignore')">Ignore</button>
+          </div>
+        ` : ""}
+      </article>
+    `;
+  }).join("");
+}
+
+async function reviewTeamChangeRequest(requestId, action) {
+  const request = teamChangeRequests.find(item => item.id === requestId);
+  if (!request) return showToast("Request not found.", "error");
+
+  const label = action === "approve" ? "APPROVE" : action === "deny" ? "DENY" : "IGNORE";
+  const notes = prompt(`${label} ${request.request_type} request for ${request.teams?.team_name || "team"}?\n\nOptional admin notes:`);
+  if (notes === null) return;
+
+  const { data, error } = await window.sb.rpc("admin_review_team_change_request", {
+    p_request_id: requestId,
+    p_action: action,
+    p_admin_notes: notes
+  });
+
+  if (error) return showToast(error.message || "Failed to review request.", "error");
+
+  showToast(`Request ${action === "approve" ? "approved" : action === "deny" ? "denied" : "ignored"}.`, "success");
+  await loadRegistrations();
+}
+
+
 async function init() {
   currentTournament = await loadDefaultTournament();
   setText("#tournamentMeta", `${currentTournament.title} · ${currentTournament.game} · ${currentTournament.format} · Registration ${currentTournament.registration_open ? "Open" : "Closed"}`);
   qs("#loginBtn").addEventListener("click", login);
   qs("#teamAdminTournamentSelect").addEventListener("change", changeTeamAdminTournament);
   qs("#refreshBtn").addEventListener("click", loadRegistrations);
+  qs("#refreshRequestsBtn")?.addEventListener("click", loadTeamChangeRequests);
   qs("#statusFilter").addEventListener("change", renderAdminTable);
   qs("#stageFilter").addEventListener("change", renderAdminTable);
   qs("#modeFilter")?.addEventListener("change", renderAdminTable);

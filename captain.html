@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Captain Portal · CODM Tournament OS</title>
-  <link rel="stylesheet" href="assets/css/style.css"/>
-  <link rel="stylesheet" href="assets/css/premium-polish.css"/>
+  <link rel="stylesheet" href="assets/css/style.css?v=20260617-captain-workflow-verified"/>
+  <link rel="stylesheet" href="assets/css/premium-polish.css?v=20260617-captain-workflow-verified"/>
 </head>
 <body>
 <header class="nav">
@@ -28,8 +28,8 @@
   <section class="page-hero" data-hero-bg>
     <div class="container">
       <div class="eyebrow">Captain Workspace</div>
-      <h1 class="h1"><span class="gradient-text">One portal.</span><br/>Matches, bracket, and veto access.</h1>
-      <p class="lead">Only approved registrations are visible here. Your available tournament mode is based on the approved Google Form registration mode.</p>
+      <h1 class="h1"><span class="gradient-text">One portal.</span><br/>Matches, requests, and support.</h1>
+      <p class="lead">Your available tournament access is based on your approved registration mode. Team edits and delete requests are tracked for admin review.</p>
       <div class="actions">
         <a class="btn btn-primary" href="support.html">Support</a>
         <a class="btn btn-ghost" href="rules.html">Rulebook</a>
@@ -84,11 +84,11 @@
         <section class="card">
           <div class="section-heading">
             <div>
-              <div class="eyebrow">Standings</div>
-              <h2>Mode Standings</h2>
+              <div class="eyebrow">Change History</div>
+              <h2>Edit / Delete Requests</h2>
             </div>
           </div>
-          <div id="modeStandings" class="standings-mini-list"></div>
+          <div id="captainRequests" class="captain-request-list"></div>
         </section>
       </div>
 
@@ -106,12 +106,148 @@
   </section>
 </main>
 
+<div id="teamEditRequestModal" class="captain-edit-modal hidden" role="dialog" aria-modal="true">
+  <div class="captain-edit-backdrop" onclick="closeTeamEditRequest()"></div>
+  <section class="captain-edit-dialog">
+    <div class="captain-edit-header">
+      <div>
+        <div class="eyebrow">Registration Closed</div>
+        <h2>Request Team Edit</h2>
+        <p class="small" id="teamEditRequestLabel">Select a team.</p>
+      </div>
+      <button class="captain-edit-close" type="button" onclick="closeTeamEditRequest()">×</button>
+    </div>
+
+    <div class="captain-ownership-notice">
+      This does not instantly change your registration. Admins must approve the edit request before it becomes official.
+    </div>
+
+    <form id="teamEditRequestForm" class="captain-edit-form">
+      <div class="grid grid-two">
+        <div class="field">
+          <label for="editTeamName">Team / Player Name</label>
+          <input id="editTeamName" maxlength="100" required/>
+        </div>
+        <div class="field">
+          <label for="editTeamTag">Team Tag</label>
+          <input id="editTeamTag" maxlength="12" required/>
+        </div>
+      </div>
+
+      <div class="grid grid-two">
+        <div class="field">
+          <label for="editCaptainName">Captain Name</label>
+          <input id="editCaptainName" maxlength="100" required/>
+        </div>
+        <div class="field">
+          <label for="editCaptainDiscord">Captain Discord</label>
+          <input id="editCaptainDiscord" maxlength="60"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="editLogoUrl">Logo URL</label>
+        <input id="editLogoUrl" type="url" placeholder="https://..."/>
+      </div>
+
+      <div class="field">
+        <label>Roster / Player Details</label>
+        <div id="editPlayersWrap" class="captain-player-edit-list"></div>
+      </div>
+
+      <div class="field">
+        <label for="editRequestReason">Reason for Edit</label>
+        <textarea id="editRequestReason" rows="3" minlength="8" maxlength="600" required placeholder="Explain why this team/player detail needs to be changed."></textarea>
+      </div>
+
+      <div id="editRequestStatus" class="registration-delete-validation"></div>
+
+      <div class="registration-delete-actions">
+        <button class="btn" type="button" onclick="closeTeamEditRequest()">Cancel</button>
+        <button class="btn btn-primary" id="submitEditRequestBtn" type="submit">Submit Edit Request</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div id="teamDeleteRequestModal" class="registration-delete-modal hidden" role="dialog" aria-modal="true">
+  <div class="registration-delete-backdrop" onclick="closeTeamDeleteRequest()"></div>
+  <section class="registration-delete-dialog">
+    <div class="registration-delete-header">
+      <div>
+        <div class="eyebrow">Admin Approval Required</div>
+        <h2>Request Team Deletion</h2>
+        <p class="small" id="teamDeleteRequestLabel">Select a team.</p>
+      </div>
+      <button class="registration-delete-close" type="button" onclick="closeTeamDeleteRequest()">×</button>
+    </div>
+
+    <div class="registration-delete-warning">
+      This does not instantly delete the team. Your request is sent to tournament admins for approval, denial, or ignore.
+    </div>
+
+    <form id="teamDeleteRequestForm" class="registration-delete-form">
+      <div class="registration-delete-step">
+        <div class="registration-delete-step-number">1</div>
+        <div class="registration-delete-step-content">
+          <h3>Confirm Team Tag</h3>
+          <p class="small">Type the exact registered team tag.</p>
+          <div class="field">
+            <label for="deleteTeamTagConfirm">Exact Team Tag</label>
+            <input id="deleteTeamTagConfirm" autocomplete="off" required/>
+          </div>
+        </div>
+      </div>
+
+      <div class="registration-delete-step">
+        <div class="registration-delete-step-number">2</div>
+        <div class="registration-delete-step-content">
+          <h3>Confirm Captain Email</h3>
+          <p class="small">Type the email connected to this captain account.</p>
+          <div class="field">
+            <label for="deleteCaptainEmailConfirm">Captain Email</label>
+            <input id="deleteCaptainEmailConfirm" type="email" autocomplete="off" required/>
+          </div>
+        </div>
+      </div>
+
+      <div class="registration-delete-step">
+        <div class="registration-delete-step-number">3</div>
+        <div class="registration-delete-step-content">
+          <h3>Confirm Permanent Request</h3>
+          <p class="small">Type the exact phrase below.</p>
+          <div class="registration-delete-phrase" id="deleteRequestPhrase">DELETE TEAM</div>
+          <div class="field">
+            <label for="deletePhraseConfirm">Deletion Phrase</label>
+            <input id="deletePhraseConfirm" autocomplete="off" required/>
+          </div>
+          <div class="field">
+            <label for="deleteRequestReason">Reason for Deletion</label>
+            <textarea id="deleteRequestReason" rows="3" minlength="8" maxlength="600" required></textarea>
+          </div>
+          <label class="checkbox-line">
+            <input id="deleteFinalConfirm" type="checkbox"/>
+            I understand this will be sent to admins for deletion approval.
+          </label>
+        </div>
+      </div>
+
+      <div id="deleteRequestStatus" class="registration-delete-validation"></div>
+
+      <div class="registration-delete-actions">
+        <button class="btn" type="button" onclick="closeTeamDeleteRequest()">Cancel</button>
+        <button class="btn btn-danger" id="submitDeleteRequestBtn" type="submit" disabled>Submit Delete Request</button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/nav-visibility.js"></script>
+<script src="assets/js/main.js?v=20260617-captain-workflow-verified"></script>
+<script src="assets/js/nav-visibility.js?v=20260617-captain-workflow-verified"></script>
 <script>
 let currentUser = null;
 let currentTournament = null;
@@ -120,6 +256,9 @@ let selectedMode = "";
 let modeMatches = [];
 let modeStandings = [];
 let teamMap = {};
+let captainRequests = [];
+let editState = null;
+let deleteState = null;
 
 function uniqById(items) {
   const map = new Map();
@@ -159,6 +298,21 @@ function teamLine(teamId, score, winner) {
       <strong>${score ?? 0}</strong>
     </div>
   `;
+}
+
+function requestForTeam(teamId, type = null) {
+  return captainRequests.find(req =>
+    req.team_id === teamId
+    && req.status === "pending"
+    && (!type || req.request_type === type)
+  );
+}
+
+function googleFormEditUrl(team) {
+  return normalizeText(team.google_form_edit_url)
+    || normalizeText(team.registration_edit_url)
+    || cfg.REGISTRATION_FORM_URL
+    || "";
 }
 
 function renderAuthGate() {
@@ -221,20 +375,45 @@ function renderSummary() {
     .sort((a, b) => new Date(a.match_start_at) - new Date(b.match_start_at))[0];
 
   qs("#portalTitle").textContent = registrationModeLabel(selectedMode);
-  qs("#portalMeta").textContent = `${currentTournament.title} · ${teams.length} approved entry${teams.length === 1 ? "" : "ies"}`;
+  qs("#portalMeta").textContent = `${currentTournament.title} · Registration ${currentTournament.registration_open ? "Open" : "Closed"} · ${teams.length} approved entry${teams.length === 1 ? "" : "ies"}`;
 
   qs("#captainSummary").innerHTML = `
-    <div class="card card-flat kpi">
-      <div class="kpi-value">${teams.length}</div>
-      <div class="kpi-label">Approved Entries</div>
-    </div>
-    <div class="card card-flat kpi">
-      <div class="kpi-value">${modeMatches.length}</div>
-      <div class="kpi-label">Posted Matches</div>
-    </div>
-    <div class="card card-flat kpi">
-      <div class="kpi-value">${nextMatch ? visibleDateTime(nextMatch.match_start_at) : "TBD"}</div>
-      <div class="kpi-label">Next Match</div>
+    <div class="card card-flat kpi"><div class="kpi-value">${teams.length}</div><div class="kpi-label">Approved Entries</div></div>
+    <div class="card card-flat kpi"><div class="kpi-value">${modeMatches.length}</div><div class="kpi-label">Posted Matches</div></div>
+    <div class="card card-flat kpi"><div class="kpi-value">${nextMatch ? visibleDateTime(nextMatch.match_start_at) : "TBD"}</div><div class="kpi-label">Next Match</div></div>
+  `;
+}
+
+function renderCaptainTeamActions(team) {
+  const pendingEdit = requestForTeam(team.id, "edit");
+  const pendingDelete = requestForTeam(team.id, "delete");
+
+  if (currentTournament.registration_open) {
+    const editUrl = googleFormEditUrl(team);
+    const hasEditUrl = !!normalizeText(team.google_form_edit_url || team.registration_edit_url);
+
+    return `
+      <div class="captain-management-box is-open">
+        <strong>Registration is open</strong>
+        <p class="small">${hasEditUrl ? "Use your Google Forms edit response link for changes." : "Edit response URL is not captured yet. This opens the official Google Form."}</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="${escapeHtml(editUrl)}" target="_blank" rel="noopener">${hasEditUrl ? "Edit Google Form Response" : "Open Google Form"}</a>
+          <a class="btn btn-ghost" href="support.html">Need Help?</a>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="captain-management-box">
+      <strong>Registration is closed</strong>
+      <p class="small">Submit edit/delete requests here. Admin approval is required before changes become official.</p>
+      ${pendingEdit ? `<div class="request-pill">Edit request pending</div>` : ""}
+      ${pendingDelete ? `<div class="request-pill danger">Delete request pending</div>` : ""}
+      <div class="actions">
+        <button class="btn btn-primary" type="button" onclick="openTeamEditRequest('${team.id}')" ${pendingEdit || pendingDelete ? "disabled" : ""}>Request Edit</button>
+        <button class="btn btn-danger" type="button" onclick="openTeamDeleteRequest('${team.id}')" ${pendingDelete ? "disabled" : ""}>Request Delete</button>
+      </div>
     </div>
   `;
 }
@@ -269,6 +448,34 @@ function renderApprovedEntries() {
           </div>
         </div>
         <ol class="players-list">${players}</ol>
+        ${renderCaptainTeamActions(team)}
+      </article>
+    `;
+  }).join("");
+}
+
+function renderCaptainRequests() {
+  const wrap = qs("#captainRequests");
+  const relevant = captainRequests.filter(req => currentModeTeams().some(team => team.id === req.team_id));
+
+  if (!relevant.length) {
+    wrap.innerHTML = `<div class="notice">No edit or delete requests yet.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = relevant.map(req => {
+    const team = approvedTeams.find(t => t.id === req.team_id);
+    return `
+      <article class="captain-request-card">
+        <div class="request-card-top">
+          ${statusBadge(req.status)}
+          <strong>${escapeHtml(String(req.request_type || "").toUpperCase())}</strong>
+        </div>
+        <h3>${escapeHtml(team?.team_name || req.teams?.team_name || "Team")}</h3>
+        <p class="small">${escapeHtml(req.reason || "No reason provided.")}</p>
+        <p class="small">Submitted: ${new Date(req.created_at).toLocaleString()}</p>
+        ${req.reviewed_at ? `<p class="small">Reviewed: ${new Date(req.reviewed_at).toLocaleString()}</p>` : ""}
+        ${req.admin_notes ? `<p class="small"><b>Admin Notes:</b> ${escapeHtml(req.admin_notes)}</p>` : ""}
       </article>
     `;
   }).join("");
@@ -276,6 +483,8 @@ function renderApprovedEntries() {
 
 function renderStandings() {
   const wrap = qs("#modeStandings");
+
+  if (!wrap) return;
 
   if (!modeStandings.length) {
     wrap.innerHTML = `<div class="notice">Standings will appear once admins generate the bracket or standings for this mode.</div>`;
@@ -309,28 +518,27 @@ function renderMatches() {
         ${statusBadge(match.status || "scheduled")}
         <span class="small">${escapeHtml(match.round_label || `Round ${match.round_no || ""}`)} · Match ${escapeHtml(match.match_no || "")}</span>
       </div>
-
       <div class="captain-schedule-pill">${escapeHtml(visibleDateTime(match.match_start_at))}</div>
-
       ${teamLine(match.team_a_id, match.team_a_series_score, match.winner_team_id === match.team_a_id)}
       ${teamLine(match.team_b_id, match.team_b_series_score, match.winner_team_id === match.team_b_id)}
-
       <p class="small">${escapeHtml(resultText(match))}</p>
-
       <div class="actions">
         <a class="btn btn-primary" href="veto.html?match_id=${encodeURIComponent(match.id)}">Open Veto Room</a>
-        <a class="btn btn-ghost" href="support.html">Need Help?</a>
+        <a class="btn btn-ghost" href="support.html">Need Help</a>
       </div>
     </article>
   `).join("");
 }
 
 async function loadApprovedRegistrations() {
+  const selectQuery = "id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,google_form_edit_url,registration_edit_url,deleted_at,team_players(id,ign,uid,player_id,role,is_substitute,player_order)";
+
   const byUser = await window.sb
     .from("teams")
-    .select("id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,team_players(id,ign,uid,player_id,role,is_substitute,player_order)")
+    .select(selectQuery)
     .eq("tournament_id", currentTournament.id)
     .eq("status", "approved")
+    .is("deleted_at", null)
     .eq("captain_user_id", currentUser.id);
 
   if (byUser.error) throw byUser.error;
@@ -340,9 +548,10 @@ async function loadApprovedRegistrations() {
   if (currentUser.email) {
     byEmail = await window.sb
       .from("teams")
-      .select("id,tournament_id,team_name,team_tag,logo_url,status,captain_name,captain_email,captain_discord_id,registration_mode,team_players(id,ign,uid,player_id,role,is_substitute,player_order)")
+      .select(selectQuery)
       .eq("tournament_id", currentTournament.id)
       .eq("status", "approved")
+      .is("deleted_at", null)
       .ilike("captain_email", currentUser.email);
 
     if (byEmail.error) throw byEmail.error;
@@ -353,11 +562,34 @@ async function loadApprovedRegistrations() {
   const savedMode = getSelectedRegistrationMode();
   const modes = getApprovedModes();
   selectedMode = modes.includes(savedMode) ? savedMode : modes[0] || "";
+
+  await loadCaptainRequests();
+}
+
+async function loadCaptainRequests() {
+  const teamIds = approvedTeams.map(team => team.id);
+  if (!teamIds.length) {
+    captainRequests = [];
+    return;
+  }
+
+  const { data, error } = await window.sb
+    .from("captain_team_change_requests")
+    .select("*")
+    .in("team_id", teamIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Could not load captain change requests:", error);
+    captainRequests = [];
+    return;
+  }
+
+  captainRequests = data || [];
 }
 
 async function buildTeamMap(ids) {
   teamMap = Object.fromEntries(approvedTeams.map(team => [team.id, team]));
-
   const missingIds = [...new Set((ids || []).filter(id => id && !teamMap[id]))];
 
   if (!missingIds.length) return;
@@ -384,7 +616,6 @@ async function loadModeData() {
 
   const teamIds = currentModeTeams().map(team => team.id);
 
-  let matches = [];
   const matchQuery = await window.sb
     .from("matches")
     .select("*")
@@ -397,7 +628,7 @@ async function loadModeData() {
 
   if (matchQuery.error) throw matchQuery.error;
 
-  matches = (matchQuery.data || []).filter(match =>
+  modeMatches = (matchQuery.data || []).filter(match =>
     teamIds.includes(match.team_a_id) ||
     teamIds.includes(match.team_b_id)
   );
@@ -412,10 +643,7 @@ async function loadModeData() {
     .order("map_diff", { ascending: false })
     .order("seed", { ascending: true });
 
-  if (standingsQuery.error) throw standingsQuery.error;
-
-  modeMatches = matches;
-  modeStandings = standingsQuery.data || [];
+  modeStandings = standingsQuery.error ? [] : standingsQuery.data || [];
 
   await buildTeamMap([
     ...modeMatches.flatMap(match => [match.team_a_id, match.team_b_id, match.winner_team_id]),
@@ -425,13 +653,13 @@ async function loadModeData() {
 
 async function renderPortal() {
   renderAuthGate();
-
   if (!currentUser || !approvedTeams.length) return;
 
   renderModeTabs();
   await loadModeData();
   renderSummary();
   renderApprovedEntries();
+  renderCaptainRequests();
   renderStandings();
   renderMatches();
 }
@@ -440,6 +668,175 @@ async function selectMode(mode) {
   selectedMode = mode;
   setSelectedRegistrationMode(mode);
   await renderPortal();
+}
+
+function playerInputsHtml(players) {
+  const list = [...(players || [])].sort((a, b) => Number(a.player_order) - Number(b.player_order));
+  return list.map((player, index) => `
+    <div class="captain-player-edit-row" data-player-row="${index}">
+      <div class="field">
+        <label>Player ${index + 1} IGN</label>
+        <input data-player-field="ign" value="${escapeHtml(player.ign || "")}" required/>
+      </div>
+      <div class="field">
+        <label>UID</label>
+        <input data-player-field="uid" value="${escapeHtml(player.uid || "")}" minlength="19" required/>
+      </div>
+      <div class="field">
+        <label>PlayerID / Open ID</label>
+        <input data-player-field="player_id" value="${escapeHtml(player.player_id || "")}" minlength="19" required/>
+      </div>
+    </div>
+  `).join("");
+}
+
+function openTeamEditRequest(teamId) {
+  const team = approvedTeams.find(item => item.id === teamId);
+  if (!team) return showToast("Team not found.", "error");
+  if (currentTournament.registration_open) return showToast("Registration is open. Use the Google Form edit response link.", "error");
+
+  editState = team;
+  qs("#teamEditRequestLabel").textContent = `${team.team_name} (${team.team_tag})`;
+  qs("#editTeamName").value = team.team_name || "";
+  qs("#editTeamTag").value = team.team_tag || "";
+  qs("#editCaptainName").value = team.captain_name || "";
+  qs("#editCaptainDiscord").value = team.captain_discord_id || "";
+  qs("#editLogoUrl").value = team.logo_url || "";
+  qs("#editRequestReason").value = "";
+  qs("#editPlayersWrap").innerHTML = playerInputsHtml(team.team_players || []);
+  qs("#editRequestStatus").textContent = "";
+  qs("#teamEditRequestModal").classList.remove("hidden");
+  document.body.classList.add("registration-delete-open");
+}
+
+function closeTeamEditRequest() {
+  editState = null;
+  qs("#teamEditRequestModal").classList.add("hidden");
+  document.body.classList.remove("registration-delete-open");
+}
+
+function collectEditPlayers() {
+  return qsa(".captain-player-edit-row").map((row, index) => ({
+    player_order: index + 1,
+    ign: normalizeText(row.querySelector('[data-player-field="ign"]')?.value),
+    uid: normalizeText(row.querySelector('[data-player-field="uid"]')?.value).replace(/\D/g, ""),
+    player_id: normalizeText(row.querySelector('[data-player-field="player_id"]')?.value).replace(/\D/g, ""),
+    is_substitute: false
+  }));
+}
+
+async function submitTeamEditRequest(event) {
+  event.preventDefault();
+  if (!editState) return;
+
+  const players = collectEditPlayers();
+  const reason = normalizeText(qs("#editRequestReason").value);
+
+  for (const player of players) {
+    if (!player.ign || player.uid.length < 19 || player.player_id.length < 19) {
+      qs("#editRequestStatus").textContent = "Every player needs IGN, UID minimum 19 digits, and PlayerID minimum 19 digits.";
+      return;
+    }
+  }
+
+  const requestedChanges = {
+    team_name: normalizeText(qs("#editTeamName").value),
+    team_tag: normalizeText(qs("#editTeamTag").value).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12),
+    logo_url: normalizeText(qs("#editLogoUrl").value),
+    captain_name: normalizeText(qs("#editCaptainName").value),
+    captain_discord_id: normalizeText(qs("#editCaptainDiscord").value),
+    players
+  };
+
+  const { data, error } = await window.sb.rpc("captain_submit_team_edit_request", {
+    p_team_id: editState.id,
+    p_requested_changes: requestedChanges,
+    p_reason: reason
+  });
+
+  if (error) {
+    qs("#editRequestStatus").textContent = error.message;
+    return;
+  }
+
+  showToast("Edit request submitted for admin review.", "success");
+  closeTeamEditRequest();
+  await refreshCaptainPortal();
+}
+
+function openTeamDeleteRequest(teamId) {
+  const team = approvedTeams.find(item => item.id === teamId);
+  if (!team) return showToast("Team not found.", "error");
+  if (currentTournament.registration_open) return showToast("Registration is open. Use the Google Form edit response link.", "error");
+
+  deleteState = team;
+  const phrase = `DELETE ${team.team_tag}`;
+  qs("#teamDeleteRequestLabel").textContent = `${team.team_name} (${team.team_tag})`;
+  qs("#deleteRequestPhrase").textContent = phrase;
+  qs("#deleteTeamTagConfirm").value = "";
+  qs("#deleteCaptainEmailConfirm").value = "";
+  qs("#deletePhraseConfirm").value = "";
+  qs("#deleteRequestReason").value = "";
+  qs("#deleteFinalConfirm").checked = false;
+  qs("#deleteRequestStatus").textContent = "";
+  validateDeleteRequest();
+  qs("#teamDeleteRequestModal").classList.remove("hidden");
+  document.body.classList.add("registration-delete-open");
+}
+
+function closeTeamDeleteRequest() {
+  deleteState = null;
+  qs("#teamDeleteRequestModal").classList.add("hidden");
+  document.body.classList.remove("registration-delete-open");
+}
+
+function validateDeleteRequest() {
+  const button = qs("#submitDeleteRequestBtn");
+  if (!deleteState || !button) return;
+
+  const tagOk = normalizeText(qs("#deleteTeamTagConfirm").value).toUpperCase() === String(deleteState.team_tag || "").toUpperCase();
+  const emailOk = normalizeText(qs("#deleteCaptainEmailConfirm").value).toLowerCase() === String(currentUser?.email || "").toLowerCase();
+  const phraseOk = normalizeText(qs("#deletePhraseConfirm").value) === `DELETE ${deleteState.team_tag}`;
+  const finalOk = qs("#deleteFinalConfirm").checked;
+  const reasonOk = normalizeText(qs("#deleteRequestReason").value).length >= 8;
+
+  const missing = [];
+  if (!tagOk) missing.push("team tag");
+  if (!emailOk) missing.push("captain email");
+  if (!phraseOk) missing.push("deletion phrase");
+  if (!reasonOk) missing.push("reason");
+  if (!finalOk) missing.push("final confirmation");
+
+  button.disabled = missing.length > 0;
+  qs("#deleteRequestStatus").textContent = missing.length ? `Waiting for: ${missing.join(", ")}` : "Ready to submit deletion request.";
+  qs("#deleteRequestStatus").classList.toggle("is-ready", missing.length === 0);
+}
+
+async function submitTeamDeleteRequest(event) {
+  event.preventDefault();
+  if (!deleteState) return;
+
+  const validation = {
+    typed_team_tag: normalizeText(qs("#deleteTeamTagConfirm").value),
+    typed_captain_email: normalizeText(qs("#deleteCaptainEmailConfirm").value),
+    typed_phrase: normalizeText(qs("#deletePhraseConfirm").value),
+    final_confirmed: qs("#deleteFinalConfirm").checked
+  };
+
+  const { data, error } = await window.sb.rpc("captain_submit_team_delete_request", {
+    p_team_id: deleteState.id,
+    p_reason: normalizeText(qs("#deleteRequestReason").value),
+    p_validation: validation
+  });
+
+  if (error) {
+    qs("#deleteRequestStatus").textContent = error.message;
+    return;
+  }
+
+  showToast("Delete request submitted for admin approval.", "success");
+  closeTeamDeleteRequest();
+  await refreshCaptainPortal();
 }
 
 async function refreshCaptainPortal() {
@@ -452,6 +849,7 @@ async function refreshCaptainPortal() {
       await loadApprovedRegistrations();
     } else {
       approvedTeams = [];
+      captainRequests = [];
     }
 
     await renderPortal();
@@ -463,6 +861,13 @@ async function refreshCaptainPortal() {
 
 async function init() {
   qs("#refreshPortalBtn")?.addEventListener("click", refreshCaptainPortal);
+  qs("#teamEditRequestForm")?.addEventListener("submit", submitTeamEditRequest);
+  qs("#teamDeleteRequestForm")?.addEventListener("submit", submitTeamDeleteRequest);
+  ["#deleteTeamTagConfirm", "#deleteCaptainEmailConfirm", "#deletePhraseConfirm", "#deleteRequestReason", "#deleteFinalConfirm"].forEach(selector => {
+    qs(selector)?.addEventListener("input", validateDeleteRequest);
+    qs(selector)?.addEventListener("change", validateDeleteRequest);
+  });
+
   await refreshCaptainPortal();
 
   window.sb.auth.onAuthStateChange(() => {

@@ -4779,3 +4779,101 @@ body.registration-delete-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============================================================
+   Captain Edit/Delete Request Workflow
+   ============================================================ */
+.captain-management-box {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+}
+
+.captain-management-box.is-open {
+  border-color: rgba(50,230,143,.22);
+  background: rgba(50,230,143,.065);
+}
+
+.request-pill {
+  display: inline-flex;
+  margin: 8px 8px 0 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(248,209,92,.12);
+  color: #f8d15c;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.request-pill.danger {
+  background: rgba(255,76,110,.13);
+  color: #ff7d96;
+}
+
+.captain-request-list,
+.team-change-request-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.captain-request-card,
+.team-change-request-card {
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 18px;
+  background: rgba(255,255,255,.032);
+}
+
+.team-change-request-card.is-delete {
+  border-color: rgba(255,76,110,.22);
+  background: rgba(255,76,110,.045);
+}
+
+.request-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.captain-player-edit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.captain-player-edit-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.028);
+}
+
+.request-change-summary {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(230,239,255,.72);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 820px) {
+  .captain-player-edit-row {
+    grid-template-columns: 1fr;
+  }
+}
